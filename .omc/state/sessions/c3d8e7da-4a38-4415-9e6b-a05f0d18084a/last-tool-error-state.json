@@ -1,0 +1,7 @@
+{
+  "tool_name": "PowerShell",
+  "tool_input_preview": "{\"command\":\"winget install Gradle.Gradle --silent --accept-package-agreements --accept-source-agreements\",\"timeout\":120000,\"description\":\"Gradle 설치\"}",
+  "error": "Exit code 20\n\r   - \r                                                                                                                        \r\r  █████████▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒  1024 KB / 3.02 MB\r  ███████████████████▒▒▒▒▒▒▒▒▒▒▒  2.00 MB / 3.02 MB\r  █████████████████████████████▒  3.00 MB / 3.02 MB\r  ██████████████████████████████  3.02 MB / 3.02 MB\r                                                                                                                        \r\r  ▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒...",
+  "timestamp": "2026-06-10T10:53:58.939Z",
+  "retry_count": 1
+}
