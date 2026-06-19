@@ -45,9 +45,11 @@ const ICON_MAP: Record<string, ElementType> = {
 interface MenuItemRowProps {
   item: MenuItem
   depth?: number
+  /** leaf(이동) 메뉴 클릭 시 호출 — 모바일에서 사이드바 닫기용 */
+  onNavigate?: () => void
 }
 
-function MenuItemRow({ item, depth = 0 }: MenuItemRowProps) {
+function MenuItemRow({ item, depth = 0, onNavigate }: MenuItemRowProps) {
   const pathname = usePathname()
   const [expanded, setExpanded] = useState(false)
 
@@ -58,8 +60,9 @@ function MenuItemRow({ item, depth = 0 }: MenuItemRowProps) {
     ? pathname.startsWith(item.path)
     : pathname === item.path
 
-  const handleToggle = () => {
+  const handleClick = () => {
     if (hasChildren) setExpanded((prev) => !prev)
+    else onNavigate?.()  // leaf 이동 → 닫기 콜백
   }
 
   return (
@@ -68,7 +71,7 @@ function MenuItemRow({ item, depth = 0 }: MenuItemRowProps) {
         <ListItemButton
           component={hasChildren ? 'div' : Link}
           {...(!hasChildren ? { href: item.path } : {})}
-          onClick={handleToggle}
+          onClick={handleClick}
           selected={isActive}
           disableRipple
           sx={{
@@ -117,7 +120,7 @@ function MenuItemRow({ item, depth = 0 }: MenuItemRowProps) {
         <Collapse in={expanded} timeout="auto" unmountOnExit>
           <List disablePadding>
             {item.children!.map((child) => (
-              <MenuItemRow key={child.key} item={child} depth={depth + 1} />
+              <MenuItemRow key={child.key} item={child} depth={depth + 1} onNavigate={onNavigate} />
             ))}
           </List>
         </Collapse>
@@ -126,7 +129,7 @@ function MenuItemRow({ item, depth = 0 }: MenuItemRowProps) {
   )
 }
 
-function SidebarContent() {
+function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       {/* 로고 영역 */}
@@ -144,7 +147,7 @@ function SidebarContent() {
       <Box sx={{ flex: 1, overflowY: 'auto', py: 0 }}>
         <List disablePadding>
           {MENU_ITEMS.map((item) => (
-            <MenuItemRow key={item.key} item={item} />
+            <MenuItemRow key={item.key} item={item} onNavigate={onNavigate} />
           ))}
         </List>
       </Box>
@@ -191,7 +194,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
           transition: 'transform 0.25s ease',
         }}
       >
-        <SidebarContent />
+        <SidebarContent onNavigate={isMobile ? onClose : undefined} />
       </Box>
     </>
   )
