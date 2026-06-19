@@ -1,17 +1,13 @@
 'use client'
 import { ThemeProvider } from '@mui/material/styles'
-import { useMediaQuery } from '@mui/material'
-import { useMemo } from 'react'
-import { lightTheme, darkTheme } from './mui-theme'
+import { lightTheme } from './mui-theme'
 import { EmotionCacheProvider } from './emotion-cache'
 
 export function MuiProvider({ children }: { children: React.ReactNode }) {
-  const prefersDark = useMediaQuery('(prefers-color-scheme: dark)')
-  const theme = useMemo(() => (prefersDark ? darkTheme : lightTheme), [prefersDark])
-
+  // 라이트 모드 고정 (시스템 다크 무시)
   return (
     <EmotionCacheProvider>
-      <ThemeProvider theme={theme}>{children}</ThemeProvider>
+      <ThemeProvider theme={lightTheme}>{children}</ThemeProvider>
     </EmotionCacheProvider>
   )
 }

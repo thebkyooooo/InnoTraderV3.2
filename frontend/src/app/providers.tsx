@@ -14,22 +14,8 @@ initApiLayer()
 
 function ThemeProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
-    const stored = localStorage.getItem('ui-store')
-    if (stored) {
-      try {
-        const parsed = JSON.parse(stored) as { state?: { theme?: string } }
-        const theme = parsed?.state?.theme
-        if (theme === 'dark') {
-          document.documentElement.classList.add('dark')
-        } else {
-          document.documentElement.classList.remove('dark')
-        }
-      } catch {
-        // 파싱 오류 무시
-      }
-    } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
-      document.documentElement.classList.add('dark')
-    }
+    // 라이트 모드 고정 — 시스템 다크/저장값과 무관하게 .dark 제거
+    document.documentElement.classList.remove('dark')
   }, [])
 
   return <>{children}</>

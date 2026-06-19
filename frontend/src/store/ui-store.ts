@@ -95,17 +95,10 @@ export const useUiStore = create<UiStore>()(
 
 // ─── 테마 적용 헬퍼 ──────────────────────────────────────────────────────────
 
-function applyTheme(theme: Theme) {
+function applyTheme(_theme: Theme) {
   if (typeof document === 'undefined') return
-
-  const root = document.documentElement
-
-  if (theme === 'system') {
-    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
-    root.classList.toggle('dark', prefersDark)
-  } else {
-    root.classList.toggle('dark', theme === 'dark')
-  }
+  // 라이트 모드 고정 — 다크 비활성화 (시스템/저장값 무시)
+  document.documentElement.classList.remove('dark')
 }
 
 // ─── 셀렉터 ──────────────────────────────────────────────────────────────────

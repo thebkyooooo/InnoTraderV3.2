@@ -81,6 +81,11 @@
     @apply border-border;
   }
 
+  /* 라이트 모드 고정 — iOS가 네이티브 컨트롤(인풋/스크롤바)을 다크로 바꾸지 않도록 */
+  :root {
+    color-scheme: light;
+  }
+
   /* iOS 가로 흔들림(러버밴드) 방지 — 페이지가 뷰포트 폭을 넘지 않도록 */
   html,
   body {
