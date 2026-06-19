@@ -10,7 +10,7 @@ export default function AuthLayout({
   children: React.ReactNode
 }) {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-muted">
+    <div className="min-h-dvh flex items-center justify-center bg-gradient-to-br from-background to-muted">
       <div className="w-full max-w-[320px] px-4">
         {/* 로고 */}
         <div className="flex justify-center">

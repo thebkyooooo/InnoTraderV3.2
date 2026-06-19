@@ -178,6 +178,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
           left: 0,
           width: DRAWER_WIDTH,
           height: '100vh',
+          '@supports (height: 100dvh)': { height: '100dvh' },
           bgcolor: 'background.paper',
           borderRight: '1px solid',
           borderBottom: '1px solid',

@@ -81,6 +81,14 @@
     @apply border-border;
   }
 
+  /* iOS 가로 흔들림(러버밴드) 방지 — 페이지가 뷰포트 폭을 넘지 않도록 */
+  html,
+  body {
+    max-width: 100%;
+    overflow-x: hidden;
+    overscroll-behavior-x: none;
+  }
+
   body {
     @apply bg-background text-foreground;
     font-feature-settings: "rlig" 1, "calt" 1;

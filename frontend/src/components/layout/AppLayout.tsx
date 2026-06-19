@@ -51,7 +51,7 @@ export function AppLayout({ children }: AppLayoutProps) {
   const handleSidebarClose = () => setSidebarOpen(false)
 
   return (
-    <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: 'background.default' }}>
+    <Box sx={{ display: 'flex', minHeight: '100vh', '@supports (min-height: 100dvh)': { minHeight: '100dvh' }, bgcolor: 'background.default' }}>
       {/* 사이드바 */}
       <Sidebar open={isDesktop || sidebarOpen} onClose={handleSidebarClose} />
 
