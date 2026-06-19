@@ -14,13 +14,20 @@ import com.innotrader.watchlist.domain.port.in.WatchlistUseCase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.CommandLineRunner;
-import org.springframework.context.annotation.Profile;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 import java.util.UUID;
 
+/**
+ * 기동 시 기본 계정 + 시드 데이터(관심종목/계좌/잔고/주문)를 생성한다.
+ *
+ * <p>{@code app.seed.enabled=true} 일 때만 동작한다 (로컬: application-local.yml에서 true,
+ * 운영: 환경변수 {@code APP_SEED_ENABLED=true} 로 한시적으로 켜서 시드 후 끄면 됨).
+ * 모든 시드는 멱등(존재 시 건너뜀)이라 재기동해도 중복 생성되지 않는다.
+ */
 @Component
-@Profile("local")
+@ConditionalOnProperty(name = "app.seed.enabled", havingValue = "true")
 public class LocalDataInitializer implements CommandLineRunner {
 
     private static final Logger log = LoggerFactory.getLogger(LocalDataInitializer.class);

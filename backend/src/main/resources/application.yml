@@ -42,6 +42,9 @@ app:
   # 리프레시 토큰 쿠키 SameSite — 동일 도메인이면 Strict, 교차 도메인(Railway 등)이면 None
   refresh-cookie:
     same-site: ${REFRESH_COOKIE_SAMESITE:Strict}
+  # 기동 시 기본 계정 + 시드 데이터 자동 생성 (운영에선 APP_SEED_ENABLED=true 로 한시 사용)
+  seed:
+    enabled: ${APP_SEED_ENABLED:false}
 
 springdoc:
   api-docs:
