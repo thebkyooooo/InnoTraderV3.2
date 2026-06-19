@@ -32,6 +32,8 @@ spring:
 
 server:
   port: ${PORT:8080}
+  # 리버스 프록시(Railway) 뒤에서 X-Forwarded-Proto/Host 신뢰 → https 스킴 인식 (Swagger URL/Secure 쿠키 정상화)
+  forward-headers-strategy: framework
 
 jwt:
   secret: ${JWT_SECRET:change-this-secret-in-production-must-be-at-least-256-bits}
