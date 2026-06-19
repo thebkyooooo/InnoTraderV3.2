@@ -12,13 +12,14 @@ interface SectionProps {
   children: React.ReactNode
   actions?: React.ReactNode
   noPadding?: boolean
+  className?: string
 }
 
-export function Section({ title, description, children, actions, noPadding = false }: SectionProps) {
+export function Section({ title, description, children, actions, noPadding = false, className }: SectionProps) {
   const hasHeader = title || description || actions
 
   return (
-    <Paper variant="outlined" sx={{ overflow: 'hidden' }}>
+    <Paper variant="outlined" className={className} sx={{ overflow: 'hidden' }}>
       {hasHeader && (
         <>
           <Box

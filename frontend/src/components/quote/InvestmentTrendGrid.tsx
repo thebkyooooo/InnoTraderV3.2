@@ -24,7 +24,7 @@ function signed(n: number) {
 const columnDefs: ColDef<InvestmentTrendItem>[] = [
   { field: 'date',        headerName: '일자',    flex: 1, minWidth: 100,
     valueFormatter: p => fmtDate(p.value) },
-  { field: 'price',       headerName: '종가',    flex: 1, minWidth: 120, type: 'numericColumn',
+  { field: 'price',       headerName: '현재가',    flex: 1, minWidth: 120, type: 'numericColumn',
     valueFormatter: p => fmtNum(p.value) },
   { field: 'prevDiff',    headerName: '전일대비', flex: 1, minWidth: 120, type: 'numericColumn',
     valueFormatter: p => p.value > 0 ? `▲${fmtNum(p.value)}` : p.value < 0 ? `▼${fmtNum(Math.abs(p.value))}` : fmtNum(p.value),
@@ -32,8 +32,6 @@ const columnDefs: ColDef<InvestmentTrendItem>[] = [
   { field: 'change',      headerName: '등락률',  flex: 1, minWidth: 100, type: 'numericColumn',
     valueFormatter: p => (p.value > 0 ? '+' : '') + (p.value as number).toFixed(2) + '%',
     cellStyle: p => { const c = diffColor(p.value as number); return c ? { color: c } : null } },
-  { field: 'volume',      headerName: '거래량',  flex: 1, minWidth: 120, type: 'numericColumn',
-    valueFormatter: p => fmtNum(p.value) },
   { field: 'foreign',     headerName: '외국인',  flex: 1, minWidth: 120, type: 'numericColumn',
     valueFormatter: p => signed(p.value as number),
     cellStyle: p => { const c = diffColor(p.value as number); return c ? { color: c } : null } },
@@ -43,6 +41,8 @@ const columnDefs: ColDef<InvestmentTrendItem>[] = [
   { field: 'institution', headerName: '기관',    flex: 1, minWidth: 120,  type: 'numericColumn',
     valueFormatter: p => signed(p.value as number),
     cellStyle: p => { const c = diffColor(p.value as number); return c ? { color: c } : null } },
+  { field: 'volume',      headerName: '거래량',  flex: 1, minWidth: 120, type: 'numericColumn',
+  valueFormatter: p => fmtNum(p.value) },
 ]
 
 export interface InvestmentTrendGridProps {

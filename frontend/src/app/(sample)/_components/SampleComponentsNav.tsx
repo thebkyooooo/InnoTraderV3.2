@@ -11,7 +11,7 @@ const NAV_GROUPS = [
     ],
   },
   {
-    label: '주식컴포넌트',
+    label: '주식',
     items: [
       { label: '현재가',   href: '/sample/components/stock/quote' },
       { label: '종목검색', href: '/sample/components/stock/search' },
@@ -20,6 +20,13 @@ const NAV_GROUPS = [
       { label: '투자동향', href: '/sample/components/stock/trends' },
       { label: '종목상세', href: '/sample/components/stock/detail' },
       { label: '분석차트', href: '/sample/components/stock/chart' },
+      { label: '호가',     href: '/sample/components/stock/orderbook' },
+    ],
+  },
+  {
+    items: [
+      { label: '보유주식',   href: '/sample/components/holdings' },
+      { label: '주문',   href: '/sample/components/order' },
     ],
   },
 ]
@@ -86,6 +93,11 @@ export function SampleComponentsNav() {
           })}
         </div>
       ))}
+      <div className="text-xs font-semibold text-foreground/60 px-1 mr-1 shrink-0 ml-auto">
+        <Link href={'/sample/page/login'} className='px-2.5 py-1.5 rounded-[3px] text-xs font-semibold transition-colors whitespace-nowrap bg-gray-200 hover:bg-gray-300/70'>
+          페이지
+        </Link>
+      </div>
     </nav>
   )
 }

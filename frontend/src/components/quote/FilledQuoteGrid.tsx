@@ -19,7 +19,7 @@ function diffColor(v: number) {
 }
 
 const columnDefs: ColDef<FilledQuoteItem>[] = [
-  { field: 'time',         headerName: '시간',    flex: 1, minWidth: 120,
+  { field: 'time',         headerName: '시간',    flex: 1, minWidth: 100,
     valueFormatter: p => fmtTime(p.value) },
   { field: 'price',        headerName: '현재가',  flex: 1, minWidth: 120, type: 'numericColumn',
     valueFormatter: p => fmtNum(p.value) },

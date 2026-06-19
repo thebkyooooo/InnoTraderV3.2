@@ -31,12 +31,17 @@ spring:
       allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000}
 
 server:
-  port: 8080
+  port: ${PORT:8080}
 
 jwt:
   secret: ${JWT_SECRET:change-this-secret-in-production-must-be-at-least-256-bits}
   access-token-validity-seconds: 900
   refresh-token-validity-seconds: 1209600
+
+app:
+  # 리프레시 토큰 쿠키 SameSite — 동일 도메인이면 Strict, 교차 도메인(Railway 등)이면 None
+  refresh-cookie:
+    same-site: ${REFRESH_COOKIE_SAMESITE:Strict}
 
 springdoc:
   api-docs:

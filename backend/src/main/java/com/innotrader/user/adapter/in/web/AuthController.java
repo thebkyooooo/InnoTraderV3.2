@@ -21,6 +21,7 @@ import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -61,6 +62,10 @@ public class AuthController {
     private final JwtTokenProvider    jwtTokenProvider;
     private final RefreshTokenService refreshTokenService;
     private final LoadUserPort        loadUserPort;
+
+    /** 리프레시 쿠키 SameSite 속성 (동일 도메인: Strict, 교차 도메인 배포: None). */
+    @Value("${app.refresh-cookie.same-site:Strict}")
+    private String refreshCookieSameSite;
 
     public AuthController(RegisterUserUseCase registerUserUseCase,
                           LoginUseCase loginUseCase,
@@ -258,7 +263,7 @@ public class AuthController {
                 + "; Path=/api/v1/auth"
                 + "; HttpOnly"
                 + "; Secure"
-                + "; SameSite=Strict"
+                + "; SameSite=" + refreshCookieSameSite
                 + "; Max-Age=" + maxAge;
         response.addHeader("Set-Cookie", cookieHeader);
     }

@@ -20,6 +20,8 @@ interface SelectProps<T extends string | number = string> {
   size?: 'small' | 'medium'
   disabled?: boolean
   sx?: SxProps<Theme>
+  /** 드롭다운 메뉴 항목(MenuItem) 추가 스타일 (예: 폰트 크기) */
+  menuItemSx?: SxProps<Theme>
 }
 
 export function Select<T extends string | number = string>({
@@ -34,6 +36,7 @@ export function Select<T extends string | number = string>({
   size = 'medium',
   disabled = false,
   sx,
+  menuItemSx,
 }: SelectProps<T>) {
   const labelId = label ? `select-label-${label.replace(/\s+/g, '-')}` : undefined
 
@@ -50,6 +53,11 @@ export function Select<T extends string | number = string>({
         value={value}
         label={label}
         onChange={handleChange}
+        MenuProps={{
+          anchorOrigin: { vertical: 'bottom', horizontal: 'left' },
+          transformOrigin: { vertical: 'top', horizontal: 'left' },
+          ...(menuItemSx ? { sx: { '& .MuiMenuItem-root': menuItemSx } as SxProps<Theme> } : {}),
+        }}
       >
         {placeholder && (
           <MenuItem value="" disabled>

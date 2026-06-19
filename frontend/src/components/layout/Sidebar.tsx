@@ -74,7 +74,7 @@ function MenuItemRow({ item, depth = 0 }: MenuItemRowProps) {
           sx={{
             pl: 2 + depth * 3.8,
             borderRadius: 1,
-            mx: 1,
+            mx: 0.5,
             mb: 0.25,
             '&:hover': {
               bgcolor: 'transparent',
@@ -130,7 +130,7 @@ function SidebarContent() {
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       {/* 로고 영역 */}
-      <Box sx={{ px: 3, pt: 2.5, pb: 1  }}>
+      <Box sx={{ px: 2.5, pt: 2, pb: 1  }}>
         <Typography
           variant="h6"
           color="primary"

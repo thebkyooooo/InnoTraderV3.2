@@ -1,4 +1,6 @@
 import { http, HttpResponse } from 'msw'
+import { dailySeries } from './_dailySeries'
+import { filledTicks } from './_intradaySeries'
 
 const BASE_URL = `${process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:8080'}/api/public/quotes`
 
@@ -64,19 +66,11 @@ export const quoteHandlers = [
     const base   = SYMBOLS[symbol]
     if (!base) return HttpResponse.json({ message: '종목을 찾을 수 없습니다.' }, { status: 404 })
 
-    const items = Array.from({ length: 3000 }, (_, i) => {
-      const r = rng(base.price * 31 + i)
-      const price = Math.max(100, Math.round(base.price * (0.7 + r() * 0.6)))
-      const prev  = Math.max(100, Math.round(price * (1 - (r() - 0.5) * 0.04)))
-      const diff  = price - prev
-      const open  = Math.max(100, Math.round(prev * (1 + (r() - 0.5) * 0.01)))
-      const high  = Math.max(price, open) + Math.round(price * 0.005)
-      const low   = Math.max(100, Math.min(price, open) - Math.round(price * 0.005))
-      const vol   = Math.round(base.volume * (0.5 + r()))
-      const d = new Date(); d.setDate(d.getDate() - i)
-      return { date: d.toISOString().slice(0, 10).replace(/-/g, ''), price, prevDiff: diff,
-               change: Math.round(diff * 1000 / prev) / 10, open, high, low, volume: vol, turnoverMan: Math.round(vol * price / 10000) }
-    })
+    // 일별 그리드 · 차트 일봉 · 투자동향이 공유하는 공통 일봉 시리즈
+    const items = dailySeries(base.price, base.prevDiff, base.volume, 3000).map(b => ({
+      date: b.date, price: b.close, prevDiff: b.prevDiff, change: b.change,
+      open: b.open, high: b.high, low: b.low, volume: b.volume, turnoverMan: b.turnoverMan,
+    }))
 
     const page = items.slice(offset, offset + size)
     const hasNext = offset + size < items.length
@@ -99,24 +93,8 @@ export const quoteHandlers = [
     const OPEN_MIN = 9 * 60, CLOSE_MIN = 15 * 60 + 30
     const totalMinutes = kstMin < OPEN_MIN ? 0 : kstMin > CLOSE_MIN ? 390 : kstMin - OPEN_MIN
 
-    let cumVol = 0
-    const items = Array.from({ length: 9999 }, (_, i) => {
-      const r = rng(base.price * 37 + i)
-      const price = Math.max(100, Math.round(base.price * (1 + (r() - 0.5) * 0.006)))
-      const filledVolume = Math.max(1, Math.round(r() * 1000))
-      cumVol += filledVolume
-      const minOff = Math.floor(i * totalMinutes / 9998)
-      const h = 9 + Math.floor(minOff / 60)
-      const m = minOff % 60
-      const s = Math.floor(r() * 60)
-      return { time: `${String(h).padStart(2,'0')}${String(m).padStart(2,'0')}${String(s).padStart(2,'0')}`,
-               price, prevDiff: price - (base.price - base.prevDiff),
-               change: Math.round((price - (base.price - base.prevDiff)) * 1000 / (base.price - base.prevDiff + 1)) / 10,
-               askPrice: price + 50, bidPrice: price - 50, filledVolume,
-               fillStrength: Math.max(0, Math.min(200, 50 + (r() - 0.5) * 60)), volume: cumVol }
-    })
-
-    items.reverse() // 가장 최근 체결(현재 시각, 마감 후엔 15:30)이 먼저 오도록 역순 정렬
+    // 체결도 오늘 일봉(시가)→현재가 브리지로 생성되어 최근 체결가 = 현재가 (최신순)
+    const items = filledTicks(base.price, base.prevDiff, base.volume, totalMinutes, 9999, 50)
 
     const page = items.slice(offset, offset + size)
     const hasNext = offset + size < items.length
@@ -152,18 +130,15 @@ export const quoteHandlers = [
     const base   = SYMBOLS[symbol]
     if (!base) return HttpResponse.json({ message: '종목을 찾을 수 없습니다.' }, { status: 404 })
 
-    const items = Array.from({ length: 3000 }, (_, i) => {
+    // 날짜·종가·전일대비·거래량은 일별 시세와 동일한 공통 시리즈, 순매수만 별도 파생
+    const items = dailySeries(base.price, base.prevDiff, base.volume, 3000).map((b, i) => {
       const r = rng(base.price * 43 + i)
-      const price = Math.max(100, Math.round(base.price * (0.7 + r() * 0.6)))
-      const prev  = Math.max(100, Math.round(price * (1 - (r() - 0.5) * 0.04)))
-      const diff  = price - prev
-      const vol   = Math.round(base.volume * (0.5 + r()))
+      const vol = b.volume
       const foreign     = Math.round((r() - 0.5) * vol * 0.4)
       const individual  = Math.round((r() - 0.5) * vol * 0.6)
-      const institution = -foreign - individual
-      const d = new Date(); d.setDate(d.getDate() - i)
-      return { date: d.toISOString().slice(0, 10).replace(/-/g, ''), price, prevDiff: diff,
-               change: Math.round(diff * 1000 / prev) / 10, volume: vol, foreign, individual, institution }
+      const institution = -foreign - individual + Math.round((r() - 0.5) * vol * 0.1)
+      return { date: b.date, price: b.close, prevDiff: b.prevDiff, change: b.change,
+               volume: vol, foreign, individual, institution }
     })
 
     const page = items.slice(offset, offset + size)

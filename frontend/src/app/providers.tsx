@@ -55,6 +55,16 @@ async function initMsw() {
 
   if (await isBackendAlive()) {
     console.info('[MSW] Backend detected — mocking disabled.')
+    // 이전 세션(백엔드 미가동 시)에 등록된 스테일 서비스워커 제거.
+    // 남아있으면 요청을 가로채 passthrough "Failed to fetch" 오류를 유발한다.
+    if ('serviceWorker' in navigator) {
+      const regs = await navigator.serviceWorker.getRegistrations()
+      await Promise.all(
+        regs
+          .filter(r => r.active?.scriptURL.includes('mockServiceWorker.js'))
+          .map(r => r.unregister())
+      )
+    }
     return
   }
 

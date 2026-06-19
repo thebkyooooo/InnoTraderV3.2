@@ -83,3 +83,8 @@ logs/
 coverage/
 .nyc_output/
 htmlcov/
+
+# ============================
+# OMC (oh-my-claudecode) 런타임 상태 — 소스 아님
+# ============================
+.omc/

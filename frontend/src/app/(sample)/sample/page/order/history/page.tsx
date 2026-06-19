@@ -62,6 +62,7 @@ export default function SampleOrderHistoryPage() {
   const [dateValue, setDateValue] = useState<Date | null>(null)
   const [selectValue, setSelectValue] = useState<string>('')
   const [orderSelectValue, orderSetSelectValue] = useState<string>('')
+  const [execSelectValue, execSetSelectValue] = useState<string>('')
 
   return (
     <>
@@ -69,32 +70,34 @@ export default function SampleOrderHistoryPage() {
 
         <h1 className="text-lg font-bold text-foreground">주문내역 샘플 페이지</h1>
 
-        {/* 계좌 셀렉트 */}
-        <Select sx={{ background: '#eeeeef90' }}
-          fullWidth
-          label="계좌번호 선택"
-          value={selectValue}
-          onChange={setSelectValue}
-          options={[
-            {
-              label: '123-01-123456 주식계좌',
-              value: '001'
-            },
-            {
-              label: '123-02-123456 주식계좌',
-              value: '002'
-            },
-            {
-              label: '123-03-123456 주식계좌',
-              value: '003'
-            }
-          ]}
-          size="small"
-          placeholder='계좌번호를 선택하세요'
-        />
+        <div className="sm:max-w-[295px]">
+          {/* 계좌 셀렉트 */}
+          <Select 
+            fullWidth
+            label="계좌번호 선택"
+            value={selectValue}
+            onChange={setSelectValue}
+            options={[
+              {
+                label: '123-01-123456 홍길동 주식계좌',
+                value: '001'
+              },
+              {
+                label: '123-02-123456 홍길동 주식계좌',
+                value: '002'
+              },
+              {
+                label: '123-03-123456 홍길동 주식계좌',
+                value: '003'
+              }
+            ]}
+            size="small"
+            placeholder='계좌번호를 선택하세요'
+          />
+        </div>
 
         {/* 조회옵션 */}
-        <div className='flex gap-2 '>
+        <div className='flex gap-2 sm:flex-nowrap flex-wrap'>
           <DatePicker
             label="시작일"
             value={dateValue}
@@ -135,8 +138,8 @@ export default function SampleOrderHistoryPage() {
           <Select
             fullWidth
             label="체결구분"
-            value={orderSelectValue}
-            onChange={orderSetSelectValue}
+            value={execSelectValue}
+            onChange={execSetSelectValue}
             options={[
               {
                 label: '전체',
@@ -158,29 +161,17 @@ export default function SampleOrderHistoryPage() {
 
         {/* 주문내역 요약 */}
         <div className='flex gap-2 '>
-          <Card  sx={{ width: '100%' }}>
-            <div className='flex flex-col gap-2 justify-between -mb-3'>
-              <span className='text-sm'>총주문</span>
-              <span className='text-right'>100건</span>
-            </div>
+          <Card title="총주문" titleSx={{ fontSize: 12, mb: -3 }} sx={{ width: '100%' }}>
+            <div className='text-right -mb-1'>100건</div>
           </Card>
-          <Card  sx={{ width: '100%' }}>
-            <div className='flex flex-col gap-2 justify-between -mb-3'>
-              <span className='text-sm'>체결</span>
-              <span className='text-right'>100건</span>
-            </div>
+          <Card title="체결" titleSx={{ fontSize: 12, mb: -3 }} sx={{ width: '100%' }}>
+            <div className='text-right -mb-1'>100건</div>
           </Card>
-          <Card  sx={{ width: '100%' }}>
-            <div className='flex flex-col gap-2 justify-between -mb-3'>
-              <span className='text-sm'>미체결</span>
-              <span className='text-right'>100건</span>
-            </div>
+          <Card title="미체결" titleSx={{ fontSize: 12, mb: -3 }} sx={{ width: '100%' }}>
+            <div className='text-right -mb-1'>100건</div>
           </Card>
-          <Card  sx={{ width: '100%' }}>
-            <div className='flex flex-col gap-2 justify-between -mb-3'>
-              <span className='text-sm'>취소</span>
-              <span className='text-right'>100건</span>
-            </div>
+          <Card title="취소" titleSx={{ fontSize: 12, mb: -3 }} sx={{ width: '100%' }}>
+            <div className='text-right -mb-1'>100건</div>
           </Card>
         </div>
 

@@ -6,14 +6,32 @@ const config: Config = {
     './src/**/*.{ts,tsx}',
   ],
   theme: {
+    // 너비 브레이크포인트 — xs(480px)를 추가하고 기본값 유지 (순서 보존)
+    screens: {
+      'xs':   '480px',
+      'sm':   '640px',
+      'md':   '768px',
+      'lg':   '1024px',
+      'xl':   '1280px',
+      '2xl':  '1536px',
+    },
     container: {
       center: true,
       padding: '2rem',
       screens: {
+        'xs': '480px',
         '2xl': '1400px',
       },
     },
     extend: {
+      // 높이(viewport height) 기준 브레이크포인트 — 너비 기준 sm/md/lg/xl/2xl과 별개
+      screens: {
+        'h-sm':  { raw: '(min-height: 640px)' },
+        'h-md':  { raw: '(min-height: 800px)' },
+        'h-lg':  { raw: '(min-height: 960px)' },
+        'h-xl':  { raw: '(min-height: 1080px)' },
+        'h-2xl': { raw: '(min-height: 1280px)' },
+      },
       colors: {
         border: 'hsl(var(--border))',
         input: 'hsl(var(--input))',

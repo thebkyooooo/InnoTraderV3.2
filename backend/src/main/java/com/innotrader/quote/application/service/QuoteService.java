@@ -1,6 +1,9 @@
 package com.innotrader.quote.application.service;
 
 import com.innotrader.common.annotation.UseCase;
+import com.innotrader.common.support.DailyBar;
+import com.innotrader.common.support.MockDailySeries;
+import com.innotrader.common.support.MockIntradaySeries;
 import com.innotrader.quote.domain.model.CurrentPrice;
 import com.innotrader.quote.domain.model.DailyQuote;
 import com.innotrader.quote.domain.model.FilledQuote;
@@ -13,13 +16,10 @@ import com.innotrader.quote.domain.port.out.FindStockBasePort;
 import com.innotrader.quote.domain.port.out.FindStockBasePort.StockBase;
 
 import java.time.Duration;
-import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.ZoneId;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Base64;
-import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.Random;
@@ -128,35 +128,20 @@ public class QuoteService implements GetQuoteUseCase {
     }
 
     private List<DailyQuote> generateDailyQuotes(StockBase base) {
-        List<DailyQuote> result = new ArrayList<>();
-        LocalDate today = LocalDate.now();
-        long price = base.price();
-
-        for (int i = 0; i < MAX_DAILY; i++) {
-            long seed = (long) base.symbol().hashCode() * 31 + i;
-            Random r = new Random(seed);
-
-            long prevPrice = i == 0 ? price : result.get(i - 1).price();
-            double dayChange = (r.nextDouble() - 0.5) * 0.04;
-            long close = Math.max(100L, Math.round(prevPrice * (1 + dayChange)));
-            long open  = Math.max(100L, Math.round(prevPrice * (1 + (r.nextDouble() - 0.5) * 0.01)));
-            long high  = Math.max(close, open) + Math.abs(r.nextLong() % (close / 100 + 1));
-            long low   = Math.max(100L, Math.min(close, open) - Math.abs(r.nextLong() % (close / 100 + 1)));
-            long vol   = Math.max(1000L, Math.round(base.volume() * (0.5 + r.nextDouble())));
-            long diff  = close - prevPrice;
-            double chg = prevPrice == 0 ? 0 : Math.round(diff * 1000.0 / prevPrice) / 10.0;
-
-            LocalDate date = today.minusDays(i);
+        // 일별 그리드 · 차트 일봉 · 투자동향이 공유하는 공통 일봉 시리즈
+        List<DailyBar> bars = MockDailySeries.generate(
+                base.symbol(), base.price(), base.prevDiff(), base.volume(), MAX_DAILY);
+        List<DailyQuote> result = new ArrayList<>(bars.size());
+        for (DailyBar b : bars) {
             result.add(new DailyQuote(
-                    date.format(DateTimeFormatter.BASIC_ISO_DATE),
-                    close, diff, chg, open, high, low, vol, vol * close / 10_000L
+                    b.date(), b.close(), b.prevDiff(), b.change(),
+                    b.open(), b.high(), b.low(), b.volume(), b.turnoverMan()
             ));
         }
         return result;
     }
 
     private List<FilledQuote> generateFilledQuotes(StockBase base) {
-        List<FilledQuote> result = new ArrayList<>();
         LocalTime open  = LocalTime.of(9, 0);
         LocalTime close = LocalTime.of(15, 30);
         // 09:00 ~ 현재 시각(KST)까지만 생성. 장 시작 전=0, 장 마감 후=390분(15:30)으로 클램프
@@ -165,34 +150,17 @@ public class QuoteService implements GetQuoteUseCase {
         if (nowKst.isBefore(open))      totalMinutes = 0;
         else if (nowKst.isAfter(close)) totalMinutes = 390;
         else                            totalMinutes = (int) Duration.between(open, nowKst).toMinutes();
-        long cumVolume = 0;
 
-        for (int i = 0; i < MAX_FILLED; i++) {
-            long seed = (long) base.symbol().hashCode() * 37 + i;
-            Random r = new Random(seed);
-
-            double chgFactor = (r.nextDouble() - 0.5) * 0.006;
-            long curPrice = Math.max(100L, Math.round(base.price() * (1 + chgFactor)));
-            long diff  = curPrice - (base.price() - base.prevDiff());
-            double chg = Math.round(diff * 1000.0 / (base.price() - base.prevDiff() + 1)) / 10.0;
-            long ask   = curPrice + TICK;
-            long bid   = curPrice - TICK;
-            long vol   = Math.max(1L, r.nextLong() % 1000 + 1);
-            cumVolume += vol;
-            double strength = 50.0 + (r.nextDouble() - 0.5) * 60;
-
-            int minuteOffset = (int) (i * (long) totalMinutes / (MAX_FILLED - 1));
-            int second = r.nextInt(60);
-            LocalTime time = open.plusMinutes(minuteOffset).plusSeconds(second);
-
+        // 체결도 오늘 일봉(시가)→현재가 브리지로 생성되어 최근 체결가 = 현재가
+        List<MockIntradaySeries.Tick> ticks = MockIntradaySeries.filledTicks(
+                base.symbol(), base.price(), base.prevDiff(), base.volume(), totalMinutes, MAX_FILLED, TICK);
+        List<FilledQuote> result = new ArrayList<>(ticks.size());
+        for (MockIntradaySeries.Tick t : ticks) {
             result.add(new FilledQuote(
-                    time.format(DateTimeFormatter.ofPattern("HHmmss")),
-                    curPrice, diff, chg, ask, bid, vol,
-                    Math.max(0, Math.min(200, strength)), cumVolume
+                    t.time(), t.price(), t.prevDiff(), t.change(),
+                    t.ask(), t.bid(), t.filledVolume(), t.strength(), t.cumVolume()
             ));
         }
-        // 가장 최근 체결(현재 시각, 마감 후엔 15:30)이 먼저 오도록 역순 정렬
-        Collections.reverse(result);
         return result;
     }
 
@@ -220,29 +188,21 @@ public class QuoteService implements GetQuoteUseCase {
     }
 
     private List<InvestmentTrend> generateInvestmentTrends(StockBase base) {
-        List<InvestmentTrend> result = new ArrayList<>();
-        LocalDate today = LocalDate.now();
-        long price = base.price();
-
-        for (int i = 0; i < MAX_DAILY; i++) {
-            long seed = (long) base.symbol().hashCode() * 43 + i;
-            Random r = new Random(seed);
-
-            long prevPrice = i == 0 ? price : result.get(i - 1).price();
-            double dayChange = (r.nextDouble() - 0.5) * 0.04;
-            long close  = Math.max(100L, Math.round(prevPrice * (1 + dayChange)));
-            long diff   = close - prevPrice;
-            double chg  = prevPrice == 0 ? 0 : Math.round(diff * 1000.0 / prevPrice) / 10.0;
-            long vol    = Math.max(1000L, Math.round(base.volume() * (0.5 + r.nextDouble())));
-
-            long foreign    = (long) ((r.nextDouble() - 0.5) * vol * 0.4);
-            long individual = (long) ((r.nextDouble() - 0.5) * vol * 0.6);
-            long institution = -foreign - individual + (long)((r.nextDouble() - 0.5) * vol * 0.1);
-
-            LocalDate date = today.minusDays(i);
+        // 날짜·종가·전일대비·거래량은 일별 시세와 동일한 공통 시리즈를 사용하고,
+        // 외국인/개인/기관 순매수만 별도 결정적 난수로 파생한다.
+        List<DailyBar> bars = MockDailySeries.generate(
+                base.symbol(), base.price(), base.prevDiff(), base.volume(), MAX_DAILY);
+        List<InvestmentTrend> result = new ArrayList<>(bars.size());
+        for (int i = 0; i < bars.size(); i++) {
+            DailyBar b = bars.get(i);
+            Random r = new Random((long) base.symbol().hashCode() * 43 + i);
+            long vol         = b.volume();
+            long foreign     = (long) ((r.nextDouble() - 0.5) * vol * 0.4);
+            long individual  = (long) ((r.nextDouble() - 0.5) * vol * 0.6);
+            long institution = -foreign - individual + (long) ((r.nextDouble() - 0.5) * vol * 0.1);
             result.add(new InvestmentTrend(
-                    date.format(DateTimeFormatter.BASIC_ISO_DATE),
-                    close, diff, chg, vol, foreign, individual, institution
+                    b.date(), b.close(), b.prevDiff(), b.change(), vol,
+                    foreign, individual, institution
             ));
         }
         return result;

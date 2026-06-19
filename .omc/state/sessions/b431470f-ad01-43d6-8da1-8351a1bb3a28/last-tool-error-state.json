@@ -1,7 +1,0 @@
-{
-  "tool_name": "Read",
-  "tool_input_preview": "{\"file_path\":\"C:\\\\Works\\\\Dev\\\\Project\\\\InnoTraderV3.2\\\\backend\\\\src\\\\main\\\\java\\\\com\\\\innotrader\\\\mocks\\\\handlers.ts\"}",
-  "error": "File does not exist. Note: your current working directory is C:\\Works\\Dev\\Project\\InnoTraderV3.2.",
-  "timestamp": "2026-06-15T03:50:45.332Z",
-  "retry_count": 1
-}

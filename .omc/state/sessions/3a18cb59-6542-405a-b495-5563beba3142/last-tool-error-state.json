@@ -1,7 +1,0 @@
-{
-  "tool_name": "PowerShell",
-  "tool_input_preview": "{\"command\":\"\\\"C:\\\\oracleJdk-21\\\\bin\\\\java.exe\\\" -version 2>&1; Get-Content \\\"C:\\\\Users\\\\USER\\\\AppData\\\\Roaming\\\\Code\\\\User\\\\settings.json\\\" | Select-String -Pattern \\\"jdt|java\\\\.home|lombok\\\" -CaseSen...",
-  "error": "Exit code 1\n\u001b[31;1mParserError: \u001b[0m\r\n\u001b[31;1m\u001b[36;1mLine |\u001b[0m\r\n\u001b[31;1m\u001b[36;1m\u001b[36;1m   1 | \u001b[0m \"C:\\oracleJdk-21\\bin\\java.exe\" \u001b[36;1m-version\u001b[0m 2>&1; Get-Content \"C:\\Users\\U …\u001b[0m\r\n\u001b[31;1m\u001b[36;1m\u001b[36;1m\u001b[0m\u001b[36;1m\u001b[0m\u001b[36;1m     | \u001b[31;1m                                ~~~~~~~~\u001b[0m\r\n\u001b[31;1m\u001b[36;1m\u001b[36;1m\u001b[0m\u001b[36;1m\u001b[0m\u001b[36;1m\u001b[31;1m\u001b[31;1m\u001b[36;1m     | \u001b[31;1mUnexpected token '-version' in expression or statement.\u001b[0m",
-  "timestamp": "2026-06-10T12:00:29.156Z",
-  "retry_count": 1
-}

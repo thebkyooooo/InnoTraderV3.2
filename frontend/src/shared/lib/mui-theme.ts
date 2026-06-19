@@ -13,6 +13,12 @@ export const lightTheme = createTheme({
   shape: { borderRadius: 8 },
   components: {
     MuiButton: { defaultProps: { disableElevation: true } },
+    MuiInputLabel: {
+      styleOverrides: {
+        // 키인(float) 시 라벨 위치 보정: top 0 → 4px
+        root: { top: '4px' },
+      },
+    },
     MuiPaper: {
       defaultProps: { elevation: 0 },
       styleOverrides: {
@@ -35,6 +41,12 @@ export const darkTheme = createTheme({
   shape: { borderRadius: 8 },
   components: {
     MuiButton: { defaultProps: { disableElevation: true } },
+    MuiInputLabel: {
+      styleOverrides: {
+        // 키인(float) 시 라벨 위치 보정: top 0 → 4px
+        root: { top: '4px' },
+      },
+    },
     MuiPaper: {
       defaultProps: { elevation: 0 },
       styleOverrides: {

@@ -16,12 +16,12 @@ const NAV_GROUPS = [
   {
     label: '시세',
     items: [
-      { label: '현재가', href: '/sample/page/market/price' },
-      { label: '호가', href: '/sample/page/market/orderbook' },
-      { label: '일별', href: '/sample/page/market/daily' },
-      { label: '체결', href: '/sample/page/market/execution' },
-      { label: '투자동향', href: '/sample/page/market/trend' },
-      { label: '분석차트', href: '/sample/page/market/chart' },
+      { label: '현재가', href: '/sample/page/quote/price' },
+      { label: '호가', href: '/sample/page/quote/orderbook' },
+      { label: '일별', href: '/sample/page/quote/daily' },
+      { label: '체결', href: '/sample/page/quote/execution' },
+      { label: '투자동향', href: '/sample/page/quote/trend' },
+      { label: '분석차트', href: '/sample/page/quote/chart' },
     ],
   },
   {
@@ -70,8 +70,7 @@ export function SamplePageNav() {
       onMouseLeave={onMouseUp}
       onMouseMove={onMouseMove}
     >
-      <span className="text-xs font-semibold text-foreground/60 px-1 mr-1 shrink-0">페이지</span>
-      <span className="text-muted-foreground/40 mx-1 text-xs shrink-0">|</span>
+      {/* <span className="text-xs font-semibold text-foreground/60 px-1 mr-1 shrink-0">페이지 샘플</span> */}
       {NAV_GROUPS.map((group, gi) => (
         <div key={gi} className="flex items-center gap-1 shrink-0">
           {gi > 0 && <span className="text-muted-foreground/40 mx-1 text-xs">|</span>}
@@ -97,6 +96,11 @@ export function SamplePageNav() {
           })}
         </div>
       ))}
+      <div className="text-xs font-semibold text-foreground/60 px-1 mr-1 shrink-0 ml-auto">
+        <Link href={'/sample/ui'} className='px-2.5 py-1.5 rounded-[3px] text-xs font-semibold transition-colors whitespace-nowrap bg-gray-200 hover:bg-gray-300/70'>
+          컴포넌트
+        </Link>
+      </div>
     </nav>
   )
 }

@@ -47,7 +47,7 @@ export function DatePicker({
 
   return (
     <LocalizationProvider dateAdapter={AdapterDayjs}>
-      <Box sx={sx}>
+      <Box sx={{ width: '100%', minWidth: 0, ...sx }}>
         <MuiDatePicker
           label={label}
           value={dayjsValue}

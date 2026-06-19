@@ -53,10 +53,12 @@ export function Chart({ data, height = 400, type = 'candlestick' }: ChartProps) 
         textColor: isDark ? '#cdd6f4' : '#333333',
       },
       grid: {
-        vertLines: { color: isDark ? '#313244' : '#e0e0e0' },
-        horzLines: { color: isDark ? '#313244' : '#e0e0e0' },
+        vertLines: { color: isDark ? '#313244' : '#e5e7eb' },
+        horzLines: { color: isDark ? '#313244' : '#e5e7eb' },
       },
-      timeScale: { timeVisible: true, secondsVisible: false },
+      timeScale: { timeVisible: true, secondsVisible: false, borderColor: isDark ? '#313244' : '#e5e7eb' },
+      rightPriceScale: { borderColor: isDark ? '#313244' : '#e5e7eb' },
+      localization: { priceFormatter: (p: number) => Math.round(p).toLocaleString('ko-KR') },
     })
 
     chartRef.current = chart
@@ -68,6 +70,8 @@ export function Chart({ data, height = 400, type = 'candlestick' }: ChartProps) 
       })
     }
 
+    const priceFormat = { type: 'price' as const, precision: 0, minMove: 1 }
+
     if (type === 'candlestick') {
       const series = chart.addSeries(CandlestickSeries, {
         upColor: UP_COLOR,
@@ -75,6 +79,7 @@ export function Chart({ data, height = 400, type = 'candlestick' }: ChartProps) 
         borderVisible: false,
         wickUpColor: UP_COLOR,
         wickDownColor: DOWN_COLOR,
+        priceFormat,
       })
       series.setData(
         data.map((d) => ({
@@ -87,7 +92,7 @@ export function Chart({ data, height = 400, type = 'candlestick' }: ChartProps) 
       )
       seriesRef.current = series
     } else if (type === 'line') {
-      const series = chart.addSeries(LineSeries, { color: '#2962ff', lineWidth: 2 })
+      const series = chart.addSeries(LineSeries, { color: '#2962ff', lineWidth: 2, priceFormat })
       series.setData(data.map((d) => ({ time: d.time as Time, value: d.close })))
       seriesRef.current = series
     } else if (type === 'area') {
@@ -95,6 +100,7 @@ export function Chart({ data, height = 400, type = 'candlestick' }: ChartProps) 
         lineColor: '#2962ff',
         topColor: 'rgba(41, 98, 255, 0.3)',
         bottomColor: 'rgba(41, 98, 255, 0)',
+        priceFormat,
       })
       series.setData(data.map((d) => ({ time: d.time as Time, value: d.close })))
       seriesRef.current = series

@@ -3,6 +3,7 @@ import React, { useState } from 'react'
 import type { ColDef } from 'ag-grid-community'
 import { Select } from '@/components/ui/Select'
 import { DataGrid } from '@/components/ui/DataGrid'
+import { Button } from '@mui/material'
 
 // 그리드 샘플
 interface GridStockRow {
@@ -64,27 +65,38 @@ export default function SampleWatchlistPage() {
       <div className="flex flex-col gap-4 w-full h-full p-4">
         <h1 className="text-lg font-bold text-foreground">관심종목 샘플 페이지</h1>
 
-        <Select
-          fullWidth
-          label="관심그룹 선택"
-          value={selectValue}
-          onChange={setSelectValue}
-          options={[
-            {
-              label: '관심그룹001',
-              value: '001'
-            },
-            {
-              label: '관심그룹002',
-              value: '002'
-            },
-            {
-              label: '관심그룹003',
-              value: '003'
-            }
-          ]}
-          size="small"
-        />
+        <div className="flex gap-2">
+          <div className='min-w-[160px]'>
+            <Select
+              fullWidth
+              label="관심그룹 선택"
+              value={selectValue}
+              onChange={setSelectValue}
+              options={[
+                {
+                  label: '관심그룹001',
+                  value: '001'
+                },
+                {
+                  label: '관심그룹002',
+                  value: '002'
+                },
+                {
+                  label: '관심그룹003',
+                  value: '003'
+                }
+              ]}
+              size="small"
+            />
+          </div>
+
+          <div className="flex gap-2 ml-auto">
+            <Button variant="outlined">그룹추가</Button>
+            <Button variant="outlined">그룹변경</Button>
+            <Button variant="outlined">그룹삭제</Button>
+            <Button variant="outlined">종목추가</Button>
+          </div>
+        </div>
 
         <DataGrid rows={gridRows} columnDefs={gridColumns} height={'100%'} />
       </div>

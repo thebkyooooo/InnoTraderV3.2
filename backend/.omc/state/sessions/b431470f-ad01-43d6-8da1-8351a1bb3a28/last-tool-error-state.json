@@ -1,7 +1,0 @@
-{
-  "tool_name": "Bash",
-  "tool_input_preview": "{\"command\":\"cd C:\\\\Works\\\\Dev\\\\Project\\\\InnoTraderV3.2\\\\frontend && npx tsc --noEmit --skipLibCheck 2>&1 | head -20\",\"timeout\":60000,\"description\":\"프론트엔드 타입 검증\"}",
-  "error": "Exit code 1\n/usr/bin/bash: line 1: cd: C:WorksDevProjectInnoTraderV3.2frontend: No such file or directory",
-  "timestamp": "2026-06-15T06:52:08.794Z",
-  "retry_count": 1
-}

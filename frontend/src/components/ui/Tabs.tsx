@@ -21,12 +21,13 @@ interface TabsProps {
 
 export function Tabs({ value, onChange, tabs, variant = 'standard' }: TabsProps) {
   return (
-    <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
+    <Box sx={{ borderBottom: 0, borderColor: 'divider' }}>
       <MuiTabs
         value={value}
         onChange={(_, newValue: string | number) => onChange(newValue)}
         variant={variant}
         scrollButtons={variant === 'scrollable' ? 'auto' : undefined}
+        sx={{ minHeight:'24px' }}
       >
         {tabs.map((tab) => (
           <MuiTab
@@ -36,6 +37,7 @@ export function Tabs({ value, onChange, tabs, variant = 'standard' }: TabsProps)
             icon={tab.icon ? <>{tab.icon}</> : undefined}
             iconPosition="start"
             disabled={tab.disabled}
+            sx={{ fontWeight: '600', p: 0, pb: 1.5, minHeight: '24px', minWidth: 0, px: '2px',  mx: 0.5, textTransform: 'none' }}
           />
         ))}
       </MuiTabs>

@@ -92,6 +92,16 @@ export interface TimeChartBar {
   filledVolume: number
 }
 
+export interface HogaEntry {
+  price: number
+  volume: number
+}
+
+export interface HogaData {
+  asks: HogaEntry[]  // 매도호가 (낮은→높은, 매도1~매도10)
+  bids: HogaEntry[]  // 매수호가 (높은→낮은, 매수1~매수10)
+}
+
 export type DailyChartType = 'D' | 'W' | 'M' | 'Y'
 
 export const quoteApi = {
@@ -115,6 +125,9 @@ export const quoteApi = {
 
   getDetail: (symbol: string) =>
     axiosInstance.get<QuoteDetailItem>('/api/public/quotes/detail', { params: { symbol } }),
+
+  getHoga: (symbol: string) =>
+    axiosInstance.get<HogaData>('/api/public/quotes/hoga', { params: { symbol } }),
 
   getChartDaily: (symbol: string, type: DailyChartType, size = 360, cursor?: string) =>
     axiosInstance.get<PageResult<DailyChartBar>>('/api/public/chart/daily', {

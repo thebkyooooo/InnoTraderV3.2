@@ -26,7 +26,7 @@ function diffColor(v: number) {
 const columnDefs: ColDef<DailyQuoteItem>[] = [
   { field: 'date',        headerName: '일자',    flex: 1, minWidth: 100,
     valueFormatter: p => fmtDate(p.value) },
-  { field: 'price',       headerName: '종가',    flex: 1, minWidth: 120, type: 'numericColumn',
+  { field: 'price',       headerName: '현재가',    flex: 1, minWidth: 120, type: 'numericColumn',
     valueFormatter: p => fmtNum(p.value) },
   { field: 'prevDiff',    headerName: '전일대비', flex: 1, minWidth: 120, type: 'numericColumn',
     valueFormatter: p => p.value > 0 ? `▲${fmtNum(p.value)}` : p.value < 0 ? `▼${fmtNum(Math.abs(p.value))}` : fmtNum(p.value),

@@ -1,7 +1,0 @@
-{
-  "tool_name": "Bash",
-  "tool_input_preview": "{\"command\":\"cd \\\"C:\\\\Works\\\\Dev\\\\Project\\\\InnoTraderV3.2\\\\frontend\\\" && npx tsc --noEmit 2>&1\",\"timeout\":60000,\"description\":\"TypeScript type check\"}",
-  "error": "Exit code 2\nsrc/components/quote/_chartIndicators.ts(258,21): error TS2552: Cannot find name 'closes'. Did you mean 'close'?\r\nsrc/components/quote/_chartIndicators.ts(258,33): error TS7006: Parameter 'c' implicitly has an 'any' type.\r\nsrc/components/quote/_chartIndicators.ts(258,36): error TS7006: Parameter 'i' implicitly has an 'any' type.\r\nsrc/components/quote/_chartIndicators.ts(258,55): error TS2552: Cannot find name 'closes'. Did you mean 'close'?\r\nsrc/components/quote/_chartIndicators.ts(2...",
-  "timestamp": "2026-06-16T03:48:39.887Z",
-  "retry_count": 1
-}

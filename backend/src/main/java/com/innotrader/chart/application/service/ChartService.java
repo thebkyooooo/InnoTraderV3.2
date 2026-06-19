@@ -2,17 +2,18 @@ package com.innotrader.chart.application.service;
 
 import com.innotrader.chart.domain.model.DailyChart;
 import com.innotrader.chart.domain.model.TimeChart;
+import com.innotrader.common.support.DailyBar;
+import com.innotrader.common.support.MockDailySeries;
+import com.innotrader.common.support.MockIntradaySeries;
 import com.innotrader.chart.domain.port.in.GetChartUseCase;
 import com.innotrader.chart.domain.port.out.FindStockBasePort;
 import com.innotrader.chart.domain.port.out.FindStockBasePort.StockBase;
 import com.innotrader.common.annotation.UseCase;
 
-import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
 import java.util.Optional;
-import java.util.Random;
 
 @UseCase
 public class ChartService implements GetChartUseCase {
@@ -65,53 +66,27 @@ public class ChartService implements GetChartUseCase {
     // ─── 일별 데이터 생성 ───────────────────────────────────────────────────────
 
     private List<DailyChart> buildDailyItems(StockBase base, DailyType type, int count) {
-        Random rng = new Random((long) base.symbol().hashCode() * 53 + type.ordinal());
-        LocalDate today = LocalDate.now();
-        List<DailyChart> result = new ArrayList<>(count);
-
-        long prevClose = base.price() - base.prevDiff();
-
-        for (int i = 0; i < count; i++) {
-            String date = dateStr(today, type, i);
-            long price  = Math.max(100, Math.round(prevClose * (1 + (rng.nextDouble() - 0.5) * volatility(type))));
-            long open   = Math.max(100, Math.round(prevClose * (1 + (rng.nextDouble() - 0.5) * 0.01)));
-            long high   = Math.max(price, open) + Math.round(price * 0.005);
-            long low    = Math.max(100, Math.min(price, open) - Math.round(price * 0.005));
-            long vol    = Math.round(base.volume() * (0.5 + rng.nextDouble()) * volMultiplier(type));
-            long diff   = price - prevClose;
-            double change = Math.round(diff * 1000.0 / (prevClose + 1)) / 10.0;
-
-            result.add(new DailyChart(date, price, diff, change, open, high, low, vol, vol * price / 10_000L));
-            prevClose = price;
+        // 일봉(D)은 공통 시리즈를, 주/월/년봉은 그 일봉을 집계해 사용한다.
+        List<DailyBar> bars = (type == DailyType.D)
+                ? MockDailySeries.generate(base.symbol(), base.price(), base.prevDiff(), base.volume(), count)
+                : MockDailySeries.generatePeriod(base.symbol(), base.price(), base.prevDiff(), base.volume(),
+                                                 toPeriod(type), count);
+        List<DailyChart> result = new ArrayList<>(bars.size());
+        for (DailyBar b : bars) {
+            result.add(new DailyChart(
+                    b.date(), b.close(), b.prevDiff(), b.change(),
+                    b.open(), b.high(), b.low(), b.volume(), b.turnoverMan()
+            ));
         }
         return result;
     }
 
-    private String dateStr(LocalDate today, DailyType type, int i) {
-        LocalDate d = switch (type) {
-            case D -> today.minusDays(i);
-            case W -> today.minusWeeks(i);
-            case M -> today.minusMonths(i).withDayOfMonth(1);
-            case Y -> today.minusYears(i).withDayOfYear(1);
-        };
-        return d.toString().replace("-", "");
-    }
-
-    private double volatility(DailyType type) {
+    private MockDailySeries.Period toPeriod(DailyType type) {
         return switch (type) {
-            case D -> 0.03;
-            case W -> 0.07;
-            case M -> 0.15;
-            case Y -> 0.30;
-        };
-    }
-
-    private double volMultiplier(DailyType type) {
-        return switch (type) {
-            case D -> 1.0;
-            case W -> 5.0;
-            case M -> 22.0;
-            case Y -> 252.0;
+            case W -> MockDailySeries.Period.W;
+            case M -> MockDailySeries.Period.M;
+            case Y -> MockDailySeries.Period.Y;
+            case D -> throw new IllegalArgumentException("D는 일봉 생성기를 사용");
         };
     }
 
@@ -127,30 +102,15 @@ public class ChartService implements GetChartUseCase {
     // ─── 분별 데이터 생성 ───────────────────────────────────────────────────────
 
     private List<TimeChart> buildTimeItems(StockBase base, TimeType type) {
-        Random rng = new Random((long) base.symbol().hashCode() * 59 + type.minutes);
-        int candlesPerDay  = 390 / type.minutes;
-        long prevDayClose  = base.price() - base.prevDiff();
-        long cumVol        = 0;
-        List<TimeChart> result = new ArrayList<>(TIME_POOL);
-
-        for (int i = 0; i < TIME_POOL; i++) {
-            int candleInDay    = i % candlesPerDay;
-            // 가장 최근 캔들(i=0)이 15:30에 가장 가까운 캔들 → 역순 배치
-            int minFromOpen    = (candlesPerDay - 1 - candleInDay) * type.minutes;
-            String time        = String.format("%02d%02d00", 9 + minFromOpen / 60, minFromOpen % 60);
-
-            long price       = Math.max(100, Math.round(base.price() * (1 + (rng.nextDouble() - 0.5) * 0.004)));
-            long open        = Math.max(100, Math.round(price * (1 + (rng.nextDouble() - 0.5) * 0.002)));
-            long high        = Math.max(price, open) + Math.round(price * 0.002);
-            long low         = Math.max(100, Math.min(price, open) - Math.round(price * 0.002));
-            long filledVol   = Math.max(1, Math.round(rng.nextDouble() * base.volume() / candlesPerDay * 2));
-            if (candleInDay == 0) cumVol = 0;
-            cumVol += filledVol;
-
-            long diff     = price - prevDayClose;
-            double change = Math.round(diff * 1000.0 / (prevDayClose + 1)) / 10.0;
-
-            result.add(new TimeChart(time, price, diff, change, open, high, low, filledVol, cumVol));
+        // 분봉은 일봉(시가→종가) 브리지로 생성되어 일봉과 일관되며 최신 봉 종가 = 현재가
+        List<MockIntradaySeries.IntraBar> bars = MockIntradaySeries.minuteCandles(
+                base.symbol(), base.price(), base.prevDiff(), base.volume(), type.minutes, TIME_POOL);
+        List<TimeChart> result = new ArrayList<>(bars.size());
+        for (MockIntradaySeries.IntraBar b : bars) {
+            result.add(new TimeChart(
+                    b.time(), b.close(), b.prevDiff(), b.change(),
+                    b.open(), b.high(), b.low(), b.filledVolume(), b.cumVolume()
+            ));
         }
         return result;
     }

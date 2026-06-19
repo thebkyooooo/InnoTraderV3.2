@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, type PointerEvent as RPointerEvent, type MouseEvent as RMouseEvent } from 'react'
 import {
   createChart, ColorType, IChartApi, ISeriesApi, SeriesType, Time,
   CandlestickSeries, LineSeries, AreaSeries, HistogramSeries, BarSeries,
@@ -62,12 +62,19 @@ function toLineData(bars: Bar[], values: (number | null)[]) {
     .filter((d): d is { time: Time; value: number } => d.value !== null)
 }
 
+const SUB_PRICE_FORMAT = { type: 'price' as const, precision: 0, minMove: 1 }
+const SUB_SCALE_MARGINS = { scaleMargins: { top: 0.1, bottom: 0 } }
+
 function mkLine(chart: IChartApi, color: string, pane: number, width: 1 | 2 | 3 | 4 = 1) {
-  return chart.addSeries(LineSeries, { color, lineWidth: width, lastValueVisible: false, priceLineVisible: false }, pane)
+  const s = chart.addSeries(LineSeries, { color, lineWidth: width, lastValueVisible: false, priceLineVisible: false, priceFormat: SUB_PRICE_FORMAT }, pane)
+  if (pane > 0) s.priceScale().applyOptions(SUB_SCALE_MARGINS)
+  return s
 }
 
 function mkHist(chart: IChartApi, pane: number) {
-  return chart.addSeries(HistogramSeries, { lastValueVisible: false, priceLineVisible: false }, pane)
+  const s = chart.addSeries(HistogramSeries, { lastValueVisible: false, priceLineVisible: false, priceFormat: SUB_PRICE_FORMAT }, pane)
+  if (pane > 0) s.priceScale().applyOptions(SUB_SCALE_MARGINS)
+  return s
 }
 
 // crosshair x축 라벨: 일봉="26.06.16", 분봉="26.06.16 01:26"
@@ -105,11 +112,12 @@ function buildChart(
       textColor: isDark ? '#cdd6f4' : '#333',
     },
     grid: {
-      vertLines: { color: isDark ? '#313244' : '#f0f0f0' },
-      horzLines: { color: isDark ? '#313244' : '#f0f0f0' },
+      vertLines: { color: isDark ? '#313244' : '#e5e7eb' },
+      horzLines: { color: isDark ? '#313244' : '#e5e7eb' },
     },
-    timeScale: { timeVisible: true, secondsVisible: false },
-    localization: { timeFormatter: fmtCrosshairTime },
+    timeScale: { timeVisible: true, secondsVisible: false, borderColor: isDark ? '#313244' : '#e5e7eb' },
+    rightPriceScale: { borderColor: isDark ? '#313244' : '#e5e7eb' },
+    localization: { timeFormatter: fmtCrosshairTime, priceFormatter: (p: number) => Math.round(p).toLocaleString('ko-KR') },
     crosshair: { mode: 1 },
   })
 
@@ -121,23 +129,24 @@ function buildChart(
   // ── 가격 시리즈 (pane 0) ──────────────────────────────────────────────────
 
   const priceScale = { scaleMargins: { top: 0.08, bottom: 0.04 } }
+  const priceFormat = { type: 'price' as const, precision: 0, minMove: 1 }
 
   if (chartType === 'candlestick') {
     const s = chart.addSeries(CandlestickSeries, {
-      upColor: UP, downColor: DOWN, borderVisible: false, wickUpColor: UP, wickDownColor: DOWN,
+      upColor: UP, downColor: DOWN, borderVisible: false, wickUpColor: UP, wickDownColor: DOWN, priceFormat,
     }, 0)
     s.setData(bars.map(b => ({ time: b.time, open: b.open, high: b.high, low: b.low, close: b.close })))
     s.priceScale().applyOptions(priceScale)
   } else if (chartType === 'bar') {
-    const s = chart.addSeries(BarSeries, { upColor: UP, downColor: DOWN }, 0)
+    const s = chart.addSeries(BarSeries, { upColor: UP, downColor: DOWN, priceFormat }, 0)
     s.setData(bars.map(b => ({ time: b.time, open: b.open, high: b.high, low: b.low, close: b.close })))
     s.priceScale().applyOptions(priceScale)
   } else if (chartType === 'line') {
-    const s = chart.addSeries(LineSeries, { color: UP, lineWidth: 2 }, 0)
+    const s = chart.addSeries(LineSeries, { color: UP, lineWidth: 2, priceFormat }, 0)
     s.setData(bars.map(b => ({ time: b.time, value: b.close })))
     s.priceScale().applyOptions(priceScale)
   } else {
-    const s = chart.addSeries(AreaSeries, { lineColor: UP, topColor: 'rgba(239,83,80,0.25)', bottomColor: 'rgba(239,83,80,0)' }, 0)
+    const s = chart.addSeries(AreaSeries, { lineColor: UP, topColor: 'rgba(239,83,80,0.25)', bottomColor: 'rgba(239,83,80,0)', priceFormat }, 0)
     s.setData(bars.map(b => ({ time: b.time, value: b.close })))
     s.priceScale().applyOptions(priceScale)
   }
@@ -259,6 +268,11 @@ function buildChart(
     }
   })
 
+  // ── pane 높이 비율 조정 (메인 : 보조 = 4 : 1) ─────────────────────────────
+  const panes = chart.panes()
+  panes[0]?.setStretchFactor(4)
+  for (let i = 1; i < panes.length; i++) panes[i]?.setStretchFactor(1)
+
   return chart
 }
 
@@ -274,9 +288,12 @@ export function AnalysisChart({ symbol }: AnalysisChartProps) {
   const [overlays, setOverlays]   = useState<Set<string>>(new Set(['ma5', 'ma20']))
   const [subs, setSubs]           = useState<Set<string>>(new Set(['volume']))
   const [bars, setBars]           = useState<Bar[]>([])
+  const [hoverBar, setHoverBar]   = useState<Bar | null>(null)
   const [loading, setLoading]     = useState(false)
   const [overlayOpen, setOverlayOpen] = useState(false)
   const [subOpen, setSubOpen]         = useState(false)
+  const [overlayPos, setOverlayPos]   = useState<{ top: number; left: number } | null>(null)
+  const [subPos, setSubPos]           = useState<{ top: number; left: number } | null>(null)
 
   const containerRef        = useRef<HTMLDivElement>(null)
   const chartRef            = useRef<IChartApi | null>(null)
@@ -291,6 +308,8 @@ export function AnalysisChart({ symbol }: AnalysisChartProps) {
   const viewCountRef         = useRef(MIN_VIEW)
   const overlayRef          = useRef<HTMLDivElement>(null)
   const subRef              = useRef<HTMLDivElement>(null)
+  const scrollRef           = useRef<HTMLDivElement>(null)
+  const dragRef             = useRef({ active: false, startX: 0, startLeft: 0, moved: false })
 
   // ── 데이터 로드 ────────────────────────────────────────────────────────────
 
@@ -379,6 +398,13 @@ export function AnalysisChart({ symbol }: AnalysisChartProps) {
     const chart = buildChart(containerRef.current, bars, chartType, overlays, subs)
     chartRef.current = chart
 
+    // crosshair 이동 → 해당 봉 OHLCV 표시 (벗어나면 최신 봉)
+    const barByTime = new Map(bars.map(b => [b.time, b]))
+    const crosshairHandler = (param: { time?: Time }) => {
+      setHoverBar(param.time != null ? barByTime.get(param.time) ?? null : null)
+    }
+    chart.subscribeCrosshairMove(crosshairHandler)
+
     const rangeHandler = (range: LogicalRange | null) => {
       if (range === null) return
       if (range.from > 10) armedRef.current = true          // 끝에서 충분히 벗어남 → 재무장
@@ -405,6 +431,7 @@ export function AnalysisChart({ symbol }: AnalysisChartProps) {
       if (!resetPendingRef.current) savedRangeRef.current = chart.timeScale().getVisibleRange()
       resetPendingRef.current = false
       chart.timeScale().unsubscribeVisibleLogicalRangeChange(rangeHandler)
+      chart.unsubscribeCrosshairMove(crosshairHandler)
       chart.remove()
       chartRef.current = null
     }
@@ -429,20 +456,75 @@ export function AnalysisChart({ symbol }: AnalysisChartProps) {
   const toggleSub = (id: string) =>
     setSubs(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n })
 
+  // ── 툴바 가로 드래그 스크롤 (마우스). 터치는 native 스크롤이 처리 ──────────
+  const onTbPointerDown = (e: RPointerEvent) => {
+    if (e.pointerType !== 'mouse') return
+    const el = scrollRef.current; if (!el) return
+    dragRef.current = { active: true, startX: e.clientX, startLeft: el.scrollLeft, moved: false }
+  }
+  const onTbPointerMove = (e: RPointerEvent) => {
+    const el = scrollRef.current, d = dragRef.current
+    if (!el || !d.active) return
+    const dx = e.clientX - d.startX
+    if (Math.abs(dx) > 3) d.moved = true
+    el.scrollLeft = d.startLeft - dx
+  }
+  const onTbPointerUp = () => { dragRef.current.active = false }
+  // 드래그로 이동한 경우 버튼 클릭(선택) 억제
+  const onTbClickCapture = (e: RMouseEvent) => {
+    if (dragRef.current.moved) { e.stopPropagation(); e.preventDefault(); dragRef.current.moved = false }
+  }
+  const onTbScroll = () => { setOverlayOpen(false); setSubOpen(false) }
+
+  // ── 드롭다운 열기: 트리거 버튼 위치 기준으로 fixed 패널 배치 ────────────────
+  const openMenu = (e: RMouseEvent, which: 'overlay' | 'sub') => {
+    const r = e.currentTarget.getBoundingClientRect()
+    const pos = { top: r.bottom + 2, left: r.left }
+    if (which === 'overlay') {
+      setSubOpen(false)
+      setOverlayOpen(v => { if (!v) setOverlayPos(pos); return !v })
+    } else {
+      setOverlayOpen(false)
+      setSubOpen(v => { if (!v) setSubPos(pos); return !v })
+    }
+  }
+
   // ── UI ─────────────────────────────────────────────────────────────────────
 
-  const btnBase = 'px-2 py-1 text-xs rounded transition-colors'
+  const btnBase = 'px-2 py-1 text-xs rounded transition-colors shrink-0 whitespace-nowrap'
   const btnActive = 'bg-blue-600 text-white'
-  const btnInactive = 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+  const btnInactive = 'bg-gray-200 text-gray-600 hover:bg-gray-200'
+
+  // ── 상단 OHLCV 범례 (hover 봉 우선, 없으면 최신 봉) ─────────────────────────
+  const dispIdx = hoverBar
+    ? bars.findIndex(b => b.time === hoverBar.time)
+    : bars.length - 1
+  const disp = bars[dispIdx]
+  const prevClose = bars[dispIdx - 1]?.close ?? disp?.open
+  const diff = disp ? disp.close - prevClose : 0
+  const changePct = prevClose ? (diff / prevClose) * 100 : 0
+  const upColor = diff >= 0 ? UP : DOWN
+  const fmt = (n: number) => Math.round(n).toLocaleString('ko-KR')
+  // 각 값을 전봉 종가 대비 개별 색상 (한국 HTS 관례)
+  const valColor = (v: number) => (v > prevClose ? UP : v < prevClose ? DOWN : '#6b7280')
 
   return (
-    <div className="flex flex-col h-full overflow-hidden">
-      {/* 툴바 */}
-      <div className="flex flex-wrap items-center gap-1 px-2 py-1.5 border-b border-gray-200 bg-white shrink-0 text-xs">
+    <div className="flex flex-col gap-2 h-full overflow-hidden p-4 pb-2 bg-white">
+      {/* 툴바 (가로 스크롤 + 마우스 드래그/터치 이동) */}
+      <div
+        ref={scrollRef}
+        onPointerDown={onTbPointerDown}
+        onPointerMove={onTbPointerMove}
+        onPointerUp={onTbPointerUp}
+        onPointerLeave={onTbPointerUp}
+        onClickCapture={onTbClickCapture}
+        onScroll={onTbScroll}
+        className="flex flex-nowrap items-center gap-1.5 shrink-0 text-xs overflow-x-auto cursor-grab active:cursor-grabbing select-none [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      >
 
         {/* 조회 모드 */}
-        <div className="flex gap-0.5 rounded border border-gray-200 overflow-hidden">
-          {(['minute', 'daily'] as const).map(m => (
+        <div className="flex gap-0 rounded border-0 overflow-hidden shrink-0">
+          {(['daily', 'minute'] as const).map(m => (
             <button key={m} onClick={() => setMode(m)}
               className={`px-2.5 py-1 ${mode === m ? btnActive : btnInactive} rounded-none`}>
               {m === 'minute' ? '분봉' : '일봉'}
@@ -452,7 +534,7 @@ export function AnalysisChart({ symbol }: AnalysisChartProps) {
 
         {/* 분봉 서브 */}
         {mode === 'minute' && (
-          <div className="flex gap-0.5">
+          <div className="flex gap-0.5 shrink-0">
             {([1,5,10,30,60] as MinPeriod[]).map(p => (
               <button key={p} onClick={() => setMinPeriod(p)}
                 className={`${btnBase} ${minPeriod === p ? btnActive : btnInactive}`}>
@@ -464,7 +546,7 @@ export function AnalysisChart({ symbol }: AnalysisChartProps) {
 
         {/* 일봉 서브 */}
         {mode === 'daily' && (
-          <div className="flex gap-0.5">
+          <div className="flex gap-0.5 shrink-0">
             {(['D','W','M','Y'] as DailyChartType[]).map(t => (
               <button key={t} onClick={() => setDailyType(t)}
                 className={`${btnBase} ${dailyType === t ? btnActive : btnInactive}`}>
@@ -474,10 +556,10 @@ export function AnalysisChart({ symbol }: AnalysisChartProps) {
           </div>
         )}
 
-        <div className="w-px h-4 bg-gray-200 mx-0.5" />
+        <div className="w-px h-4 bg-gray-200 mx-0.5 shrink-0" />
 
         {/* 차트 유형 */}
-        <div className="flex gap-0.5">
+        <div className="flex gap-0.5 shrink-0">
           {([
             ['candlestick','캔들'],['bar','바'],['line','라인'],['area','영역']
           ] as [ChartType,string][]).map(([t, label]) => (
@@ -488,16 +570,17 @@ export function AnalysisChart({ symbol }: AnalysisChartProps) {
           ))}
         </div>
 
-        <div className="w-px h-4 bg-gray-200 mx-0.5" />
+        <div className="w-px h-4 bg-gray-200 mx-0.5 shrink-0" />
 
         {/* 오버레이 드롭다운 */}
-        <div ref={overlayRef} className="relative">
-          <button onClick={() => setOverlayOpen(v => !v)}
+        <div ref={overlayRef} className="relative shrink-0">
+          <button onClick={e => openMenu(e, 'overlay')}
             className={`${btnBase} border ${overlayOpen ? 'border-blue-400 text-blue-600' : 'border-gray-200 text-gray-600'} bg-white hover:bg-gray-50`}>
             오버레이{overlays.size > 0 ? ` (${overlays.size})` : ''}
           </button>
-          {overlayOpen && (
-            <div className="absolute top-full left-0 z-20 mt-0.5 bg-white border border-gray-200 rounded shadow-lg min-w-[150px] py-1">
+          {overlayOpen && overlayPos && (
+            <div className="fixed z-30 bg-white border border-gray-200 rounded shadow-lg min-w-[150px] py-1"
+              style={{ top: overlayPos.top, left: overlayPos.left }}>
               {OVERLAYS.map(({ id, label, color }) => (
                 <label key={id} className="flex items-center gap-2 px-3 py-1 hover:bg-gray-50 cursor-pointer">
                   <input type="checkbox" checked={overlays.has(id)} onChange={() => toggleOverlay(id)}
@@ -511,13 +594,14 @@ export function AnalysisChart({ symbol }: AnalysisChartProps) {
         </div>
 
         {/* 보조지표 드롭다운 */}
-        <div ref={subRef} className="relative">
-          <button onClick={() => setSubOpen(v => !v)}
+        <div ref={subRef} className="relative shrink-0">
+          <button onClick={e => openMenu(e, 'sub')}
             className={`${btnBase} border ${subOpen ? 'border-blue-400 text-blue-600' : 'border-gray-200 text-gray-600'} bg-white hover:bg-gray-50`}>
             보조지표{subs.size > 0 ? ` (${subs.size})` : ''}
           </button>
-          {subOpen && (
-            <div className="absolute top-full left-0 z-20 mt-0.5 bg-white border border-gray-200 rounded shadow-lg min-w-[150px] py-1">
+          {subOpen && subPos && (
+            <div className="fixed z-30 bg-white border border-gray-200 rounded shadow-lg min-w-[150px] py-1"
+              style={{ top: subPos.top, left: subPos.left }}>
               {SUBS.map(({ id, label }) => (
                 <label key={id} className="flex items-center gap-2 px-3 py-1 hover:bg-gray-50 cursor-pointer">
                   <input type="checkbox" checked={subs.has(id)} onChange={() => toggleSub(id)}
@@ -530,12 +614,33 @@ export function AnalysisChart({ symbol }: AnalysisChartProps) {
         </div>
 
         {loading && (
-          <span className="text-gray-400 ml-1">로딩 중...</span>
+          <span className="text-gray-400 ml-1 shrink-0 whitespace-nowrap">로딩 중...</span>
         )}
       </div>
 
       {/* 차트 영역 */}
-      <div ref={containerRef} className="flex-1 min-h-0" />
+      <div className="relative flex-1 min-h-0 border-t border-gray-200">
+        {disp && (
+          <div className="absolute top-1.5 left-2 z-10 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs pointer-events-none select-none w-[calc(100%-100px)]">
+            {([['시', disp.open], ['고', disp.high], ['저', disp.low], ['종', disp.close]] as [string, number][]).map(([l, v]) => (
+              <span key={l} className="flex items-center gap-1">
+                <span className="text-gray-400">{l}</span>
+                <span className="font-medium tabular-nums" style={{ color: valColor(v) }}>{fmt(v)}</span>
+              </span>
+            ))}
+            <span className="flex items-center gap-1">
+              <span className="font-medium tabular-nums" style={{ color: upColor }}>
+                {diff >= 0 ? '+' : ''}{fmt(diff)} ({changePct >= 0 ? '+' : ''}{changePct.toFixed(2)}%)
+              </span>
+            </span>
+            <span className="flex items-center gap-1">
+              <span className="text-gray-400">거래량</span>
+              <span className="font-medium tabular-nums text-gray-600">{fmt(disp.volume)}</span>
+            </span>
+          </div>
+        )}
+        <div ref={containerRef} className="absolute inset-0" />
+      </div>
     </div>
   )
 }

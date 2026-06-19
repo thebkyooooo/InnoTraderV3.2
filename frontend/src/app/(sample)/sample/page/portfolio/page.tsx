@@ -66,55 +66,48 @@ export default function SamplePortfolioPage() {
 
         <h1 className="text-lg font-bold text-foreground">포트폴리오(보유주식) 샘플 페이지</h1>
 
-        {/* 계좌 셀렉트 */}
-        <Select
-          fullWidth
-          label="계좌번호 선택"
-          value={selectValue}
-          onChange={setSelectValue}
-          options={[
-            {
-              label: '123-01-123456 주식계좌',
-              value: '001'
-            },
-            {
-              label: '123-02-123456 주식계좌',
-              value: '002'
-            },
-            {
-              label: '123-03-123456 주식계좌',
-              value: '003'
-            }
-          ]}
-          size="small"
-          placeholder='계좌번호를 선택하세요'
-        />
+        <div className="max-w-[236px]">
+          {/* 계좌 셀렉트 */}
+          <Select
+            fullWidth
+            label="계좌번호 선택"
+            value={selectValue}
+            onChange={setSelectValue}
+            options={[
+              {
+                label: '123-01-123456 주ㄴㅇㄻㄴㅇㄻㄴㅇㄻㄴㅇㄹㄴㅇㅁ식계좌',
+                value: '001'
+              },
+              {
+                label: '123-02-123456 주식계좌',
+                value: '002'
+              },
+              {
+                label: '123-03-123456 주식계좌',
+                value: '003'
+              }
+            ]}
+            size="small"
+            placeholder='계좌번호를 선택하세요'
+          />
+        </div>
 
         {/* 보유주식 요약 */}
         <div className='flex gap-2 '>
-          <Card  sx={{ width: '100%' }}>
-            <div className='flex flex-col gap-2 justify-between -mb-3'>
-              <span className='text-sm'>총자산</span>
-              <span className='text-right'>100,000,000</span>
-            </div>
+          <Card title="총자산" titleSx={{ fontSize: 12, mb: -3 }} sx={{ width: '100%' }}>
+            <div className='text-right'>100,000,000</div>
           </Card>
-          <Card  sx={{ width: '100%' }}>
-            <div className='flex flex-col gap-2 justify-between -mb-3'>
-              <span className='text-sm'>총평가</span>
-              <span className='text-right'>100,000,000</span>
-            </div>
+          <Card title="총평가" titleSx={{ fontSize: 12, mb: -3 }} sx={{ width: '100%' }}>
+            <div className='text-right'>100,000,000</div>
           </Card>
-          <Card  sx={{ width: '100%' }}>
-            <div className='flex flex-col gap-2 justify-between -mb-3'>
-              <span className='text-sm'>총수익</span>
-              <span className='text-right'>100,000,000</span>
-            </div>
+          <Card title="원금" titleSx={{ fontSize: 12, mb: -3 }} sx={{ width: '100%' }}>
+            <div className='text-right'>100,000,000</div>
           </Card>
-          <Card  sx={{ width: '100%' }}>
-            <div className='flex flex-col gap-2 justify-between -mb-3'>
-              <span className='text-sm'>수익률</span>
-              <span className='text-right'>35.15%</span>
-            </div>
+          <Card title="총수익" titleSx={{ fontSize: 12, mb: -3 }} sx={{ width: '100%' }}>
+            <div className='text-right'>100,000,000</div>
+          </Card>
+          <Card title="수익률" titleSx={{ fontSize: 12, mb: -3 }} sx={{ width: '100%' }}>
+            <div className='text-right'>35.50%</div>
           </Card>
         </div>
 

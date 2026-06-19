@@ -2,6 +2,7 @@ package com.innotrader.common.config;
 
 import com.innotrader.common.security.JwtAuthenticationFilter;
 import com.innotrader.common.security.JwtTokenProvider;
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -78,6 +79,11 @@ public class SecurityConfig {
                 ).permitAll()
                 .anyRequest().authenticated()
             )
+            // 인증 없이 보호 엔드포인트 접근 시 403이 아닌 401 반환
+            // → 프론트 axios 인터셉터가 RT로 토큰을 재발급하고 재시도할 수 있게 한다.
+            .exceptionHandling(ex -> ex.authenticationEntryPoint(
+                (request, response, authException) ->
+                    response.sendError(HttpServletResponse.SC_UNAUTHORIZED)))
             .addFilterBefore(jwtAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class);
 
         return http.build();

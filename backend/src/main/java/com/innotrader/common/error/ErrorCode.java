@@ -52,7 +52,19 @@ public enum ErrorCode {
     // -------------------------------------------------------------------------
     // PORTFOLIO
     // -------------------------------------------------------------------------
-    POSITION_NOT_FOUND(HttpStatus.NOT_FOUND, "PORTFOLIO_001", "Position not found");
+    POSITION_NOT_FOUND(HttpStatus.NOT_FOUND, "PORTFOLIO_001", "Position not found"),
+
+    // -------------------------------------------------------------------------
+    // ACCOUNT
+    // -------------------------------------------------------------------------
+    ACCOUNT_NOT_FOUND(HttpStatus.NOT_FOUND, "ACCOUNT_001", "계좌를 찾을 수 없습니다."),
+
+    // -------------------------------------------------------------------------
+    // WATCHLIST
+    // -------------------------------------------------------------------------
+    WATCHLIST_GROUP_NOT_FOUND(HttpStatus.NOT_FOUND, "WATCHLIST_001", "관심그룹을 찾을 수 없습니다."),
+    WATCHLIST_GROUP_LIMIT(HttpStatus.UNPROCESSABLE_ENTITY, "WATCHLIST_002", "관심그룹은 최대 100개까지 등록할 수 있습니다."),
+    WATCHLIST_ITEM_LIMIT(HttpStatus.UNPROCESSABLE_ENTITY, "WATCHLIST_003", "그룹당 관심종목은 최대 100개까지 등록할 수 있습니다.");
 
     private final HttpStatus httpStatus;
     private final String code;
