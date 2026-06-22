@@ -1,44 +1,65 @@
-import type { Metadata } from 'next'
+'use client'
+import React, { useState } from 'react'
+import { AccountSelect } from '@/components/account'
+import { Card } from '@/components/ui/Card'
+import Typography from '@mui/material/Typography'
 
-export const metadata: Metadata = { title: 'InnoTrader — 대시보드' }
-export const dynamic = 'force-dynamic'
+import DevicesFoldOutlinedIcon from '@mui/icons-material/DevicesFoldOutlined';
 
 export default function DashboardPage() {
+  const [accountNo, setAccountNo] = useState('')
+  const [panelOpen, setPanelOpen] = useState(true)
+
   return (
-    <div>
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-foreground">대시보드</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          시장 현황 및 계좌 요약을 확인하세요.
-        </p>
-      </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-        <div className="bg-card border border-border rounded-lg p-4">
-          <p className="text-sm text-muted-foreground">총 평가금액</p>
-          <p className="text-2xl font-bold text-foreground font-numeric mt-1">₩ --</p>
-          <p className="text-xs text-muted-foreground mt-1">데이터 로딩 중...</p>
-        </div>
-        <div className="bg-card border border-border rounded-lg p-4">
-          <p className="text-sm text-muted-foreground">오늘 손익</p>
-          <p className="text-2xl font-bold font-numeric mt-1">--</p>
-          <p className="text-xs text-muted-foreground mt-1">수익률: --%</p>
-        </div>
-        <div className="bg-card border border-border rounded-lg p-4">
-          <p className="text-sm text-muted-foreground">주문 대기</p>
-          <p className="text-2xl font-bold text-foreground font-numeric mt-1">--</p>
-          <p className="text-xs text-muted-foreground mt-1">미체결 주문</p>
-        </div>
-      </div>
+      <div className='flex flex-col sm:h-full sm:flex-row gap-4 relative'>
+        <button
+          type="button"
+          onClick={() => setPanelOpen(v => !v)}
+          aria-pressed={panelOpen}
+          title={panelOpen ? '패널 숨기기' : '패널 보기'}
+          className='absolute top-0 right-[-2px] hidden sm:block border border-gray-50 bg-gray-200 rounded-xl h-[43px] w-[43px]'
+        >
+          <DevicesFoldOutlinedIcon sx={{ fontSize: 26, color: panelOpen ? 'primary.main' : 'text.disabled' }} />
+        </button>
 
-      <div className="bg-card border border-border rounded-lg">
-        <div className="p-4 border-b border-border">
-          <h2 className="font-semibold text-foreground">최근 체결 내역</h2>
+        <div className="flex-1 flex gap-4">
+          <h1 className="text-2xl font-bold text-foreground">대시보드</h1>
         </div>
-        <div className="p-8 text-center text-muted-foreground text-sm">
-          체결 내역이 없습니다.
+
+        <div
+          aria-hidden={!panelOpen}
+          className={`shrink-0 overflow-hidden transition-[width,opacity] duration-300 ease-in-out ${panelOpen ? 'sm:w-[260px] sm:opacity-100' : 'sm:w-0 sm:opacity-0'}`}
+        >
+        <div className="sm:w-[260px] shrink-0 h-full flex flex-col gap-4 pt-0.5">
+          {/* 계좌 셀렉트 */}
+          <div className="sm:w-[calc(100%-46px)]">
+            <AccountSelect fullWidth value={accountNo} onChange={setAccountNo} label="계좌 선택" placeholder="계좌번호를 선택하세요" />
+          </div>
+          
+          <div className="sm:w-[260px] shrink-0 flex-1 flex flex-col gap-4 border rounded-l-xl border-gray-200  p-4 bg-white">
+            <Card title="총 평가금액" subtitle='72,000,300원' titleSx={{fontSize: '14px'}} subtitleSx={{fontSize: '20px'}}>
+              <ul className='flex flex-col text-sm'>
+                <li className='flex-1 flex justify-between'><span>+12,000,000원</span><span>(+1.2%)</span></li>
+              </ul>              
+            </Card>
+
+            <Card title="주문대기" subtitle='2건' titleSx={{fontSize: '14px'}}>
+              <ul className='flex flex-col text-sm'>
+                <li className='flex-1 flex justify-between'><span>삼성전자</span><span>10주</span></li>
+                <li className='flex-1 flex justify-between'><span>SK하이닉스</span><span>10주</span></li>
+              </ul>
+            </Card>
+            <Card title="체결완료" subtitle='3건' titleSx={{fontSize: '14px'}}>
+              <ul className='flex flex-col text-sm'>
+                <li className='flex-1 flex justify-between'><span>삼성전자</span><span>10주</span></li>
+                <li className='flex-1 flex justify-between'><span>SK하이닉스</span><span>10주</span></li>
+                <li className='flex-1 flex justify-between'><span>현대자동차</span><span>10주</span></li>
+              </ul>
+            </Card>
+          </div>
+        </div>
         </div>
       </div>
-    </div>
   )
 }

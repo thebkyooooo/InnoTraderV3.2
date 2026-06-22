@@ -24,6 +24,15 @@ function ThemeProvider({ children }: { children: React.ReactNode }) {
 // ─── MSW 초기화 ───────────────────────────────────────────────────────────────
 
 async function isBackendAlive(): Promise<boolean> {
+  // 이전 세션의 MSW 서비스워커가 이 페이지를 제어 중이면, 아래 헬스체크 fetch가 워커에
+  // 가로채여 죽은 백엔드로 passthrough되고 SW 레벨에서 무해한 'Failed to fetch'
+  // unhandledrejection이 발생한다(앱 try/catch로는 잡히지 않음). 프로브 동안만 억제한다.
+  const suppress = (e: PromiseRejectionEvent) => {
+    if (e.reason instanceof TypeError && e.reason.message === 'Failed to fetch') {
+      e.preventDefault()
+    }
+  }
+  window.addEventListener('unhandledrejection', suppress)
   try {
     const res = await fetch(
       `${process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:8080'}/actuator/health`,
@@ -32,6 +41,9 @@ async function isBackendAlive(): Promise<boolean> {
     return res.ok
   } catch {
     return false
+  } finally {
+    // SW의 rejection은 fetch 직후 비동기로 표면화되므로 잠시 뒤 리스너 제거
+    setTimeout(() => window.removeEventListener('unhandledrejection', suppress), 2000)
   }
 }
 
@@ -59,6 +71,18 @@ async function initMsw() {
     onUnhandledRequest: 'bypass',
     serviceWorker: { url: '/mockServiceWorker.js' },
   })
+
+  // 새로 등록/활성화된 서비스워커가 아직 현재 페이지를 '제어'하지 않으면 요청이
+  // 인터셉트되지 않고 실제 백엔드로 새어나가(ERR_CONNECTION_REFUSED) 모킹이 동작하지 않는다.
+  // 이 경우 한 번만 새로고침해 SW가 페이지를 제어하도록 한다(루프 방지: 세션당 1회).
+  if (!navigator.serviceWorker.controller) {
+    if (!sessionStorage.getItem('msw-reloaded')) {
+      sessionStorage.setItem('msw-reloaded', '1')
+      window.location.reload()
+    }
+  } else {
+    sessionStorage.removeItem('msw-reloaded')
+  }
 }
 
 // ─── QueryClient 싱글톤 ───────────────────────────────────────────────────────

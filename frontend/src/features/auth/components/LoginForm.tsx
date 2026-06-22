@@ -14,7 +14,7 @@ export function LoginForm() {
     resolver: zodResolver(loginSchema),
   })
 
-  const { mutate: login, isPending, error } = useLogin()
+  const { mutate: login, isPending, error, reset } = useLogin()
 
   // axios 에러에서 서버 메시지 추출
   const serverError = (() => {
@@ -109,8 +109,15 @@ export function LoginForm() {
 
       {/* 서버 에러 */}
       {serverError && (
-        <div className="flex items-center justify-center rounded-md bg-destructive/20 p-8 text-sm font-medium text-destructive absolute bottom-0 left-0 w-full h-full z-100">
-          {serverError}
+        <div className="flex flex-col gap-2 items-center justify-center rounded-md bg-destructive/20 p-8 text-sm font-medium text-destructive absolute bottom-0 left-0 w-full h-full z-100">
+          <p className='text-center'>{serverError}</p>
+          <button
+            type="button"
+            onClick={() => reset()}
+            className='w-full bg-black/90 rounded-lg py-3 text-sm text-primary hover:underline'
+          >
+            다시 로그인하기
+          </button>
         </div>
       )}
     </div>

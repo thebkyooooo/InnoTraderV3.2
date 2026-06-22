@@ -40,23 +40,39 @@ export function Select<T extends string | number = string>({
 }: SelectProps<T>) {
   const labelId = label ? `select-label-${label.replace(/\s+/g, '-')}` : undefined
 
+  const anchorRef = React.useRef<HTMLDivElement>(null)
+  const [menuWidth, setMenuWidth] = React.useState<number>()
+
   const handleChange = (e: SelectChangeEvent<T | ''>) => {
     const val = e.target.value
     if (val !== '') onChange(val as T)
   }
 
   return (
-    <FormControl fullWidth={fullWidth} error={error} size={size} disabled={disabled} sx={sx}>
+    <FormControl ref={anchorRef} fullWidth={fullWidth} error={error} size={size} disabled={disabled} sx={sx}>
       {label && <InputLabel id={labelId}>{label}</InputLabel>}
       <MuiSelect
         labelId={labelId}
         value={value}
         label={label}
         onChange={handleChange}
+        onOpen={() => setMenuWidth(anchorRef.current?.offsetWidth)}
         MenuProps={{
           anchorOrigin: { vertical: 'bottom', horizontal: 'left' },
           transformOrigin: { vertical: 'top', horizontal: 'left' },
-          ...(menuItemSx ? { sx: { '& .MuiMenuItem-root': menuItemSx } as SxProps<Theme> } : {}),
+          // 화면 가장자리 보정(기본 16px)을 꺼서 드롭다운 좌측을 셀렉트 좌측에 정확히 맞춤
+          marginThreshold: 0,
+          // 드롭다운 너비를 셀렉트 너비와 동일하게 고정 (긴 라벨은 말줄임)
+          slotProps: { paper: { sx: { width: menuWidth, maxWidth: menuWidth } } },
+          sx: {
+            '& .MuiMenuItem-root': {
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              display: 'block',
+              ...(menuItemSx as object),
+            },
+          } as SxProps<Theme>,
         }}
       >
         {placeholder && (

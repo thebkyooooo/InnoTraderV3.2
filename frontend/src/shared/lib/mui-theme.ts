@@ -1,6 +1,10 @@
 import { createTheme } from '@mui/material/styles'
 
+// Tailwind 기본 브레이크포인트와 정렬 (MUI 기본 sm=600 → Tailwind sm=640 등)
+const breakpoints = { values: { xs: 0, sm: 640, md: 768, lg: 1024, xl: 1280 } }
+
 export const lightTheme = createTheme({
+  breakpoints,
   palette: {
     mode: 'light',
     primary: { main: '#2563eb', light: '#3b82f6', dark: '#1d4ed8' },
@@ -29,6 +33,7 @@ export const lightTheme = createTheme({
 })
 
 export const darkTheme = createTheme({
+  breakpoints,
   palette: {
     mode: 'dark',
     primary: { main: '#3b82f6', light: '#60a5fa', dark: '#2563eb' },

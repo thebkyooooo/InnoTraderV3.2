@@ -17,9 +17,11 @@ interface CardProps {
   sx?: SxProps<Theme>
   /** 타이틀 추가 스타일 (예: 폰트 크기) */
   titleSx?: SxProps<Theme>
+  /** 부제(subtitle) 추가 스타일 */
+  subtitleSx?: SxProps<Theme>
 }
 
-export function Card({ title, subtitle, children, actions, headerAction, noPadding = false, sx, titleSx }: CardProps) {
+export function Card({ title, subtitle, children, actions, headerAction, noPadding = false, sx, titleSx, subtitleSx }: CardProps) {
   const hasHeader = title || subtitle || headerAction
 
   return (
@@ -29,10 +31,14 @@ export function Card({ title, subtitle, children, actions, headerAction, noPaddi
           title={title}
           subheader={subtitle}
           action={headerAction}
-          slotProps={{ title: { variant: 'h6', sx: { fontWeight: 600, ...titleSx } } }}
+          slotProps={{
+            title: { variant: 'h6', sx: { fontWeight: 600, color: 'hsl(var(--secondary-foreground) / .5)', ...titleSx } },
+            subheader: { sx: { ...subtitleSx, color: 'inherit' } },
+          }}
+          sx={ {pb: 0} }
         />
       )}
-      <CardContent sx={noPadding ? { p: '0 !important' } : { '&:last-child': { pt: 0, pb: 2 } }}>
+      <CardContent sx={noPadding ? { p: '0 !important' } : { '&:last-child': { pt: 2, pb: 2 } }}>
         {children}
       </CardContent>
       {actions && <CardActions>{actions}</CardActions>}
