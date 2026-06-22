@@ -40,8 +40,8 @@ export function DataGrid<TData = Record<string, unknown>>({
   onScrollEnd,
   pagination = false,
   pageSize = 20,
-  headerHeight = 36,
-  rowHeight = 32,
+  headerHeight = 38,
+  rowHeight = 36,
 }: DataGridProps<TData>) {
   const handleRowClicked = useCallback(
     (event: RowClickedEvent<TData>) => {
@@ -77,7 +77,7 @@ export function DataGrid<TData = Record<string, unknown>>({
         paginationPageSize={pageSize}
         paginationPageSizeSelector={pagination ? Array.from(new Set([pageSize, 20, 50, 100])).sort((a, b) => a - b) : false}
         rowSelection={onRowClick ? { mode: 'singleRow' } : undefined}
-        defaultColDef={{ resizable: true, sortable: true, filter: true }}
+        defaultColDef={{ resizable: true, sortable: true, filter: false }}
       />
     </Box>
   )

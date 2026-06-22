@@ -34,6 +34,13 @@ export function SegmentedControl<T extends string = string>({
           key={option.value}
           value={option.value}
           disabled={option.disabled}
+          sx={{
+            '&.Mui-selected': {
+              bgcolor: 'primary.main',
+              color: 'primary.contrastText',
+              '&:hover': { bgcolor: 'primary.dark' },
+            },
+          }}
         >
           {option.label}
         </ToggleButton>

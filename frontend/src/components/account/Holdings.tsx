@@ -14,13 +14,13 @@ const center = { textAlign: 'center' as const }
 
 const columns: ColDef<HoldingItem>[] = [
   { field: 'name',         headerName: '종목명',   flex: 1, minWidth: 120 },
-  { field: 'symbol',       headerName: '종목코드', width: 100, cellStyle: center },
-  { field: 'quantity',     headerName: '보유수량', width: 100, cellStyle: right, valueFormatter: p => fmt(p.value) },
-  { field: 'avgPrice',     headerName: '평균단가', width: 110, cellStyle: right, valueFormatter: p => fmt(p.value) },
-  { field: 'currentPrice', headerName: '현재가',   width: 110, cellStyle: right, valueFormatter: p => fmt(p.value) },
-  { field: 'evalAmount',   headerName: '평가금액', width: 130, cellStyle: right, valueFormatter: p => fmt(p.value) },
-  { field: 'profit',       headerName: '수익금',   width: 120, cellStyle: p => ({ ...right, color: signColor(p.value), fontWeight: 600 }), valueFormatter: p => `${sign(p.value)}${fmt(p.value)}` },
-  { field: 'profitRate',   headerName: '수익률',   width: 90,  cellStyle: p => ({ ...right, color: signColor(p.value), fontWeight: 600 }), valueFormatter: p => `${sign(p.value)}${Number(p.value).toFixed(2)}%` },
+  { field: 'symbol',       headerName: '종목코드', width: 100, cellStyle: center, headerClass: 'header-center' },
+  { field: 'quantity',     headerName: '보유수량', width: 100, cellStyle: right, valueFormatter: p => fmt(p.value), headerClass: 'header-right' },
+  { field: 'avgPrice',     headerName: '평균단가', width: 110, cellStyle: right, valueFormatter: p => fmt(p.value), headerClass: 'header-right' },
+  { field: 'currentPrice', headerName: '현재가',   width: 110, cellStyle: right, valueFormatter: p => fmt(p.value), headerClass: 'header-right' },
+  { field: 'evalAmount',   headerName: '평가금액', width: 130, cellStyle: right, valueFormatter: p => fmt(p.value), headerClass: 'header-right' },
+  { field: 'profit',       headerName: '수익금',   width: 120, cellStyle: p => ({ ...right, color: signColor(p.value), fontWeight: 600 }), valueFormatter: p => `${sign(p.value)}${fmt(p.value)}`, headerClass: 'header-right' },
+  { field: 'profitRate',   headerName: '수익률',   width: 90,  cellStyle: p => ({ ...right, color: signColor(p.value), fontWeight: 600 }), valueFormatter: p => `${sign(p.value)}${Number(p.value).toFixed(2)}%`, headerClass: 'header-right' },
 ]
 
 export interface HoldingsProps {

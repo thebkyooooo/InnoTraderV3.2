@@ -36,21 +36,23 @@ const center = { textAlign: 'center' as const }
 const numFmt = (p: { value: number }) => won(p.value ?? 0)
 
 const columns: ColDef<OrderHistoryItem>[] = [
-  { field: 'orderDate', headerName: '주문일자', width: 110, cellStyle: center },
+  { field: 'orderDate', headerName: '주문일자', width: 110 },
   { field: 'name', headerName: '종목명', flex: 1, minWidth: 110,
-    cellStyle: p => ({ color: p.data?.side === 'buy' ? BUY_COLOR : SELL_COLOR, fontWeight: 600 }) },
-  { field: 'symbol', headerName: '종목코드', width: 100, cellStyle: center },
-  { field: 'quantity', headerName: '주문수량', width: 100, cellStyle: right, valueFormatter: numFmt },
-  { field: 'price', headerName: '주문단가', width: 110, cellStyle: right, valueFormatter: numFmt },
-  { field: 'filledQuantity', headerName: '체결수량', width: 100, cellStyle: right, valueFormatter: numFmt },
-  { field: 'filledPrice', headerName: '체결단가', width: 110, cellStyle: right, valueFormatter: numFmt },
-  { headerName: '체결금액', width: 120, cellStyle: right,
+    cellStyle: p => ({ color: p.data?.side === 'buy' ? BUY_COLOR : SELL_COLOR, fontWeight: 600 }), filter: true },
+  { field: 'symbol', headerName: '종목코드', width: 100, cellStyle: center, headerClass: 'header-center' },
+  { field: 'sideName', headerName: '주문구분', width: 100, headerClass: 'header-center',
+    cellStyle: p => ({ ...center, color: p.data?.side === 'buy' ? BUY_COLOR : SELL_COLOR, fontWeight: 600 }), filter: true },
+  { field: 'quantity', headerName: '주문수량', width: 100, cellStyle: right, headerClass: 'header-right', valueFormatter: numFmt },
+  { field: 'price', headerName: '주문단가', width: 110, cellStyle: right, headerClass: 'header-right', valueFormatter: numFmt },
+  { field: 'filledQuantity', headerName: '체결수량', width: 100, cellStyle: right, headerClass: 'header-right', valueFormatter: numFmt },
+  { field: 'filledPrice', headerName: '체결단가', width: 110, cellStyle: right, headerClass: 'header-right', valueFormatter: numFmt },
+  { headerName: '체결금액', width: 120, cellStyle: right, headerClass: 'header-right',
     valueGetter: p => (p.data ? p.data.filledQuantity * p.data.filledPrice : 0), valueFormatter: numFmt },
-  { field: 'orderTypeName', headerName: '주문유형', width: 90, cellStyle: center },
+  { field: 'orderTypeName', headerName: '주문유형', width: 100, cellStyle: center, filter: true },
   { field: 'statusName', headerName: '주문상태', width: 100, cellStyle: p => ({
-      ...center, color: STATUS_COLOR[(p.data?.status ?? 'RECEIVED')], fontWeight: 600 }) },
-  { field: 'orderNo', headerName: '주문번호', width: 120, cellStyle: center },
-  { headerName: '주문시간', width: 100, cellStyle: center,
+      ...center, color: STATUS_COLOR[(p.data?.status ?? 'RECEIVED')], fontWeight: 600 }), filter: true },
+  { field: 'orderNo', headerName: '주문번호', width: 120, headerClass: 'header-center', cellStyle: center },
+  { headerName: '주문시간', width: 100, cellStyle: center, headerClass: 'header-center',
     valueGetter: p => p.data?.orderTime ?? '' },
 ]
 

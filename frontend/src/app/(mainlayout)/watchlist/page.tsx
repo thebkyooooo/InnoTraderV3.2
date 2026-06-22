@@ -32,16 +32,16 @@ const center = { textAlign: 'center' as const }
 
 const columns: ColDef<StockQuote>[] = [
   { field: 'name',        headerName: '종목명',     flex: 1, minWidth: 120 },
-  { field: 'symbol',      headerName: '종목코드',   width: 100, cellStyle: center },
-  { field: 'market',      headerName: '시장구분',   width: 90,  cellStyle: center },
-  { field: 'price',       headerName: '종가',       width: 100, cellStyle: right, valueFormatter: p => fmt(p.value) },
-  { field: 'prevDiff',    headerName: '전일대비',   width: 100, cellStyle: p => ({ ...right, color: signColor(p.value), fontWeight: 600 }), valueFormatter: p => `${p.value > 0 ? '+' : ''}${fmt(p.value)}` },
-  { field: 'change',      headerName: '등락률',     width: 90,  cellStyle: p => ({ ...right, color: signColor(p.value), fontWeight: 600 }), valueFormatter: p => `${p.value > 0 ? '+' : ''}${Number(p.value).toFixed(2)}%` },
-  { field: 'open',        headerName: '시가',       width: 100, cellStyle: right, valueFormatter: p => fmt(p.value) },
-  { field: 'high',        headerName: '고가',       width: 100, cellStyle: right, valueFormatter: p => fmt(p.value) },
-  { field: 'low',         headerName: '저가',       width: 100, cellStyle: right, valueFormatter: p => fmt(p.value) },
-  { field: 'volume',      headerName: '거래량',     width: 120, cellStyle: right, valueFormatter: p => fmt(p.value) },
-  { field: 'turnoverMan', headerName: '거래금액(만)', width: 130, cellStyle: right, valueFormatter: p => fmt(p.value) },
+  { field: 'symbol',      headerName: '종목코드',   width: 100, cellStyle: center, headerClass: 'header-center' },
+  { field: 'price',       headerName: '종가',       width: 100, cellStyle: right, headerClass: 'header-right', valueFormatter: p => fmt(p.value) },
+  { field: 'prevDiff',    headerName: '전일대비',   width: 100, cellStyle: p => ({ ...right, color: signColor(p.value), fontWeight: 600 }), headerClass: 'header-right', valueFormatter: p => `${p.value > 0 ? '+' : ''}${fmt(p.value)}` },
+  { field: 'change',      headerName: '등락률',     width: 90,  cellStyle: p => ({ ...right, color: signColor(p.value), fontWeight: 600 }), headerClass: 'header-right', valueFormatter: p => `${p.value > 0 ? '+' : ''}${Number(p.value).toFixed(2)}%` },
+  { field: 'open',        headerName: '시가',       width: 100, cellStyle: right, valueFormatter: p => fmt(p.value), headerClass: 'header-right' },
+  { field: 'high',        headerName: '고가',       width: 100, cellStyle: right, valueFormatter: p => fmt(p.value), headerClass: 'header-right' },
+  { field: 'low',         headerName: '저가',       width: 100, cellStyle: right, valueFormatter: p => fmt(p.value), headerClass: 'header-right' },
+  { field: 'volume',      headerName: '거래량',     width: 120, cellStyle: right, valueFormatter: p => fmt(p.value), headerClass: 'header-right' },
+  { field: 'turnoverMan', headerName: '거래금액(만)', width: 130, cellStyle: right, valueFormatter: p => fmt(p.value), headerClass: 'header-right' },
+  { field: 'market',      headerName: '시장구분',   width: 90,  cellStyle: center, headerClass: 'header-center' },
 ]
 
 type ModalType = 'group-add' | 'group-rename' | 'group-delete' | 'stock-add' | 'stock-remove' | null
