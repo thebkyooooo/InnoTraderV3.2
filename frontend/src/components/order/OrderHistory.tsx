@@ -1,8 +1,14 @@
 'use client'
-import React, { useCallback, useEffect, useState } from 'react'
-import type { ColDef } from 'ag-grid-community'
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import type { ColDef, ICellRendererParams } from 'ag-grid-community'
+import InputAdornment from '@mui/material/InputAdornment'
+import DialogTitle from '@mui/material/DialogTitle'
+import DialogContent from '@mui/material/DialogContent'
+import DialogActions from '@mui/material/DialogActions'
 import { DataGrid } from '@/components/ui/DataGrid'
 import { Button } from '@/components/ui/Button'
+import { Input } from '@/components/ui/Input'
+import { Modal } from '@/components/ui/Modal'
 import { DatePicker } from '@/components/ui/DatePicker'
 import { SegmentedControl } from '@/components/ui/SegmentedControl'
 import {
@@ -13,7 +19,7 @@ import {
   type OrderStatusCode,
 } from '@/features/order/api/order-api'
 import { useAuthStore } from '@/store/auth-store'
-import { won, BUY_COLOR, SELL_COLOR } from './_format'
+import { won, parseDigits, BUY_COLOR, SELL_COLOR } from './_format'
 
 export interface OrderHistoryProps {
   accountNo: string
@@ -35,7 +41,7 @@ const right = { textAlign: 'right' as const }
 const center = { textAlign: 'center' as const }
 const numFmt = (p: { value: number }) => won(p.value ?? 0)
 
-const columns: ColDef<OrderHistoryItem>[] = [
+const baseColumns: ColDef<OrderHistoryItem>[] = [
   { field: 'orderDate', headerName: '주문일자', width: 110 },
   { field: 'name', headerName: '종목명', flex: 1, minWidth: 110,
     cellStyle: p => ({ color: p.data?.side === 'buy' ? BUY_COLOR : SELL_COLOR, fontWeight: 600 }), filter: true },
@@ -58,6 +64,10 @@ const columns: ColDef<OrderHistoryItem>[] = [
 
 const fmtDate = (d: Date) =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+
+/** 당일 미체결(접수/부분체결) 주문 — 정정·취소 가능 */
+const isCancelable = (it: OrderHistoryItem, today: string) =>
+  it.orderDate === today && (it.status === 'RECEIVED' || it.status === 'PARTIAL')
 
 const monthAgo = () => { const d = new Date(); d.setMonth(d.getMonth() - 1); return d }
 
@@ -113,6 +123,80 @@ export function OrderHistory({ accountNo, height = 400, todayOnly = false }: Ord
   // 계좌/필터 변경 시 자동 조회
   useEffect(() => { load() }, [load])
 
+  // ── 정정/취소 ───────────────────────────────────────────────────────────────
+  const today = fmtDate(new Date())
+  const [cancelTarget, setCancelTarget] = useState<OrderHistoryItem | null>(null)
+  const [amendTarget, setAmendTarget] = useState<OrderHistoryItem | null>(null)
+  const [amendPrice, setAmendPrice] = useState<number | ''>('')
+  const [amendQty, setAmendQty] = useState<number | ''>('')
+  const [actionLoading, setActionLoading] = useState(false)
+
+  const openCancel = useCallback((it: OrderHistoryItem) => setCancelTarget(it), [])
+  const openAmend = useCallback((it: OrderHistoryItem) => {
+    setAmendTarget(it)
+    setAmendPrice(it.price)
+    setAmendQty(Math.max(0, it.quantity - it.filledQuantity))  // 미체결 잔량 기본값
+  }, [])
+
+  const doCancel = async () => {
+    if (!cancelTarget) return
+    setActionLoading(true)
+    try {
+      await orderApi.cancel({ accountNo, symbol: cancelTarget.symbol, originalOrderNo: cancelTarget.orderNo })
+      setCancelTarget(null)
+      load()
+    } catch { /* 에러 시 모달 유지 */ } finally { setActionLoading(false) }
+  }
+
+  const doAmend = async () => {
+    if (!amendTarget) return
+    const qty = typeof amendQty === 'number' ? amendQty : 0
+    const prc = typeof amendPrice === 'number' ? amendPrice : 0
+    if (qty <= 0 || (amendTarget.orderType === 'LIMIT' && prc <= 0)) return
+    setActionLoading(true)
+    try {
+      await orderApi.amend({
+        accountNo,
+        symbol: amendTarget.symbol,
+        originalOrderNo: amendTarget.orderNo,
+        orderType: amendTarget.orderType,
+        quantity: qty,
+        price: prc,
+      })
+      setAmendTarget(null)
+      load()
+    } catch { /* 에러 시 모달 유지 */ } finally { setActionLoading(false) }
+  }
+
+  // 당일 미체결 주문에만 정정/취소 버튼 노출
+  const columnDefs = useMemo<ColDef<OrderHistoryItem>[]>(() => [
+    ...baseColumns,
+    {
+      headerName: '주문관리',
+      width: 100,
+      // pinned: 'right',
+      sortable: false,
+      headerClass: 'header-center',
+      cellStyle: { ...center, padding: 0 },
+      cellRenderer: (p: ICellRendererParams<OrderHistoryItem>) => {
+        const it = p.data
+        if (!it || !isCancelable(it, today)) return null
+        return (
+          <div className="flex items-center justify-center gap-1 h-full">
+            <button type="button" onClick={e => { e.currentTarget.blur(); openAmend(it) }}
+              className="px-2 py-0.5 text-xs rounded border border-gray-300 text-gray-700 hover:bg-gray-50">
+              정정
+            </button>
+            <button type="button" onClick={e => { e.currentTarget.blur(); openCancel(it) }}
+              className="px-2 py-0.5 text-xs rounded border border-gray-300 text-red-600 hover:bg-red-50">
+              취소
+            </button>
+          </div>
+        )
+      },
+    },
+  ], [today, openAmend, openCancel])
+
   return (
     <div className="flex flex-col gap-3 h-full">
       {/* 조회구분 */}
@@ -147,8 +231,74 @@ export function OrderHistory({ accountNo, height = 400, todayOnly = false }: Ord
 
       {/* 주문내역 그리드 */}
       <div className="flex-1 min-h-0">
-        <DataGrid<OrderHistoryItem> rows={items} columnDefs={columns} loading={loading} height={height} />
+        <DataGrid<OrderHistoryItem> rows={items} columnDefs={columnDefs} loading={loading} height={height} />
       </div>
+
+      {/* 취소 확인 모달 */}
+      <Modal open={!!cancelTarget} onClose={() => setCancelTarget(null)} maxWidth={300}>
+        <DialogTitle sx={{ pt: 3, pb: 1.5, fontSize: 16, fontWeight: 700 }}>주문 취소</DialogTitle>
+        <DialogContent>
+          <div className="flex flex-col gap-1.5 text-sm border-t border-b border-gray-200 py-3">
+            <Row label="주문종목" value={`${cancelTarget?.name ?? ''} (${cancelTarget?.symbol ?? ''})`} />
+            <Row label="주문구분" value={cancelTarget?.sideName ?? ''} />
+            <Row label="주문수량" value={`${won(cancelTarget?.quantity ?? 0)} 주`} />
+            <Row label="미체결수량" value={`${won(Math.max(0, (cancelTarget?.quantity ?? 0) - (cancelTarget?.filledQuantity ?? 0)))} 주`} strong />
+          </div>
+          <p className="text-xs text-gray-500 mt-2">미체결 잔량을 취소합니다. 진행하시겠습니까?</p>
+        </DialogContent>
+        <DialogActions sx={{ pt: 0, pb: 3, px: 3 }}>
+          <Button variant="outlined" color="inherit" onClick={() => setCancelTarget(null)}>취소</Button>
+          <Button variant="contained" color="error" loading={actionLoading} onClick={doCancel}>주문 취소</Button>
+        </DialogActions>
+      </Modal>
+
+      {/* 정정 모달 */}
+      <Modal open={!!amendTarget} onClose={() => setAmendTarget(null)} maxWidth={300}>
+        <DialogTitle sx={{ pt: 3, pb: 1.5, fontSize: 16, fontWeight: 700 }}>주문 정정</DialogTitle>
+        <DialogContent>
+          <div className="flex flex-col gap-1.5 text-sm border-t border-b border-gray-200 py-3 mb-3">
+            <Row label="주문종목" value={`${amendTarget?.name ?? ''} (${amendTarget?.symbol ?? ''})`} />
+            <Row label="주문구분" value={amendTarget?.sideName ?? ''} />
+            <Row label="주문유형" value={amendTarget?.orderTypeName ?? ''} />
+          </div>
+          <div className="flex flex-col gap-2">
+            <Input
+              label="정정가격"
+              size="small"
+              value={amendTarget?.orderType === 'MARKET' ? '시장가' : (amendPrice === '' ? '' : won(amendPrice))}
+              disabled={amendTarget?.orderType === 'MARKET'}
+              onChange={e => { const d = parseDigits(e.target.value); setAmendPrice(d === '' ? '' : Number(d)) }}
+              slotProps={{
+                input: { endAdornment: <InputAdornment position="end">원</InputAdornment> },
+                htmlInput: { inputMode: 'numeric' },
+              }}
+            />
+            <Input
+              label="정정수량"
+              size="small"
+              value={amendQty === '' ? '' : won(amendQty)}
+              onChange={e => { const d = parseDigits(e.target.value); setAmendQty(d === '' ? '' : Number(d)) }}
+              slotProps={{
+                input: { endAdornment: <InputAdornment position="end">주</InputAdornment> },
+                htmlInput: { inputMode: 'numeric' },
+              }}
+            />
+          </div>
+        </DialogContent>
+        <DialogActions sx={{ pt: 0, pb: 3, px: 3 }}>
+          <Button variant="outlined" color="inherit" onClick={() => setAmendTarget(null)}>취소</Button>
+          <Button variant="contained" loading={actionLoading} onClick={doAmend}>주문 정정</Button>
+        </DialogActions>
+      </Modal>
+    </div>
+  )
+}
+
+function Row({ label, value, strong }: { label: string; value: string; strong?: boolean }) {
+  return (
+    <div className="flex items-center justify-between">
+      <span className="text-gray-500">{label}</span>
+      <span className={strong ? 'font-bold text-foreground' : 'text-foreground'}>{value}</span>
     </div>
   )
 }

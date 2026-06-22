@@ -224,7 +224,7 @@ export function OrderForm({ accountNo, symbol, name, currentPrice, onOrdered }: 
         variant="contained"
         fullWidth
         disabled={!canSubmit}
-        onClick={() => setConfirmOpen(true)}
+        onClick={e => { e.currentTarget.blur(); setConfirmOpen(true) }}
         sx={{ bgcolor: sideColor, '&:hover': { bgcolor: sideColor, filter: 'brightness(0.95)' } }}
       >
         {sideLabel}
@@ -248,7 +248,7 @@ export function OrderForm({ accountNo, symbol, name, currentPrice, onOrdered }: 
           <Button
             variant="contained"
             loading={submitting}
-            onClick={submit}
+            onClick={e => { e.currentTarget.blur(); submit() }}
             sx={{ bgcolor: sideColor, '&:hover': { bgcolor: sideColor, filter: 'brightness(0.95)' } }}
           >
             {sideLabel}

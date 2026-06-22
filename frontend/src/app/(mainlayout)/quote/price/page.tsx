@@ -44,10 +44,10 @@ export default function QuotePricePage() {
       )}
 
 
-      <div className="h-2xl:flex-1 flex flex-col-reverse sm:flex-row gap-4">
+      <div className="h-2xl:flex-1 flex flex-col sm:flex-row gap-4">
         <div className="flex-1 min-w-0 flex flex-col gap-4">
           {/* 분석차트 컴포넌트 */}
-          <div className="h-[560px] h-2xl:flex-1 shrink-0 border border-gray-200 rounded-lg overflow-hidden">
+          <div className="h-[560px] h-2xl-sm:flex-1 shrink-0 border border-gray-200 rounded-lg overflow-hidden">
             <AnalysisChart symbol={symbol} />
           </div>
 

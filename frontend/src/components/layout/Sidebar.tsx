@@ -186,7 +186,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
           borderRight: '1px solid',
           borderBottom: '1px solid',
           borderColor: 'divider',
-          borderRadius: '0 20px 20px 0',
+          borderRadius: '0 10px 10px 0',
           display: 'flex',
           flexDirection: 'column',
           zIndex: 1200,
