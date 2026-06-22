@@ -28,9 +28,9 @@ const config: Config = {
       screens: {
         'h-sm':  { raw: '(min-height: 640px)' },
         'h-md':  { raw: '(min-height: 800px)' },
-        'h-lg':  { raw: '(min-height: 960px)' },
-        'h-xl':  { raw: '(min-height: 1080px)' },
-        'h-2xl': { raw: '(min-height: 1280px)' },
+        'h-lg':  { raw: '(min-height: 1080px)' },
+        'h-xl':  { raw: '(min-height: 1280px)' },
+        'h-2xl': { raw: '(min-height: 1600px)' },
       },
       colors: {
         border: 'hsl(var(--border))',

@@ -115,20 +115,18 @@ export function OrderHistory({ accountNo, height = 400, todayOnly = false }: Ord
     <div className="flex flex-col gap-3 h-full">
       {/* 조회구분 */}
       {!todayOnly && (
-      <div className="flex flex-col xs:flex-row xs:flex-wrap  gap-2">
+      <div className="flex flex-col xs:flex-row xs:flex-wrap gap-2">
         <div className="min-w-[160px] xs:max-w-[160px]">
           <DatePicker label="시작일" value={startDate} onChange={setStartDate} size="small" />
         </div>
         <div className="min-w-[160px] xs:max-w-[160px]">
           <DatePicker label="종료일" value={endDate} onChange={setEndDate} size="small" />
         </div>
-        <div className="min-w-[125px]">
+        <div className="flex gap-2">
           <SegmentedControl<SideFilter> size="small" value={side} onChange={setSide}
-          options={[{ label: '전체', value: 'ALL' }, { label: '매수', value: 'BUY' }, { label: '매도', value: 'SELL' }]} />
-        </div>
-        <div className="min-w-[138px]">
+            options={[{ label: '전체', value: 'ALL' }, { label: '매수', value: 'BUY' }, { label: '매도', value: 'SELL' }]} />
           <SegmentedControl<FillFilter> size="small" value={fill} onChange={setFill}
-          options={[{ label: '전체', value: 'ALL' }, { label: '체결', value: 'FILLED' }, { label: '미체결', value: 'UNFILLED' }]} />
+            options={[{ label: '전체', value: 'ALL' }, { label: '체결', value: 'FILLED' }, { label: '미체결', value: 'UNFILLED' }]} />
         </div>
         <Button className='h-[2.425rem] !ml-auto' variant="contained" size="medium" onClick={load}>조회</Button>
       </div>

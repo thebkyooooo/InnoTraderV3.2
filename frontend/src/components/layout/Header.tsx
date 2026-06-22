@@ -30,7 +30,7 @@ export function Header({ onMenuToggle }: HeaderProps) {
         borderBottom: '1px solid',
         borderColor: 'divider',
         zIndex: (theme) => theme.zIndex.drawer + 1,
-        borderRadius: '10px 0 0 0',
+        borderRadius: { md:'10px 0 0 0'}
       }}
     >
       <Toolbar sx={{ gap: 1, minHeight: { xs: '46px !important', sm: '54px !important' } }}>

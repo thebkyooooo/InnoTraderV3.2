@@ -13,7 +13,7 @@ export function Footer() {
         border: '1px solid',
         borderColor: 'divider',
         bgcolor: 'background.paper',
-        borderRadius: '0 0 0 10px',
+        borderRadius: { md:'0 0 0 10px' },
       }}
     >
       <Typography variant="caption" color="text.secondary">
