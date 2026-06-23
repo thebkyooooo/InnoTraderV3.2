@@ -79,6 +79,7 @@ export function AppLayout({ children }: AppLayoutProps) {
             borderRight: '1px solid',
             borderLeft: '1px solid',
             borderColor: 'divider',
+            containerType: 'inline-size',
           }}
         >
           {children}
