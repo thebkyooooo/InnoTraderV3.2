@@ -20,7 +20,7 @@ export const lightTheme = createTheme({
     MuiInputLabel: {
       styleOverrides: {
         // 키인(float) 시 라벨 위치 보정: top 0 → 4px
-        root: { top: '4px' },
+        root: { top: '2px' },
       },
     },
     MuiPaper: {
@@ -49,7 +49,7 @@ export const darkTheme = createTheme({
     MuiInputLabel: {
       styleOverrides: {
         // 키인(float) 시 라벨 위치 보정: top 0 → 4px
-        root: { top: '4px' },
+        root: { top: '2px' },
       },
     },
     MuiPaper: {
