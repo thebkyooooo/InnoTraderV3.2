@@ -51,6 +51,8 @@ const baseColumns: ColDef<OrderHistoryItem>[] = [
   { field: 'quantity', headerName: '주문수량', width: 100, cellStyle: right, headerClass: 'header-right', valueFormatter: numFmt },
   { field: 'price', headerName: '주문단가', width: 110, cellStyle: right, headerClass: 'header-right', valueFormatter: numFmt },
   { field: 'filledQuantity', headerName: '체결수량', width: 100, cellStyle: right, headerClass: 'header-right', valueFormatter: numFmt },
+  { headerName: '미체결수량', width: 100, cellStyle: right, headerClass: 'header-right',
+    valueGetter: p => (p.data ? p.data.quantity - p.data.filledQuantity : 0), valueFormatter: numFmt },
   { field: 'filledPrice', headerName: '체결단가', width: 110, cellStyle: right, headerClass: 'header-right', valueFormatter: numFmt },
   { headerName: '체결금액', width: 120, cellStyle: right, headerClass: 'header-right',
     valueGetter: p => (p.data ? p.data.filledQuantity * p.data.filledPrice : 0), valueFormatter: numFmt },

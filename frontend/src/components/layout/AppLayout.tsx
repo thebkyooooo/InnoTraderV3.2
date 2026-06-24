@@ -1,6 +1,7 @@
 'use client'
 import React, { useState, useEffect } from 'react'
 import { Box, useTheme, useMediaQuery } from '@mui/material'
+import type { SxProps, Theme } from '@mui/material'
 import { Header } from './Header'
 import { Sidebar } from './Sidebar'
 import { Footer } from './Footer'
@@ -13,9 +14,10 @@ const DRAWER_WIDTH = 240
 
 interface AppLayoutProps {
   children: React.ReactNode
+  mainSx?: SxProps<Theme>
 }
 
-export function AppLayout({ children }: AppLayoutProps) {
+export function AppLayout({ children, mainSx }: AppLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const theme = useTheme()
   const isDesktop = useMediaQuery(theme.breakpoints.up('md'))
@@ -72,15 +74,18 @@ export function AppLayout({ children }: AppLayoutProps) {
         {/* 콘텐츠 */}
         <Box
           component="main"
-          sx={{
-            flex: 1,
-            p: { xs: 2, sm: 3 },
-            overflow: 'auto',
-            borderRight: '1px solid',
-            borderLeft: '1px solid',
-            borderColor: 'divider',
-            containerType: 'inline-size',
-          }}
+          sx={[
+            {
+              flex: 1,
+              p: { xs: 2, sm: 3 },
+              overflow: 'auto',
+              borderRight: '1px solid',
+              borderLeft: '1px solid',
+              borderColor: 'divider',
+              containerType: 'inline-size',
+            },
+            ...(Array.isArray(mainSx) ? mainSx : mainSx ? [mainSx] : []),
+          ]}
         >
           {children}
         </Box>

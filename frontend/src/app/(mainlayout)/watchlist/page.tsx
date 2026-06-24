@@ -17,10 +17,13 @@ import { Select } from '@/components/ui/Select'
 import { DataGrid } from '@/components/ui/DataGrid'
 import { watchlistApi, type WatchlistGroup, type WatchlistItem } from '@/features/watchlist/api/watchlist-api'
 import { stockMasterApi, type StockQuote } from '@/features/stock-master/api/stock-master-api'
+import { Chart } from '@/components/ui/Chart'
+import { StockDetailCard } from '@/components/quote'
 import { GroupFormDialog } from '@/features/watchlist/components/GroupFormDialog'
 import { StockAddDialog } from '@/features/watchlist/components/StockAddDialog'
 import { StockRemoveDialog } from '@/features/watchlist/components/StockRemoveDialog'
 import { useAuthStore } from '@/store/auth-store'
+import { ArrowForwardIosSharp, FormatIndentIncreaseOutlined } from '@mui/icons-material';
 
 // ── 그리드 ──────────────────────────────────────────────────────────────────────
 
@@ -55,6 +58,8 @@ export default function WatchlistPage() {
   const [quotes, setQuotes]           = useState<StockQuote[]>([])
   const [loading, setLoading]         = useState(false)
   const [modal, setModal]             = useState<ModalType>(null)
+  const [panelOpen, setPanelOpen] = useState(true)
+  const [selectedStock, setSelectedStock] = useState<StockQuote | null>(null)
 
   const current = groups.find(g => g.groupCode === selectedCode)
 
@@ -97,6 +102,15 @@ export default function WatchlistPage() {
   }, [])
 
   useEffect(() => { loadItems(selectedCode).catch(() => { setItems([]); setQuotes([]) }) }, [selectedCode, loadItems])
+
+  // ── 선택 종목 동기화 ─────────────────────────────────────────────────────────
+  // 그룹이 바뀌면 선택 종목을 첫 종목으로 맞춘다(없으면 해제)
+  useEffect(() => {
+    setSelectedStock(prev => {
+      if (prev && quotes.some(q => q.symbol === prev.symbol)) return prev
+      return quotes[0] ?? null
+    })
+  }, [quotes])
 
   // ── 변경 핸들러 ──────────────────────────────────────────────────────────────
   const handleGroupSubmit = async (name: string) => {
@@ -145,42 +159,101 @@ export default function WatchlistPage() {
 
   // ── UI ──────────────────────────────────────────────────────────────────────
   return (
-    <div className="flex flex-col gap-4 w-full h-full">
-      {/* <h1 className="text-lg font-bold text-foreground">관심종목</h1> */}
+    <div aria-pressed={panelOpen} className="flex flex-col sm:flex-row gap-4 sm:gap-0 w-full h-full relative">
+      <button
+        type="button"
+        onClick={() => setPanelOpen(v => !v)}
+        aria-pressed={panelOpen}
+        title={panelOpen ? '패널 숨기기' : '패널 보기'}
+        className={`absolute hidden sm:block border border-gray-50 bg-slate-200 h-[48px] w-[24px] top-0.5 right-0.5 transition-transform ${panelOpen ? 'rounded-l-lg' : 'rounded-r-lg rotate-180'}`}
+      >
+        <ArrowForwardIosSharp sx={{ fontSize: 20, color: 'text.disabled' }} />
+      </button>
 
-      <div className="flex flex-wrap items-center gap-2">
-        <div className="min-w-[200px]">
-          <Select
-            fullWidth size="small" label="관심그룹 선택"
-            value={selectedCode}
-            onChange={setSelectedCode}
-            options={groups.map(g => ({ label: `${g.groupName} (${g.itemCount})`, value: g.groupCode }))}
-          />
+      <div 
+          aria-hidden={!panelOpen}
+          className={`@container pt-1 sm:p-6 flex-1 flex flex-col gap-4 shrink-0 overflow-hidden transition-[width,opacity] duration-300 ease-in-out ${panelOpen ? 'w-full' : 'w-full sm:w-[calc(100%-274px)]'}`}
+        >
+        {/* <h1 className="text-lg font-bold text-foreground">관심종목</h1> */}
+
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="min-w-[200px]">
+            <Select
+              fullWidth size="small" label="관심그룹 선택"
+              value={selectedCode}
+              onChange={setSelectedCode}
+              options={groups.map(g => ({ label: `${g.groupName} (${g.itemCount})`, value: g.groupCode }))}
+              placeholder="그룹을 선택하세요"
+            />
+          </div>
+
+          <div className="flex flex-wrap gap-1.5 items-center ml-auto">
+            <div className='w-[24px] text-xs leading-[13px]'>그룹관리</div>
+            <Tooltip title="그룹추가">
+              <IconButton className='!p-0 !bg-slate-200' onClick={() => openModal('group-add')}><CreateNewFolderOutlinedIcon className='!text-[32px]' /></IconButton>
+            </Tooltip>
+            <Tooltip title="그룹변경">
+              <span><IconButton className='!p-0 !bg-slate-200' onClick={() => openModal('group-rename')} disabled={!current}><DriveFileRenameOutlineIcon className='!text-[32px]' /></IconButton></span>
+            </Tooltip>
+            <Tooltip title="그룹삭제">
+              <span><IconButton className='!p-0 !bg-slate-200' color="error" onClick={() => openModal('group-delete')} disabled={!current}><DeleteOutlineIcon className='!text-[32px]' /></IconButton></span>
+            </Tooltip>
+            <div className='w-[24px] text-xs leading-[13px] ml-2'>종목관리</div>
+            <Tooltip title="종목추가">
+              <span><IconButton className='!p-0 !bg-slate-200' color="primary" onClick={() => openModal('stock-add')} disabled={!current}><AddCircleOutlineIcon className='!text-[32px]' /></IconButton></span>
+            </Tooltip>
+            <Tooltip title="종목삭제">
+              <span><IconButton className='!p-0 !bg-slate-200' color="error" onClick={() => openModal('stock-remove')} disabled={!current || items.length === 0}><RemoveCircleOutlineIcon className='!text-[32px]' /></IconButton></span>
+            </Tooltip>
+          </div>
         </div>
 
-        <div className="flex flex-wrap gap-1.5 items-center ml-auto">
-          <div className='w-[24px] text-xs leading-[13px]'>그룹관리</div>
-          <Tooltip title="그룹추가">
-            <IconButton className='!p-0 !bg-slate-200' onClick={() => openModal('group-add')}><CreateNewFolderOutlinedIcon className='!text-[32px]' /></IconButton>
-          </Tooltip>
-          <Tooltip title="그룹변경">
-            <span><IconButton className='!p-0 !bg-slate-200' onClick={() => openModal('group-rename')} disabled={!current}><DriveFileRenameOutlineIcon className='!text-[32px]' /></IconButton></span>
-          </Tooltip>
-          <Tooltip title="그룹삭제">
-            <span><IconButton className='!p-0 !bg-slate-200' color="error" onClick={() => openModal('group-delete')} disabled={!current}><DeleteOutlineIcon className='!text-[32px]' /></IconButton></span>
-          </Tooltip>
-          <div className='w-[24px] text-xs leading-[13px] ml-2'>종목관리</div>
-          <Tooltip title="종목추가">
-            <span><IconButton className='!p-0 !bg-slate-200' color="primary" onClick={() => openModal('stock-add')} disabled={!current}><AddCircleOutlineIcon className='!text-[32px]' /></IconButton></span>
-          </Tooltip>
-          <Tooltip title="종목삭제">
-            <span><IconButton className='!p-0 !bg-slate-200' color="error" onClick={() => openModal('stock-remove')} disabled={!current || items.length === 0}><RemoveCircleOutlineIcon className='!text-[32px]' /></IconButton></span>
-          </Tooltip>
+        <div className="flex-1 gap-4 min-h-[360px]">
+          <DataGrid<StockQuote> rows={quotes} columnDefs={columns} loading={loading} height="100%" onRowClick={setSelectedStock} />
         </div>
       </div>
 
-      <div className="flex-1 min-h-[360px]">
-        <DataGrid<StockQuote> rows={quotes} columnDefs={columns} loading={loading} height="100%" />
+      {/* 사이드 패널 */}
+      <div
+        aria-hidden={!panelOpen}
+        className={`flex shrink-0 overflow-hidden transition-[width,opacity] duration-300 ease-in-out border-gray-200 sm:bg-white ${panelOpen ? 'sm:border-l sm:w-[320px] 2xl:w-[520px] sm:opacity-100' : 'sm:w-0 sm:opacity-0'}`}
+      >
+        <div className="shrink-0 w-full flex flex-col gap-3 rounded-xl bg-white border border-gray-200 sm:rounded-none sm:border-none">
+          <div className="w-full sm:w-[320px] 2xl:w-[520px] flex flex-col gap-3.5 p-4">
+            {selectedStock ? (
+              <>
+                <div>
+                  {/* 선택 종목 헤더 */}
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-base font-bold text-foreground truncate">{selectedStock.name}</span>
+                    <span className="text-xs text-gray-500">{selectedStock.symbol}</span>
+                  </div>
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-xl font-bold tabular-nums" style={{ color: signColor(selectedStock.prevDiff) }}>
+                      {fmt(selectedStock.price)}
+                    </span>
+                    <span className="text-sm font-medium tabular-nums" style={{ color: signColor(selectedStock.prevDiff) }}>
+                      {selectedStock.prevDiff > 0 ? '+' : ''}{fmt(selectedStock.prevDiff)}
+                      {' '}({selectedStock.change > 0 ? '+' : ''}{Number(selectedStock.change).toFixed(2)}%)
+                    </span>
+                  </div>
+                </div>
+
+                {/* 일봉 차트 — symbol만 넘기면 Chart 내부에서 조회 */}
+                <div className="rounded-lg border border-gray-200 overflow-hidden pl-2 pt-2">
+                  <Chart symbol={selectedStock.symbol} height={300} type="candlestick" />
+                </div>
+
+                {/* 종목 상세 — symbol만 넘기면 내부에서 조회 */}
+                <StockDetailCard symbol={selectedStock.symbol} />
+              </>
+            ) : (
+              <div className="items-center justify-center text-sm text-gray-400">
+                종목을 선택하세요
+              </div>
+            )}
+          </div>
+        </div>
       </div>
 
       {/* 그룹 추가/변경 모달 */}

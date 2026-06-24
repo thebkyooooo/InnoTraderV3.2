@@ -17,10 +17,18 @@ export const lightTheme = createTheme({
   shape: { borderRadius: 8 },
   components: {
     MuiButton: { defaultProps: { disableElevation: true } },
+    // 오버레이류가 열릴 때 body 스크롤 잠금(overflow:hidden + padding-right) 비활성화 → 화면 흔들림 방지
+    MuiModal:    { defaultProps: { disableScrollLock: true } },
+    MuiDialog:   { defaultProps: { disableScrollLock: true } },
+    MuiPopover:  { defaultProps: { disableScrollLock: true } },
+    MuiMenu:     { defaultProps: { disableScrollLock: true } },
     MuiInputLabel: {
       styleOverrides: {
-        // 키인(float) 시 라벨 위치 보정: top 0 → 4px
-        root: { top: '2px' },
+        // rest 상태 수직 정렬 보정. small은 보정 0(아래로 처짐 방지), 그 외 2px.
+        // float(shrink) 상태는 MUI 기본 위치를 그대로 사용.
+        root: ({ ownerState }) => ({
+          top: ownerState.shrink ? undefined : ownerState.size === 'small' ? '0px' : '2px',
+        }),
       },
     },
     MuiPaper: {
@@ -46,10 +54,18 @@ export const darkTheme = createTheme({
   shape: { borderRadius: 8 },
   components: {
     MuiButton: { defaultProps: { disableElevation: true } },
+    // 오버레이류가 열릴 때 body 스크롤 잠금(overflow:hidden + padding-right) 비활성화 → 화면 흔들림 방지
+    MuiModal:    { defaultProps: { disableScrollLock: true } },
+    MuiDialog:   { defaultProps: { disableScrollLock: true } },
+    MuiPopover:  { defaultProps: { disableScrollLock: true } },
+    MuiMenu:     { defaultProps: { disableScrollLock: true } },
     MuiInputLabel: {
       styleOverrides: {
-        // 키인(float) 시 라벨 위치 보정: top 0 → 4px
-        root: { top: '2px' },
+        // rest 상태 수직 정렬 보정. small은 보정 0(아래로 처짐 방지), 그 외 2px.
+        // float(shrink) 상태는 MUI 기본 위치를 그대로 사용.
+        root: ({ ownerState }) => ({
+          top: ownerState.shrink ? undefined : ownerState.size === 'small' ? '0px' : '2px',
+        }),
       },
     },
     MuiPaper: {

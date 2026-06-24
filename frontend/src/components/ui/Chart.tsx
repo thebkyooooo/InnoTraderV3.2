@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useRef } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import Box from '@mui/material/Box'
 import {
   createChart,
@@ -14,6 +14,7 @@ import {
   AreaSeries,
   HistogramSeries,
 } from 'lightweight-charts'
+import { quoteApi, type DailyChartType } from '@/features/quote/api/quote-api'
 
 interface OHLCBar {
   time: string
@@ -25,7 +26,14 @@ interface OHLCBar {
 }
 
 interface ChartProps {
-  data: OHLCBar[]
+  /** 직접 OHLC 데이터를 넘기는 방식 (symbol 미지정 시 사용) */
+  data?: OHLCBar[]
+  /** 종목코드를 넘기면 Chart 내부에서 일봉을 직접 조회한다 */
+  symbol?: string
+  /** symbol 조회 시 일봉 유형 (기본 'D') */
+  dailyType?: DailyChartType
+  /** symbol 조회 시 조회 개수 (기본 120) */
+  count?: number
   height?: number
   type?: 'candlestick' | 'line' | 'area'
 }
@@ -33,14 +41,37 @@ interface ChartProps {
 const UP_COLOR   = '#ef5350'
 const DOWN_COLOR = '#4285f4'
 
-export function Chart({ data, height = 400, type = 'candlestick' }: ChartProps) {
+export function Chart({ data, symbol, dailyType = 'D', count = 120, height = 400, type = 'candlestick' }: ChartProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const chartRef     = useRef<IChartApi | null>(null)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const seriesRef    = useRef<ISeriesApi<SeriesType> | null>(null)
 
+  // symbol이 주어지면 내부에서 일봉을 조회, 아니면 data prop을 그대로 사용
+  const [fetched, setFetched] = useState<OHLCBar[]>([])
+
+  useEffect(() => {
+    if (!symbol) { setFetched([]); return }
+    let cancelled = false
+    quoteApi.getChartDaily(symbol, dailyType, count)
+      .then(res => {
+        if (cancelled) return
+        // 최신→과거 정렬을 과거→최신으로 뒤집고 OHLCBar로 변환
+        const bars: OHLCBar[] = res.data.items.slice().reverse().map(item => ({
+          time: `${item.date.slice(0, 4)}-${item.date.slice(4, 6)}-${item.date.slice(6, 8)}`,
+          open: item.open, high: item.high, low: item.low, close: item.price, volume: item.volume,
+        }))
+        setFetched(bars)
+      })
+      .catch(() => { if (!cancelled) setFetched([]) })
+    return () => { cancelled = true }
+  }, [symbol, dailyType, count])
+
+  const bars = symbol ? fetched : (data ?? [])
+
   useEffect(() => {
     if (!containerRef.current) return
+    const data = bars
 
     const isDark     = document.documentElement.classList.contains('dark')
     const hasVolume  = data.some((d) => d.volume != null)
@@ -137,7 +168,7 @@ export function Chart({ data, height = 400, type = 'candlestick' }: ChartProps) 
       chartRef.current = null
       seriesRef.current = null
     }
-  }, [data, height, type])
+  }, [bars, height, type])
 
   return <Box ref={containerRef} sx={{ width: '100%', height }} />
 }

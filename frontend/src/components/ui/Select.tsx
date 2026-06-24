@@ -66,6 +66,8 @@ export function Select<T extends string | number = string>({
           slotProps: { paper: { sx: { width: menuWidth, maxWidth: menuWidth } } },
           sx: {
             '& .MuiMenuItem-root': {
+              // sm 미만(터치)에서 MUI가 적용하는 min-height:48px 제거 → 항목 높이/하단 여백 통일
+              minHeight: 'auto',
               whiteSpace: 'nowrap',
               overflow: 'hidden',
               textOverflow: 'ellipsis',

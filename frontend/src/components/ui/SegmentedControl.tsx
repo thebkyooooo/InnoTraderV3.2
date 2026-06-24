@@ -3,6 +3,7 @@
 import React from 'react'
 import ToggleButtonGroup from '@mui/material/ToggleButtonGroup'
 import ToggleButton from '@mui/material/ToggleButton'
+import { SxProps, Theme } from '@mui/material/styles'
 
 interface SegmentedControlProps<T extends string = string> {
   value: T
@@ -10,6 +11,7 @@ interface SegmentedControlProps<T extends string = string> {
   options: Array<{ label: string; value: T; disabled?: boolean }>
   size?: 'small' | 'medium' | 'large'
   fullWidth?: boolean
+  sx?: SxProps<Theme>
 }
 
 export function SegmentedControl<T extends string = string>({
@@ -18,6 +20,7 @@ export function SegmentedControl<T extends string = string>({
   options,
   size = 'medium',
   fullWidth = false,
+  sx
 }: SegmentedControlProps<T>) {
   return (
     <ToggleButtonGroup
@@ -28,6 +31,7 @@ export function SegmentedControl<T extends string = string>({
       }}
       size={size}
       fullWidth={fullWidth}
+      sx={sx}
     >
       {options.map((option) => (
         <ToggleButton

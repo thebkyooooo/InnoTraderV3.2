@@ -10,6 +10,7 @@ export function Footer() {
       sx={{
         px: 3,
         py: 1,
+        textAlign: 'center',
         border: '1px solid',
         borderColor: 'divider',
         bgcolor: 'background.paper',

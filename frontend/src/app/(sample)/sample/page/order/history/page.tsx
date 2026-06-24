@@ -154,7 +154,7 @@ export default function SampleOrderHistoryPage() {
                 value: '003'
               }
             ]}
-            size="small"
+            size="small" 
             placeholder='체결구분 선택하세요'
           />
         </div>

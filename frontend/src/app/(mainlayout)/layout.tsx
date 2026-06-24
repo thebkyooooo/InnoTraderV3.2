@@ -1,4 +1,4 @@
-import { AppLayout } from '@/components/layout/AppLayout'
+import { MainLayoutClient } from './MainLayoutClient'
 
 export const dynamic = 'force-dynamic'
 
@@ -7,5 +7,5 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode
 }) {
-  return <AppLayout>{children}</AppLayout>
+  return <MainLayoutClient>{children}</MainLayoutClient>
 }

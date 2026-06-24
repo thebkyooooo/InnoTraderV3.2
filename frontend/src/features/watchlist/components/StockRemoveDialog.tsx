@@ -20,9 +20,12 @@ export interface StockRemoveDialogProps {
 export function StockRemoveDialog({ open, items, preselected = [], onClose, onRemove }: StockRemoveDialogProps) {
   const [selected, setSelected] = useState<Set<string>>(new Set())
 
+  // preselected가 인라인 기본값([])으로 넘어오면 매 렌더 참조가 바뀌므로,
+  // 참조가 아닌 내용(key)을 의존성으로 사용해 열릴 때 1회만 초기화한다(무한 루프 방지).
+  const preselectedKey = preselected.join(',')
   useEffect(() => {
-    if (open) setSelected(new Set(preselected))
-  }, [open, preselected])
+    if (open) setSelected(new Set(preselectedKey ? preselectedKey.split(',') : []))
+  }, [open, preselectedKey])
 
   const toggle = (symbol: string) =>
     setSelected(prev => { const n = new Set(prev); n.has(symbol) ? n.delete(symbol) : n.add(symbol); return n })
@@ -34,14 +37,14 @@ export function StockRemoveDialog({ open, items, preselected = [], onClose, onRe
       <DialogTitle sx={{ pt: 3 }}>종목 삭제 {selected.size > 0 && <span className="text-sm text-red-600">({selected.size})</span>}</DialogTitle>
       <DialogContent>
         <p className="text-xs text-gray-500 mb-2">삭제할 종목을 선택하세요.</p>
-        <div className="max-h-[320px] overflow-y-auto border border-gray-200 rounded">
+        <div className="max-h-[320px] overflow-y-auto border-t border-b border-gray-200 rounded">
           {items.length === 0 && (
             <div className="text-xs text-gray-400 text-center py-6">종목이 없습니다.</div>
           )}
           {items.map(it => (
             <label key={it.symbol}
-              className="flex items-center gap-2 px-2 py-1.5 border-b border-gray-100 last:border-b-0 hover:bg-gray-50 cursor-pointer text-sm">
-              <Checkbox size="small" checked={selected.has(it.symbol)} onChange={() => toggle(it.symbol)} sx={{ p: 0.5 }} />
+              className="flex items-center gap-2 px-0 py-2 border-b border-gray-100 last:border-b-0 hover:bg-gray-50 cursor-pointer text-sm">
+              <Checkbox size="small" checked={selected.has(it.symbol)} onChange={() => toggle(it.symbol)} sx={{ p: 0 }} />
               <span className="font-medium">{it.name}</span>
               <span className="ml-auto text-gray-400 tabular-nums">{it.symbol}</span>
             </label>
