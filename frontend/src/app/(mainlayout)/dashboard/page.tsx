@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react'
 import { AccountSelect } from '@/components/account'
 import { Card } from '@/components/ui/Card'
 import { SegmentedControl } from '@/components/ui/SegmentedControl'
+import { DragScroll } from '@/components/ui/DragScroll'
 import { ArrowForwardIosSharp, FormatIndentIncreaseOutlined } from '@mui/icons-material';
 import { holdingApi, type HoldingsResponse } from '@/features/holding/api/holding-api'
 import { orderApi, type OrderHistoryResponse } from '@/features/order/api/order-api'
@@ -83,7 +84,7 @@ export default function DashboardPage() {
           {/* <h1 className="text-2xl font-bold text-foreground">대시보드</h1> */}
           
           {/* 글로벌지수 */}
-          <div className='w-full overflow-auto rounded-sm'>
+          <DragScroll className='w-full rounded-sm'>
             <div className='w-full flex gap-1 min-w-[800px]'>
               <Card title="KOSPI" subtitle='72,000,300' sx={{width: '100%'}} titleSx={{fontSize: '14px'}} subtitleSx={{fontSize: '20px'}}>
                 <ul className='flex flex-col text-sm'>
@@ -103,10 +104,10 @@ export default function DashboardPage() {
               <Card title="S&P 500" subtitle='72,000,300' sx={{width: '100%'}} titleSx={{fontSize: '14px'}} subtitleSx={{fontSize: '20px'}}>
                 <ul className='flex flex-col text-sm'>
                   <li className='flex-1 flex'><span>+1,000</span><span>(+1.2%)</span></li>
-                </ul>              
+                </ul>
               </Card>
             </div>
-          </div>
+          </DragScroll>
 
           <div className='w-full grid grid-cols-1 @[500px]:grid-cols-2 @[1024px]:grid-cols-3 gap-4'>
             <div className='w-full flex flex-col gap-2'>
@@ -345,12 +346,13 @@ export default function DashboardPage() {
             </div>
           </div>
 
+          {/* 인기검색종목 */}
           <div className='w-full flex flex-col gap-2'>
             <div className='w-full flex gap-2 justify-between items-center'>
               <h2 className='text-sm font-semibold'>인기검색종목</h2>
             </div>
 
-            <div className='w-full overflow-auto rounded-sm'>
+            <DragScroll className='w-full rounded-sm'>
               <div className='flex gap-1 min-w-[800px]'>
                 <Card sx={{width: '100%', minWidth: '200px'}}>
                   <ul className='flex flex-col text-sm gap-4'>
@@ -398,7 +400,7 @@ export default function DashboardPage() {
                   </ul>
                 </Card>
               </div>
-            </div>
+            </DragScroll>
           </div>
         </div>
 
