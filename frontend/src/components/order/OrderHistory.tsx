@@ -82,7 +82,7 @@ const emptySummary: Summary = {
 
 /**
  * 주문내역 — 조회구분(계좌·기간·주문구분·체결구분) + 요약 + 주문내역 그리드.
- * 기간 필터는 클라이언트에서 주문일자 기준으로 적용한다.
+ * 기간 필터는 백엔드에서 주문일자(startDate/endDate) 기준으로 적용한다.
  */
 export function OrderHistory({ accountNo, height = 400, todayOnly = false }: OrderHistoryProps) {
   const [startDate, setStartDate] = useState<Date | null>(monthAgo())
@@ -90,31 +90,21 @@ export function OrderHistory({ accountNo, height = 400, todayOnly = false }: Ord
   const [side, setSide] = useState<SideFilter>('ALL')
   const [fill, setFill] = useState<FillFilter>('ALL')
 
+  // 기간은 YYYY-MM-DD 문자열로 변환해 백엔드 필터로 전달한다. todayOnly면 당일만.
+  const todayDate = fmtDate(new Date())
+  const queryStart = todayOnly ? todayDate : (startDate ? fmtDate(startDate) : undefined)
+  const queryEnd = todayOnly ? todayDate : (endDate ? fmtDate(endDate) : undefined)
+
   const { data, isFetching: loading, refetch } = useOrderHistory({
     accountNo,
     side: todayOnly ? 'ALL' : side,
     fill: todayOnly ? 'ALL' : fill,
+    startDate: queryStart,
+    endDate: queryEnd,
   })
 
-  // 기간 필터는 클라이언트에서 주문일자 기준으로 적용한다.
-  const items = useMemo<OrderHistoryItem[]>(() => {
-    const rows = data?.items ?? []
-    const today = fmtDate(new Date())
-    const from = todayOnly ? today : (startDate ? fmtDate(startDate) : null)
-    const to = todayOnly ? today : (endDate ? fmtDate(endDate) : null)
-    return rows.filter(it =>
-      (!from || it.orderDate >= from) && (!to || it.orderDate <= to))
-  }, [data, startDate, endDate, todayOnly])
-
-  const summary = useMemo<Summary>(() => items.reduce<Summary>((acc, o) => {
-    const unfilled = Math.max(0, o.quantity - o.filledQuantity)
-    acc.totalQuantity += o.quantity
-    acc.totalFilledQuantity += o.filledQuantity
-    acc.totalFilledAmount += o.filledQuantity * o.filledPrice
-    if (o.status === 'CANCELED') acc.totalCanceledQuantity += unfilled
-    else acc.totalUnfilledQuantity += unfilled
-    return acc
-  }, { ...emptySummary }), [items])
+  const items = data?.items ?? []
+  const summary: Summary = data?.summary ?? emptySummary
 
   const load = useCallback(() => { refetch() }, [refetch])
 

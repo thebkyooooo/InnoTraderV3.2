@@ -10,7 +10,7 @@ import java.util.List;
 
 public interface GetMarketUseCase {
 
-    enum MarketType { KOSPI, KOSDAQ }
+    enum MarketType { KOSPI, KOSDAQ, ALL }
 
     List<IndexInfo>    getIndexInfo();
     List<ExchangeRate> getExchangeRates();
@@ -19,6 +19,9 @@ public interface GetMarketUseCase {
     List<StockRanking> getTradingAmountRanking(MarketType market);
     List<StockRanking> getAdvancingStocks(MarketType market);
     List<StockRanking> getDecliningStocks(MarketType market);
+    List<StockRanking> getGapUpStocks(MarketType market);
+    List<StockRanking> getOverheatedStocks(MarketType market);
+    List<StockRanking> getTrendingStocks();
     MarketTrend        getMarketTrend(MarketType market);
     MarketBreadth      getMarketBreadth(MarketType market);
 }

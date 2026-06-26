@@ -2,38 +2,95 @@
 import Link from 'next/link'
 import React, { useState } from 'react'
 import { AccountSelect } from '@/components/account'
-import { Card } from '@/components/ui/Card'
+import { Card, Button } from '@/components/ui/'
 import { SegmentedControl } from '@/components/ui/SegmentedControl'
 import { DragScroll } from '@/components/ui/DragScroll'
 import { ArrowForwardIosSharp, FormatIndentIncreaseOutlined } from '@mui/icons-material';
 import { useHoldings } from '@/features/holding/api/use-holding'
 import { useOrderHistory } from '@/features/order/api/use-order'
+import {
+  useMarketIndex,
+  useExchangeRates,
+  useMarketCapRanking,
+  useVolumeRanking,
+  useAdvancing,
+  useDeclining,
+  useGapUp,
+  useOverheated,
+  useTrending,
+} from '@/features/market/api/use-market'
+import type { StockRanking, MarketType } from '@/features/market/api/market-api'
 
-interface StockRankinRows {
-  name: string
-  code: string
-  price: number
-  /** 등락률 (%) */
-  change: number
-  /** 전일대비 (절대값) */
-  prevdiff: number
-}
-
-const stockRankinRows: StockRankinRows[] = [
-  { name: '삼성전자', code: '005930', price: 72300, change: 1.2, prevdiff: 1870 },
-  { name: 'SK하이닉스', code: '000660', price: 198500, change: -0.8, prevdiff: 870 },
-  { name: 'NAVER', code: '035420', price: 215000, change: 0.5, prevdiff: 870 },
-  { name: 'Kakao', code: '035720', price: 48500, change: -2.1, prevdiff: 870 },
-  { name: 'LG에너지솔루션', code: '373220', price: 385000, change: 3.2, prevdiff: 870 },
-  { name: '현대자동차', code: '005380', price: 245000, change: 0.8, prevdiff: 870 },
-  { name: 'LG전자', code: '066570', price: 245000, change: 0.8, prevdiff: 870 },
-]
+// segment 값('all'|'kospi'|'kosdaq') → 백엔드 MarketType('ALL'|'KOSPI'|'KOSDAQ') 변환
+const toMarketType = (segment: string): MarketType =>
+  segment === 'all' ? 'ALL' : segment === 'kosdaq' ? 'KOSDAQ' : 'KOSPI'
 
 // 손익 부호 색상 (이익=빨강, 손실=파랑)
 const pnlClass = (v: number) => (v > 0 ? 'text-red-500' : v < 0 ? 'text-blue-500' : 'text-gray-500')
 const signed = (v: number) => `${v > 0 ? '+' : ''}${v.toLocaleString()}`
+// 지수/환율용 — 소수점 2자리 고정 (1000.00, 1000.10 등)
+const fmt2 = (v: number) => v.toLocaleString('ko-KR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+const signed2 = (v: number) => `${v > 0 ? '+' : ''}${fmt2(v)}`
 // 건수/종목수 라벨: 0 또는 미로딩 시 '-' 표시
 const countLabel = (n: number | undefined, unit: string) => (n ? `${n}${unit}` : '-')
+// 오늘 날짜 (YYYY-MM-DD) — 주문일자(orderDate) 당일 비교용
+const todayStr = () => {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
+// ── 랭킹 영역 공통 컴포넌트 (시가총액/거래량/상승/하락/갭상승/과열 동일 UI) ──────
+interface RankingSectionProps {
+  title: string
+  value: string
+  onChange: (v: string) => void
+  rows: StockRanking[]
+}
+
+function RankingSection({ title, value, onChange, rows }: RankingSectionProps) {
+  return (
+    <div className='w-full flex flex-col gap-2'>
+      <div className='w-full flex gap-2 justify-between items-center'>
+        <h2 className='text-sm font-semibold'>{title}</h2>
+        <SegmentedControl
+          value={value}
+          onChange={onChange}
+          options={[
+            { label: '전체', value: 'all' },
+            { label: '코스피', value: 'kospi' },
+            { label: '코스닥', value: 'kosdaq' },
+          ]}
+          size="small"
+          sx={{height: 32}}
+        />
+      </div>
+
+      <Card>
+        <div className='flex flex-col gap-2'>
+          <ul className='flex flex-col gap-2 min-h-[327px]'>
+            {rows.slice(0, 7).map((s, i) => {
+              const up = s.change >= 0
+              const color = up ? 'text-red-500' : 'text-blue-500'
+              const sign = up ? '+' : '-'
+              return (
+                <li key={`${s.symbol}-${i}`} className='flex-1 flex justify-between text-sm font-semibold gap-2.5'>
+                  <div>{s.name}</div>
+                  <div className='flex flex-col items-end'>
+                    <p>{s.price.toLocaleString()}</p>
+                    <p className={`text-[12px] font-normal ${color} whitespace-nowrap`}>
+                      <span className="mr-0.5">{sign}{Math.abs(s.prevDiff).toLocaleString()}</span>
+                      <span>({sign}{Math.abs(s.change)}%)</span>
+                    </p>
+                  </div>
+                </li>
+              )
+            })}
+          </ul>
+        </div>
+      </Card>
+    </div>
+  )
+}
 
 export default function DashboardPage() {
   const [accountNo, setAccountNo] = useState('')
@@ -42,14 +99,32 @@ export default function DashboardPage() {
   // ── MY 계좌 사이드 패널 데이터 ────────────────────────────────────────────────
   // Holdings/OrderHistory 컴포넌트와 같은 queryKey라 동시/중복 요청은 dedupe된다.
   const { data: holdings = null } = useHoldings(accountNo)                          // 평가금액 + 보유주식
-  const { data: pendingOrders = null } = useOrderHistory({ accountNo, fill: 'UNFILLED' })  // 주문대기(미체결)
-  const { data: filledOrders = null } = useOrderHistory({ accountNo, fill: 'FILLED' })      // 체결완료
-  const [segment01, setSegment01] = useState('kospi')
-  const [segment02, setSegment02] = useState('kospi')
-  const [segment03, setSegment03] = useState('kospi')
-  const [segment04, setSegment04] = useState('kospi')
-  const [segment05, setSegment05] = useState('kospi')
-  const [segment06, setSegment06] = useState('kospi')
+  // 주문대기/체결완료는 당일만 백엔드에서 조회한다 (startDate=endDate=오늘).
+  const today = todayStr()
+  const { data: pendingOrders = null } = useOrderHistory({ accountNo, fill: 'UNFILLED', startDate: today, endDate: today })  // 주문대기(미체결)
+  const { data: filledOrders = null } = useOrderHistory({ accountNo, fill: 'FILLED', startDate: today, endDate: today })      // 체결완료
+
+  const pendingToday = pendingOrders?.items ?? []
+  const filledToday = filledOrders?.items ?? []
+
+  // ── 시장 정보(글로벌지수/환율) — 공개 API ────────────────────────────────────
+  const { data: indexes = [] } = useMarketIndex()
+  const { data: exchanges = [] } = useExchangeRates()
+  
+  // ── 랭킹 영역 ↔ 훅 매핑 (시장 구분 segment 연동) ───────────────────────────────
+  const [segment01, setSegment01] = useState('all')
+  const [segment02, setSegment02] = useState('all')
+  const [segment03, setSegment03] = useState('all')
+  const [segment04, setSegment04] = useState('all')
+  const [segment05, setSegment05] = useState('all')
+  const [segment06, setSegment06] = useState('all')
+  const { data: marketCapRows = [] } = useMarketCapRanking(toMarketType(segment01))
+  const { data: volumeRows = [] } = useVolumeRanking(toMarketType(segment02))
+  const { data: advancingRows = [] } = useAdvancing(toMarketType(segment03))
+  const { data: decliningRows = [] } = useDeclining(toMarketType(segment04))
+  const { data: gapUpRows = [] } = useGapUp(toMarketType(segment05))
+  const { data: overheatedRows = [] } = useOverheated(toMarketType(segment06))
+  const { data: trendingRows = [] } = useTrending()
 
   return (
 
@@ -71,281 +146,28 @@ export default function DashboardPage() {
           {/* <h1 className="text-2xl font-bold text-foreground">대시보드</h1> */}
           
           {/* 글로벌지수 */}
-          <DragScroll className='flex w-full rounded-lg border-l border-r border-gray-200'>
-            <div className='flex gap-1 w-full'>
-              <Card title="KOSPI" subtitle='72,000,300' sx={{width: '100%', minWidth: '200px', pr: 7}} titleSx={{fontSize: '14px'}} subtitleSx={{fontSize: '20px'}}>
-                <ul className='flex flex-col text-sm'>
-                  <li className='flex-1 flex'><span>+1,000</span><span>(+1.2%)</span></li>
-                </ul>              
-              </Card>
-              <Card title="KOSPI" subtitle='72,000,300' sx={{width: '100%', minWidth: '200px', pr: 7}} titleSx={{fontSize: '14px'}} subtitleSx={{fontSize: '20px'}}>
-                <ul className='flex flex-col text-sm'>
-                  <li className='flex-1 flex'><span>+1,000</span><span>(+1.2%)</span></li>
-                </ul>              
-              </Card>
-              <Card title="KOSPI" subtitle='72,000,300' sx={{width: '100%', minWidth: '200px', pr: 7}} titleSx={{fontSize: '14px'}} subtitleSx={{fontSize: '20px'}}>
-                <ul className='flex flex-col text-sm'>
-                  <li className='flex-1 flex'><span>+1,000</span><span>(+1.2%)</span></li>
-                </ul>              
-              </Card>
-              <Card title="KOSPI" subtitle='72,000,300' sx={{width: '100%', minWidth: '200px', pr: 7}} titleSx={{fontSize: '14px'}} subtitleSx={{fontSize: '20px'}}>
-                <ul className='flex flex-col text-sm'>
-                  <li className='flex-1 flex'><span>+1,000</span><span>(+1.2%)</span></li>
-                </ul>
-              </Card>
-              <Card title="KOSPI" subtitle='72,000,300' sx={{width: '100%', minWidth: '200px', pr: 7}} titleSx={{fontSize: '14px'}} subtitleSx={{fontSize: '20px'}}>
-                <ul className='flex flex-col text-sm'>
-                  <li className='flex-1 flex'><span>+1,000</span><span>(+1.2%)</span></li>
-                </ul>
-              </Card>
-              <Card title="KOSPI" subtitle='72,000,300' sx={{width: '100%', minWidth: '200px', pr: 7}} titleSx={{fontSize: '14px'}} subtitleSx={{fontSize: '20px'}}>
-                <ul className='flex flex-col text-sm'>
-                  <li className='flex-1 flex'><span>+1,000</span><span>(+1.2%)</span></li>
-                </ul>
-              </Card>
-              <Card title="KOSPI" subtitle='72,000,300' sx={{width: '100%', minWidth: '200px', pr: 7}} titleSx={{fontSize: '14px'}} subtitleSx={{fontSize: '20px'}}>
-                <ul className='flex flex-col text-sm'>
-                  <li className='flex-1 flex'><span>+1,000</span><span>(+1.2%)</span></li>
-                </ul>
-              </Card>
+          <DragScroll className='flex w-full rounded-lg border-l border-r border-gray-200 min-h-[129px]'>
+            <div className='flex gap-2 w-full'>
+              {indexes.map(idx => (
+                <Card key={idx.code} title={idx.name} subtitle={fmt2(idx.price)} sx={{width: '100%', minWidth: '200px', pr: 7}} titleSx={{fontSize: '14px'}} subtitleSx={{fontSize: '24px'}}>
+                  <ul className='flex flex-col text-sm'>
+                    <li className={`flex-1 flex gap-1 ${pnlClass(idx.prevDiff)}`}>
+                      <span>{signed2(idx.prevDiff)}</span>
+                      <span>({signed2(idx.change)}%)</span>
+                    </li>
+                  </ul>
+                </Card>
+              ))}
             </div>
           </DragScroll>
 
           <div className='w-full grid grid-cols-1 @[500px]:grid-cols-2 @[1024px]:grid-cols-3 gap-4'>
-            <div className='w-full flex flex-col gap-2'>
-              <div className='w-full flex gap-2 justify-between items-center'>
-                <h2 className='text-sm font-semibold'>시가총액상위</h2>
-                <SegmentedControl
-                  value={segment01}
-                  onChange={setSegment01}
-                  options={[
-                    { label: '코스피', value: 'kospi' },
-                    { label: '코스닥', value: 'kosdaq' },
-                  ]}
-                  size="small"
-                  sx={{height: 32}}
-                />
-              </div>
-              
-              <Card>
-                <div className='flex flex-col gap-2'>
-                  <ul className='flex flex-col gap-2'>
-                    {stockRankinRows.map((s, i) => {
-                      const up = s.change >= 0
-                      const color = up ? 'text-red-500' : 'text-blue-500'
-                      const sign = up ? '+' : '-'
-                      return (
-                        <li key={`${s.code}-${i}`} className='flex-1 flex justify-between text-sm font-semibold gap-2'>
-                          <div>{s.name}</div>
-                          <div className='flex flex-col items-end'>
-                            <p>{s.price.toLocaleString()}</p>
-                            <p className={`text-[12px] font-normal ${color}`}>
-                              <span>{sign}{s.prevdiff.toLocaleString()}</span>
-                              <span> ({sign}{Math.abs(s.change)}%)</span>
-                            </p>
-                          </div>
-                        </li>
-                      )
-                    })}
-                  </ul>
-                </div>
-              </Card>
-            </div>
-            <div className='w-full flex flex-col gap-2'>
-              <div className='w-full flex gap-2 justify-between items-center'>
-                <h2 className='text-sm font-semibold'>거래량상위</h2>
-                <SegmentedControl
-                  value={segment02}
-                  onChange={setSegment02}
-                  options={[
-                    { label: '코스피', value: 'kospi' },
-                    { label: '코스닥', value: 'kosdaq' },
-                  ]}
-                  size="small"
-                  sx={{height: 32}}
-                />
-              </div>
-              
-              <Card>
-                <div className='flex flex-col gap-2'>
-                  <ul className='flex flex-col gap-2'>
-                    {stockRankinRows.map((s, i) => {
-                      const up = s.change >= 0
-                      const color = up ? 'text-red-500' : 'text-blue-500'
-                      const sign = up ? '+' : '-'
-                      return (
-                        <li key={`${s.code}-${i}`} className='flex-1 flex justify-between text-sm font-semibold gap-2'>
-                          <div>{s.name}</div>
-                          <div className='flex flex-col items-end'>
-                            <p>{s.price.toLocaleString()}</p>
-                            <p className={`text-[12px] font-normal ${color}`}>
-                              <span>{sign}{s.prevdiff.toLocaleString()}</span>
-                              <span> ({sign}{Math.abs(s.change)}%)</span>
-                            </p>
-                          </div>
-                        </li>
-                      )
-                    })}
-                  </ul>
-                </div>
-              </Card>
-            </div>
-            <div className='w-full flex flex-col gap-2'>
-              <div className='w-full flex gap-2 justify-between items-center'>
-                <h2 className='text-sm font-semibold'>상승종목</h2>
-                <SegmentedControl
-                  value={segment03}
-                  onChange={setSegment03}
-                  options={[
-                    { label: '코스피', value: 'kospi' },
-                    { label: '코스닥', value: 'kosdaq' },
-                  ]}
-                  size="small"
-                  sx={{height: 32}}
-                />
-              </div>
-              
-              <Card>
-                <div className='flex flex-col gap-2'>
-                  <ul className='flex flex-col gap-2'>
-                    {stockRankinRows.map((s, i) => {
-                      const up = s.change >= 0
-                      const color = up ? 'text-red-500' : 'text-blue-500'
-                      const sign = up ? '+' : '-'
-                      return (
-                        <li key={`${s.code}-${i}`} className='flex-1 flex justify-between text-sm font-semibold gap-2'>
-                          <div>{s.name}</div>
-                          <div className='flex flex-col items-end'>
-                            <p>{s.price.toLocaleString()}</p>
-                            <p className={`text-[12px] font-normal ${color}`}>
-                              <span>{sign}{s.prevdiff.toLocaleString()}</span>
-                              <span> ({sign}{Math.abs(s.change)}%)</span>
-                            </p>
-                          </div>
-                        </li>
-                      )
-                    })}
-                  </ul>
-                </div>
-              </Card>
-            </div>
-            <div className='w-full flex flex-col gap-2'>
-              <div className='w-full flex gap-2 justify-between items-center'>
-                <h2 className='text-sm font-semibold'>하락종목</h2>
-                <SegmentedControl
-                  value={segment04}
-                  onChange={setSegment04}
-                  options={[
-                    { label: '코스피', value: 'kospi' },
-                    { label: '코스닥', value: 'kosdaq' },
-                  ]}
-                  size="small"
-                  sx={{height: 32}}
-                />
-              </div>
-              
-              <Card>
-                <div className='flex flex-col gap-2'>
-                  <ul className='flex flex-col gap-2'>
-                    {stockRankinRows.map((s, i) => {
-                      const up = s.change >= 0
-                      const color = up ? 'text-red-500' : 'text-blue-500'
-                      const sign = up ? '+' : '-'
-                      return (
-                        <li key={`${s.code}-${i}`} className='flex-1 flex justify-between text-sm font-semibold gap-2'>
-                          <div>{s.name}</div>
-                          <div className='flex flex-col items-end'>
-                            <p>{s.price.toLocaleString()}</p>
-                            <p className={`text-[12px] font-normal ${color}`}>
-                              <span>{sign}{s.prevdiff.toLocaleString()}</span>
-                              <span> ({sign}{Math.abs(s.change)}%)</span>
-                            </p>
-                          </div>
-                        </li>
-                      )
-                    })}
-                  </ul>
-                </div>
-              </Card>
-            </div>
-            <div className='w-full flex flex-col gap-2'>
-              <div className='w-full flex gap-2 justify-between items-center'>
-                <h2 className='text-sm font-semibold'>갭상승종목</h2>
-                <SegmentedControl
-                  value={segment05}
-                  onChange={setSegment05}
-                  options={[
-                    { label: '코스피', value: 'kospi' },
-                    { label: '코스닥', value: 'kosdaq' },
-                  ]}
-                  size="small"
-                  sx={{height: 32}}
-                />
-              </div>
-              
-              <Card>
-                <div className='flex flex-col gap-2'>
-                  <ul className='flex flex-col gap-2'>
-                    {stockRankinRows.map((s, i) => {
-                      const up = s.change >= 0
-                      const color = up ? 'text-red-500' : 'text-blue-500'
-                      const sign = up ? '+' : '-'
-                      return (
-                        <li key={`${s.code}-${i}`} className='flex-1 flex justify-between text-sm font-semibold gap-2'>
-                          <div>{s.name}</div>
-                          <div className='flex flex-col items-end'>
-                            <p>{s.price.toLocaleString()}</p>
-                            <p className={`text-[12px] font-normal ${color}`}>
-                              <span>{sign}{s.prevdiff.toLocaleString()}</span>
-                              <span> ({sign}{Math.abs(s.change)}%)</span>
-                            </p>
-                          </div>
-                        </li>
-                      )
-                    })}
-                  </ul>
-                </div>
-              </Card>
-            </div>
-            <div className='w-full flex flex-col gap-2'>
-              <div className='w-full flex gap-2 justify-between items-center'>
-                <h2 className='text-sm font-semibold'>투자심리과열종목</h2>
-                <SegmentedControl
-                  value={segment06}
-                  onChange={setSegment06}
-                  options={[
-                    { label: '코스피', value: 'kospi' },
-                    { label: '코스닥', value: 'kosdaq' },
-                  ]}
-                  size="small"
-                  sx={{height: 32}}
-                />
-              </div>
-              
-              <Card>
-                <div className='flex flex-col gap-2'>
-                  <ul className='flex flex-col gap-2'>
-                    {stockRankinRows.map((s, i) => {
-                      const up = s.change >= 0
-                      const color = up ? 'text-red-500' : 'text-blue-500'
-                      const sign = up ? '+' : '-'
-                      return (
-                        <li key={`${s.code}-${i}`} className='flex-1 flex justify-between text-sm font-semibold gap-2'>
-                          <div>{s.name}</div>
-                          <div className='flex flex-col items-end'>
-                            <p>{s.price.toLocaleString()}</p>
-                            <p className={`text-[12px] font-normal ${color}`}>
-                              <span>{sign}{s.prevdiff.toLocaleString()}</span>
-                              <span> ({sign}{Math.abs(s.change)}%)</span>
-                            </p>
-                          </div>
-                        </li>
-                      )
-                    })}
-                  </ul>
-                </div>
-              </Card>
-            </div>
+            <RankingSection title='시가총액상위' value={segment01} onChange={setSegment01} rows={marketCapRows} />
+            <RankingSection title='거래량상위' value={segment02} onChange={setSegment02} rows={volumeRows} />
+            <RankingSection title='상승종목' value={segment03} onChange={setSegment03} rows={advancingRows} />
+            <RankingSection title='하락종목' value={segment04} onChange={setSegment04} rows={decliningRows} />
+            <RankingSection title='갭상승종목' value={segment05} onChange={setSegment05} rows={gapUpRows} />
+            <RankingSection title='투자심리과열종목' value={segment06} onChange={setSegment06} rows={overheatedRows} />
           </div>
 
           {/* 인기검색종목 */}
@@ -354,80 +176,27 @@ export default function DashboardPage() {
               <h2 className='text-sm font-semibold'>인기검색종목</h2>
             </div>
 
-            <DragScroll className='flex w-full rounded-lg border-l border-r border-gray-200'>
-              <div className='flex gap-1 w-full'>
-                <Card sx={{width: '100%', minWidth: '200px'}}>
-                  <ul className='flex flex-col text-sm gap-4'>
-                    <li><span className='font-semibold'>삼성전자</span></li>
-                    <li className='flex flex-col'>
-                      <p className='font-semibold text-lg'>300,000</p>
-                      <p><span>+1,000</span><span>(+1.2%)</span></p>
-                    </li>
-                  </ul>
-                </Card>
-                <Card sx={{width: '100%', minWidth: '200px'}}>
-                  <ul className='flex flex-col text-sm gap-4'>
-                    <li><span className='font-semibold'>삼성전자</span></li>
-                    <li className='flex flex-col'>
-                      <p className='font-semibold text-lg'>300,000</p>
-                      <p><span>+1,000</span><span>(+1.2%)</span></p>
-                    </li>
-                  </ul>
-                </Card>
-                <Card sx={{width: '100%', minWidth: '200px'}}>
-                  <ul className='flex flex-col text-sm gap-4'>
-                    <li><span className='font-semibold'>삼성전자</span></li>
-                    <li className='flex flex-col'>
-                      <p className='font-semibold text-lg'>300,000</p>
-                      <p><span>+1,000</span><span>(+1.2%)</span></p>
-                    </li>
-                  </ul>
-                </Card>
-                <Card sx={{width: '100%', minWidth: '200px'}}>
-                  <ul className='flex flex-col text-sm gap-4'>
-                    <li><span className='font-semibold'>삼성전자</span></li>
-                    <li className='flex flex-col'>
-                      <p className='font-semibold text-lg'>300,000</p>
-                      <p><span>+1,000</span><span>(+1.2%)</span></p>
-                    </li>
-                  </ul>
-                </Card>
-                <Card sx={{width: '100%', minWidth: '200px'}}>
-                  <ul className='flex flex-col text-sm gap-4'>
-                    <li><span className='font-semibold'>삼성전자</span></li>
-                    <li className='flex flex-col'>
-                      <p className='font-semibold text-lg'>300,000</p>
-                      <p><span>+1,000</span><span>(+1.2%)</span></p>
-                    </li>
-                  </ul>
-                </Card>
-                <Card sx={{width: '100%', minWidth: '200px'}}>
-                  <ul className='flex flex-col text-sm gap-4'>
-                    <li><span className='font-semibold'>삼성전자</span></li>
-                    <li className='flex flex-col'>
-                      <p className='font-semibold text-lg'>300,000</p>
-                      <p><span>+1,000</span><span>(+1.2%)</span></p>
-                    </li>
-                  </ul>
-                </Card>
-                <Card sx={{width: '100%', minWidth: '200px'}}>
-                  <ul className='flex flex-col text-sm gap-4'>
-                    <li><span className='font-semibold'>삼성전자</span></li>
-                    <li className='flex flex-col'>
-                      <p className='font-semibold text-lg'>300,000</p>
-                      <p><span>+1,000</span><span>(+1.2%)</span></p>
-                    </li>
-                  </ul>
-                </Card>
-                <Card sx={{width: '100%', minWidth: '200px'}}>
-                  <ul className='flex flex-col text-sm gap-4'>
-                    <li><span className='font-semibold'>삼성전자</span></li>
-                    <li className='flex flex-col'>
-                      <p className='font-semibold text-lg'>300,000</p>
-                      <p><span>+1,000</span><span>(+1.2%)</span></p>
-                    </li>
-                  </ul>
-                </Card>
+            <DragScroll className='flex w-full rounded-lg border-l border-r border-gray-200 min-h-[118px]'>
+              <div className='flex gap-2 w-full'>
+                {trendingRows.map((s, i) => {
+                  const up = s.change >= 0
+                  const color = up ? 'text-red-500' : 'text-blue-500'
+                  const sign = up ? '+' : '-'
+                  return (
+                    <Card key={`${s.symbol}-${i}`} sx={{width: '100%', minWidth: '200px'}}>
+                      <ul className='flex flex-col text-sm gap-4'>
+                        <li><span className='font-semibold'>{s.name}</span></li>
+                        <li className='flex flex-col'>
+                          <p className='font-semibold text-lg'>{s.price.toLocaleString()}</p>
+                          <p className={color}>
+                            <span>{sign}{Math.abs(s.prevDiff).toLocaleString()}</span>
+                            <span> ({sign}{Math.abs(s.change)}%)</span>
+                          </p>
+                        </li>
+                      </ul>
+                    </Card>
+                  )
+                })}
               </div>
             </DragScroll>
           </div>
@@ -435,31 +204,20 @@ export default function DashboardPage() {
           {/* 환율 */}
           <div className='w-full flex flex-col gap-2'>
             <div className='w-full flex gap-2 justify-between items-center'>
-              <h2 className='text-sm font-semibold'>환율</h2>
+              <h2 className='text-sm font-semibold'>주요 환율</h2>
             </div>
 
             <DragScroll className='flex w-full rounded-lg border-l border-r border-gray-200'>
-              <div className='flex gap-1 w-full'>
-                <div className='flex-1 flex gap-2 py-2 px-3.5 items-center rounded-md border border-gray-200 bg-white'>
-                  <span className='text-sm text-gray-500 font-semibold'>USD/KRW</span>
-                  <span className='flex-1 inline-flex items-center font-semibold text-xs whitespace-nowrap'><span>1,500.00원</span><span>(+1.2%)</span></span>
-                </div>
-                <div className='flex-1 flex gap-2 py-2 px-3.5 items-center rounded-md border border-gray-200 bg-white'>
-                  <span className='text-sm text-gray-500 font-semibold'>USD/KRW</span>
-                  <span className='flex-1 inline-flex items-center font-semibold text-xs whitespace-nowrap'><span>1,500.00원</span><span>(+1.2%)</span></span>
-                </div>
-                <div className='flex-1 flex gap-2 py-2 px-3.5 items-center rounded-md border border-gray-200 bg-white'>
-                  <span className='text-sm text-gray-500 font-semibold'>USD/KRW</span>
-                  <span className='flex-1 inline-flex items-center font-semibold text-xs whitespace-nowrap'><span>1,500.00원</span><span>(+1.2%)</span></span>
-                </div>
-                <div className='flex-1 flex gap-2 py-2 px-3.5 items-center rounded-md border border-gray-200 bg-white'>
-                  <span className='text-sm text-gray-500 font-semibold'>USD/KRW</span>
-                  <span className='flex-1 inline-flex items-center font-semibold text-xs whitespace-nowrap'><span>1,500.00원</span><span>(+1.2%)</span></span>
-                </div>
-                <div className='flex-1 flex gap-2 py-2 px-3.5 items-center rounded-md border border-gray-200 bg-white'>
-                  <span className='text-sm text-gray-500 font-semibold'>USD/KRW</span>
-                  <span className='flex-1 inline-flex items-center font-semibold text-xs whitespace-nowrap'><span>1,500.00원</span><span>(+1.2%)</span></span>
-                </div>
+              <div className='flex gap-2 w-full'>
+                {exchanges.map(ex => (
+                  <div key={ex.pair} className='flex-1 flex gap-2 py-2 px-3 items-center rounded-md border border-gray-200 bg-slate-700'>
+                    <span className='text-sm text-gray-300/80 font-semibold whitespace-nowrap'>{ex.pair}</span>
+                    <span className={`flex-1 inline-flex items-center gap-1 font-semibold text-xs whitespace-nowrap ${pnlClass(ex.prevDiff)}`}>
+                      <span>{fmt2(ex.rate)}원</span>
+                      <span>({signed2(ex.change)}%)</span>
+                    </span>
+                  </div>
+                ))}
               </div>
             </DragScroll>
           </div>
@@ -498,18 +256,18 @@ export default function DashboardPage() {
               <Card>
                 <div className='flex justify-between mb-4 text-sm font-semibold'>
                   <span className='text-gray-400'>주문대기</span>
-                  <span>{countLabel(pendingOrders?.items.length, '건')}</span>
+                  <span>{countLabel(pendingToday.length, '건')}</span>
                 </div>
                 <div className='flex flex-col text-sm'>
-                  {(pendingOrders?.items ?? []).slice(0, 3).map(o => (
+                  {pendingToday.slice(0, 3).map(o => (
                     <div key={o.orderNo} className='flex-1 flex justify-between'>
                       <span>{o.name}</span>
                       <span>{(o.quantity - o.filledQuantity).toLocaleString()}주</span>
                     </div>
                   ))}
-                  {(pendingOrders?.items?.length ?? 0) > 0 ? (
-                    <Link href={'/order/history'}>
-                      <button className='flex gap-1 items-center mt-2 ml-auto text-gray-500 hover:text-blue-500/90'>
+                  {pendingToday.length > 0 ? (
+                    <Link href={'/order/history'} className='ml-auto'>
+                      <button className='flex gap-1 items-center mt-2 text-gray-500 hover:text-blue-500/90'>
                         <span className='text-sm'>더보기</span>
                         <FormatIndentIncreaseOutlined sx={{ fontSize: 15 }} />
                       </button>
@@ -527,21 +285,22 @@ export default function DashboardPage() {
                   )}
                 </div>
               </Card>
+
               <Card>
                 <div className='flex justify-between mb-4 text-sm font-semibold'>
                   <span className='text-gray-400'>체결완료</span>
-                  <span>{countLabel(filledOrders?.items.length, '건')}</span>
+                  <span>{countLabel(filledToday.length, '건')}</span>
                 </div>
                 <div className='flex flex-col text-sm'>
-                  {(filledOrders?.items ?? []).slice(0, 3).map(o => (
+                  {filledToday.slice(0, 3).map(o => (
                     <div key={o.orderNo} className='flex-1 flex justify-between'>
                       <span>{o.name}</span>
                       <span>{o.filledQuantity.toLocaleString()}주</span>
                     </div>
                   ))}
-                  {(filledOrders?.items?.length ?? 0) > 0 ? (
-                    <Link href={'/order/history'}>
-                      <button className='flex gap-1 items-center mt-2 ml-auto text-gray-500 hover:text-blue-500/90'>
+                  {filledToday.length > 0 ? (
+                    <Link href={'/order/history'} className='ml-auto'>
+                      <button className='flex gap-1 items-center mt-2  text-gray-500 hover:text-blue-500/90'>
                         <span className='text-sm'>더보기</span>
                         <FormatIndentIncreaseOutlined sx={{ fontSize: 15 }} />
                       </button>
@@ -550,7 +309,7 @@ export default function DashboardPage() {
                     <div className='flex flex-col'>
                       <span className='text-gray-400 text-center'>체결 주문이 없습니다.</span>
                       <Link className='justify-items-center' href={'/order/history'}>
-                        <button className='flex gap-1 items-center mt-2  text-gray-500 hover:text-blue-500/90'>
+                        <button className='flex gap-1 items-center mt-2 text-gray-500 hover:text-blue-500/90'>
                           <span className='text-sm'>주문하기</span>
                           <FormatIndentIncreaseOutlined sx={{ fontSize: 15 }} />
                         </button>
@@ -572,8 +331,8 @@ export default function DashboardPage() {
                     </div>
                   ))}
                   {(holdings?.items?.length ?? 0) > 0 ? (
-                    <Link href={'/portfolio'}>
-                      <button className='flex gap-1 items-center mt-2 ml-auto text-gray-500 hover:text-blue-500/90'>
+                    <Link href={'/portfolio'} className='ml-auto'>
+                      <button className='flex gap-1 items-center mt-2 text-gray-500 hover:text-blue-500/90'>
                         <span className='text-sm'>더보기</span>
                         <FormatIndentIncreaseOutlined sx={{ fontSize: 15 }} />
                       </button>
@@ -581,11 +340,13 @@ export default function DashboardPage() {
                   ) : (
                     <div className='flex flex-col'>
                       <span className='text-gray-400 text-center'>보유 종목이 없습니다.</span>
-                      <Link className='justify-items-center' href={'/order/history'}>
-                        <button className='flex gap-1 items-center mt-2  text-gray-500 hover:text-blue-500/90'>
-                          <span className='text-sm'>주문하기</span>
-                          <FormatIndentIncreaseOutlined sx={{ fontSize: 15 }} />
-                        </button>
+                      <Link className='justify-items-center' href={'/order/order'}>
+                        <Button
+                          variant="outlined"
+                          size='small'
+                        >
+                          주문하기
+                        </Button>
                       </Link>
                     </div>
                   )}

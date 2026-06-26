@@ -22,6 +22,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.time.LocalDate;
 import java.util.UUID;
 
 /**
@@ -85,13 +86,22 @@ public class OrderController {
             @RequestParam String accountNo,
             @RequestParam(defaultValue = "ALL") String side,
             @RequestParam(defaultValue = "ALL") String fill,
-            @RequestParam(required = false) String symbol) {
+            @RequestParam(required = false) String symbol,
+            @RequestParam(required = false) String startDate,
+            @RequestParam(required = false) String endDate) {
         HistoryQuery query = new HistoryQuery(
                 userId(principal), accountNo,
                 SideFilter.valueOf(side.toUpperCase()),
                 FillFilter.valueOf(fill.toUpperCase()),
-                symbol);
+                symbol,
+                parseDate(startDate),
+                parseDate(endDate));
         return ResponseEntity.ok(OrderHistoryResponse.from(orderUseCase.getHistory(query)));
+    }
+
+    /** YYYY-MM-DD 문자열을 LocalDate로 변환 (null/blank면 null). */
+    private LocalDate parseDate(String value) {
+        return (value == null || value.isBlank()) ? null : LocalDate.parse(value);
     }
 
     /** 계좌별 주문내역 초기화 후 재시드 (기존 데이터 삭제 → 재생성) */

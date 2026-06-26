@@ -22,6 +22,8 @@ import {
   WorkspacePremium,
   TrendingUp,
   Assignment,
+  DataExploration,
+  PieChart,
   Settings,
 } from '@mui/icons-material'
 import { MENU_ITEMS, type MenuItem } from '@/config/menu.config'
@@ -39,6 +41,8 @@ const ICON_MAP: Record<string, ElementType> = {
   Briefcase: WorkspacePremium,
   TrendingUp: TrendingUp,
   ClipboardList: Assignment,
+  DataExploration: DataExploration,
+  PieChart: PieChart,
   Settings: Settings,
 }
 

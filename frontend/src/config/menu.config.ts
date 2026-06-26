@@ -23,11 +23,15 @@ export const MENU_ITEMS: MenuItem[] = [
     requiredAuth: true,
   },
   {
-    key: 'portfolio',
-    label: '포트폴리오',
-    path: '/portfolio',
-    icon: 'Briefcase',
+    key: 'market',
+    label: '마켓',
+    path: '/market',
+    icon: 'PieChart',
     requiredAuth: true,
+    children: [
+      { key: 'market-ranking', label: '시장랭킹', path: '/market/ranking' },
+      { key: 'market-trend', label: '시장투자동향', path: '/market/trend' },
+    ],
   },
   {
     key: 'quote',
@@ -54,6 +58,13 @@ export const MENU_ITEMS: MenuItem[] = [
       { key: 'order-order', label: '주문', path: '/order/order' },
       { key: 'order-history', label: '주문내역', path: '/order/history' },
     ],
+  },
+  {
+    key: 'portfolio',
+    label: '포트폴리오',
+    path: '/portfolio',
+    icon: 'Briefcase',
+    requiredAuth: true,
   },
   {
     key: 'settings',

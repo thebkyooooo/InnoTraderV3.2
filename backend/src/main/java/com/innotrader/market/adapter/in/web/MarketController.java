@@ -29,6 +29,9 @@ import java.util.List;
  *   <li>GET /api/public/market/ranking/trading-amount — 거래대금 상위</li>
  *   <li>GET /api/public/market/advancing          — 상승 종목</li>
  *   <li>GET /api/public/market/declining          — 하락 종목</li>
+ *   <li>GET /api/public/market/gap-up             — 갭상승 종목</li>
+ *   <li>GET /api/public/market/overheated         — 투자심리과열 종목</li>
+ *   <li>GET /api/public/market/trending           — 인기검색 종목</li>
  *   <li>GET /api/public/market/trend              — 시장 투자동향</li>
  *   <li>GET /api/public/market/breadth            — 시장 상승/하락 현황</li>
  * </ul>
@@ -67,7 +70,7 @@ public class MarketController {
     @Operation(summary = "시가총액 상위 종목", description = "시가총액 기준 상위 100개 종목")
     @GetMapping("/ranking/market-cap")
     public ResponseEntity<List<StockRankingResponse>> getMarketCapRanking(
-            @Parameter(description = "시장 구분 (KOSPI/KOSDAQ)", example = "KOSPI")
+            @Parameter(description = "시장 구분 (ALL/KOSPI/KOSDAQ)", example = "KOSPI")
             @RequestParam(defaultValue = "KOSPI") String market
     ) {
         return ResponseEntity.ok(
@@ -80,7 +83,7 @@ public class MarketController {
     @Operation(summary = "거래량 상위 종목", description = "거래량 기준 상위 100개 종목")
     @GetMapping("/ranking/volume")
     public ResponseEntity<List<StockRankingResponse>> getVolumeRanking(
-            @Parameter(description = "시장 구분 (KOSPI/KOSDAQ)", example = "KOSPI")
+            @Parameter(description = "시장 구분 (ALL/KOSPI/KOSDAQ)", example = "KOSPI")
             @RequestParam(defaultValue = "KOSPI") String market
     ) {
         return ResponseEntity.ok(
@@ -93,7 +96,7 @@ public class MarketController {
     @Operation(summary = "거래대금 상위 종목", description = "거래대금 기준 상위 100개 종목")
     @GetMapping("/ranking/trading-amount")
     public ResponseEntity<List<StockRankingResponse>> getTradingAmountRanking(
-            @Parameter(description = "시장 구분 (KOSPI/KOSDAQ)", example = "KOSPI")
+            @Parameter(description = "시장 구분 (ALL/KOSPI/KOSDAQ)", example = "KOSPI")
             @RequestParam(defaultValue = "KOSPI") String market
     ) {
         return ResponseEntity.ok(
@@ -106,7 +109,7 @@ public class MarketController {
     @Operation(summary = "상승 종목", description = "등락률 상위 상승 종목 100개")
     @GetMapping("/advancing")
     public ResponseEntity<List<StockRankingResponse>> getAdvancing(
-            @Parameter(description = "시장 구분 (KOSPI/KOSDAQ)", example = "KOSPI")
+            @Parameter(description = "시장 구분 (ALL/KOSPI/KOSDAQ)", example = "KOSPI")
             @RequestParam(defaultValue = "KOSPI") String market
     ) {
         return ResponseEntity.ok(
@@ -119,7 +122,7 @@ public class MarketController {
     @Operation(summary = "하락 종목", description = "등락률 하위 하락 종목 100개")
     @GetMapping("/declining")
     public ResponseEntity<List<StockRankingResponse>> getDeclining(
-            @Parameter(description = "시장 구분 (KOSPI/KOSDAQ)", example = "KOSPI")
+            @Parameter(description = "시장 구분 (ALL/KOSPI/KOSDAQ)", example = "KOSPI")
             @RequestParam(defaultValue = "KOSPI") String market
     ) {
         return ResponseEntity.ok(
@@ -129,10 +132,46 @@ public class MarketController {
         );
     }
 
+    @Operation(summary = "갭상승 종목", description = "갭상승 상위 100개 종목")
+    @GetMapping("/gap-up")
+    public ResponseEntity<List<StockRankingResponse>> getGapUp(
+            @Parameter(description = "시장 구분 (ALL/KOSPI/KOSDAQ)", example = "KOSPI")
+            @RequestParam(defaultValue = "KOSPI") String market
+    ) {
+        return ResponseEntity.ok(
+                getMarketUseCase.getGapUpStocks(parseMarketType(market)).stream()
+                        .map(StockRankingResponse::from)
+                        .toList()
+        );
+    }
+
+    @Operation(summary = "투자심리과열 종목", description = "투자심리 과열 상위 100개 종목")
+    @GetMapping("/overheated")
+    public ResponseEntity<List<StockRankingResponse>> getOverheated(
+            @Parameter(description = "시장 구분 (ALL/KOSPI/KOSDAQ)", example = "KOSPI")
+            @RequestParam(defaultValue = "KOSPI") String market
+    ) {
+        return ResponseEntity.ok(
+                getMarketUseCase.getOverheatedStocks(parseMarketType(market)).stream()
+                        .map(StockRankingResponse::from)
+                        .toList()
+        );
+    }
+
+    @Operation(summary = "인기검색 종목", description = "인기검색 상위 10개 종목")
+    @GetMapping("/trending")
+    public ResponseEntity<List<StockRankingResponse>> getTrending() {
+        return ResponseEntity.ok(
+                getMarketUseCase.getTrendingStocks().stream()
+                        .map(StockRankingResponse::from)
+                        .toList()
+        );
+    }
+
     @Operation(summary = "시장 투자동향", description = "외국인/개인/기관 순매수 (억 단위)")
     @GetMapping("/trend")
     public ResponseEntity<MarketTrendResponse> getTrend(
-            @Parameter(description = "시장 구분 (KOSPI/KOSDAQ)", example = "KOSPI")
+            @Parameter(description = "시장 구분 (ALL/KOSPI/KOSDAQ)", example = "KOSPI")
             @RequestParam(defaultValue = "KOSPI") String market
     ) {
         MarketType marketType = parseMarketType(market);
@@ -142,7 +181,7 @@ public class MarketController {
     @Operation(summary = "시장 상승/하락 현황", description = "상한가/상승/보합/하락/하한가 종목 수 및 대표 종목")
     @GetMapping("/breadth")
     public ResponseEntity<MarketBreadthResponse> getBreadth(
-            @Parameter(description = "시장 구분 (KOSPI/KOSDAQ)", example = "KOSPI")
+            @Parameter(description = "시장 구분 (ALL/KOSPI/KOSDAQ)", example = "KOSPI")
             @RequestParam(defaultValue = "KOSPI") String market
     ) {
         MarketType marketType = parseMarketType(market);
@@ -152,6 +191,8 @@ public class MarketController {
     // ─── 유틸 ────────────────────────────────────────────────────────────────
 
     private MarketType parseMarketType(String market) {
-        return "KOSDAQ".equalsIgnoreCase(market) ? MarketType.KOSDAQ : MarketType.KOSPI;
+        if ("ALL".equalsIgnoreCase(market))    return MarketType.ALL;
+        if ("KOSDAQ".equalsIgnoreCase(market)) return MarketType.KOSDAQ;
+        return MarketType.KOSPI;
     }
 }

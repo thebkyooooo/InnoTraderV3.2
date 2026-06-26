@@ -149,6 +149,7 @@ public class OrderService implements OrderUseCase {
                 .filter(o -> symbolFilter == null || symbolFilter.equals(o.symbol()))
                 .filter(o -> matchesSide(o, q.sideFilter()))
                 .filter(o -> matchesFill(o, q.fillFilter()))
+                .filter(o -> matchesDate(o, q.startDate(), q.endDate()))       // 주문일자(KST) 범위 필터
                 .toList();
 
         List<HistoryItem> items = new ArrayList<>(orders.size());
@@ -263,5 +264,13 @@ public class OrderService implements OrderUseCase {
             case FILLED   -> o.filledQuantity() > 0;                                   // 체결분 존재
             case UNFILLED -> o.status() != OrderStatus.CANCELED && o.unfilledQuantity() > 0; // 미체결 잔량 존재
         };
+    }
+
+    /** 주문일자(Asia/Seoul 기준)가 [startDate, endDate] inclusive 범위에 드는지. null 경계는 무시. */
+    private boolean matchesDate(Order o, LocalDate startDate, LocalDate endDate) {
+        LocalDate orderDate = o.orderedAt().atZone(KST).toLocalDate();
+        if (startDate != null && orderDate.isBefore(startDate)) return false;
+        if (endDate != null && orderDate.isAfter(endDate)) return false;
+        return true;
     }
 }

@@ -32,24 +32,25 @@ public class MarketService implements GetMarketUseCase {
 
     @Override
     public List<IndexInfo> getIndexInfo() {
-        record IndexSpec(String code, String name, double min, double max) {}
+        record IndexSpec(String code, String name, double base) {}
 
+        // base = 기준값(현재가). 전일대비/등락률만 변동 생성한다.
         List<IndexSpec> specs = List.of(
-                new IndexSpec("KS11",   "코스피",       2400, 2700),
-                new IndexSpec("KQ11",   "코스닥",        720,  850),
-                new IndexSpec("DJI",    "DOW",          38000, 42000),
-                new IndexSpec("COMP",   "NASDAQ",       16000, 18000),
-                new IndexSpec("INX",    "S&P 500",       5000,  5500),
-                new IndexSpec("N225",   "니케이 225",   38000, 42000),
-                new IndexSpec("000001", "상하이 종합",   3000,  3300),
-                new IndexSpec("HSI",    "항셍",         16000, 19000)
+                new IndexSpec("KS11",   "코스피",       8713.42),
+                new IndexSpec("KQ11",   "코스닥",         845.24),
+                new IndexSpec("DJI",    "DOW",          50866.78),
+                new IndexSpec("COMP",   "NASDAQ",       22881.38),
+                new IndexSpec("INX",    "S&P 500",       7383.74),
+                new IndexSpec("N225",   "니케이 225",   69212.26),
+                new IndexSpec("000001", "상하이 종합",   4096.47),
+                new IndexSpec("HSI",    "항셍",         24961.95)
         );
 
         return IntStream.range(0, specs.size())
                 .mapToObj(i -> {
                     IndexSpec s = specs.get(i);
                     Random rng = new Random(42L + i);
-                    double price    = round2(s.min() + rng.nextDouble() * (s.max() - s.min()));
+                    double price    = round2(s.base());
                     double prevDiff = round2(price * (rng.nextDouble() - 0.5) * 0.04);
                     double change   = round1(prevDiff / price * 100);
                     return new IndexInfo(s.code(), s.name(), price, prevDiff, change);
@@ -61,21 +62,22 @@ public class MarketService implements GetMarketUseCase {
 
     @Override
     public List<ExchangeRate> getExchangeRates() {
-        record RateSpec(String pair, String name, double min, double max) {}
+        record RateSpec(String pair, String name, double base) {}
 
+        // base = 기준 환율. 전일대비/등락률만 변동 생성한다.
         List<RateSpec> specs = List.of(
-                new RateSpec("USD/KRW", "미국 달러/원",      1300, 1400),
-                new RateSpec("JPY/KRW", "일본 엔/원",          8.5,  9.5),
-                new RateSpec("EUR/KRW", "유로/원",            1400, 1500),
-                new RateSpec("GBP/KRW", "영국 파운드/원",     1600, 1700),
-                new RateSpec("CNY/KRW", "중국 위안(RMB)/원",   175,  190)
+                new RateSpec("USD/KRW", "미국 달러/원",      1548.80),
+                new RateSpec("JPY/KRW", "일본 엔/원",           9.57),
+                new RateSpec("EUR/KRW", "유로/원",            1758.8),
+                new RateSpec("GBP/KRW", "영국 파운드/원",     2039.2),
+                new RateSpec("CNY/KRW", "중국 위안(RMB)/원",   227.6)
         );
 
         return IntStream.range(0, specs.size())
                 .mapToObj(i -> {
                     RateSpec s = specs.get(i);
                     Random rng = new Random(99L + i);
-                    double rate     = round2(s.min() + rng.nextDouble() * (s.max() - s.min()));
+                    double rate     = round2(s.base());
                     double prevDiff = round2(rate * (rng.nextDouble() - 0.5) * 0.04);
                     double change   = round1(prevDiff / rate * 100);
                     return new ExchangeRate(s.pair(), s.name(), rate, prevDiff, change);
@@ -142,11 +144,50 @@ public class MarketService implements GetMarketUseCase {
                 ));
     }
 
+    // ─── 갭상승 / 투자심리과열 / 인기검색 ─────────────────────────────────────────
+
+    @Override
+    public List<StockRanking> getGapUpStocks(MarketType market) {
+        // 시가/전일종가 필드가 없어 결정적 보조기준(symbol 해시 가중치 + change)으로 갭상승을 시뮬레이션한다.
+        return byMarket(market).stream()
+                .filter(s -> s.change() > 0)
+                .sorted(Comparator.comparingDouble(this::gapScore).reversed())
+                .limit(RANKING_LIMIT)
+                .collect(java.util.stream.Collectors.collectingAndThen(
+                        java.util.stream.Collectors.toList(),
+                        list -> rankWith(list, false, false, false)
+                ));
+    }
+
+    @Override
+    public List<StockRanking> getOverheatedStocks(MarketType market) {
+        // 과열 시뮬레이션 — 등락률 절대값 * 거래량 기준 상위 100.
+        return byMarket(market).stream()
+                .sorted(Comparator.comparingDouble(this::overheatScore).reversed())
+                .limit(RANKING_LIMIT)
+                .collect(java.util.stream.Collectors.collectingAndThen(
+                        java.util.stream.Collectors.toList(),
+                        list -> rankWith(list, false, false, false)
+                ));
+    }
+
+    @Override
+    public List<StockRanking> getTrendingStocks() {
+        // 인기검색 — 시장 무관 전체에서 거래대금 상위 10개.
+        return findMarketDataPort.findAll().stream()
+                .sorted(Comparator.comparingLong(StockData::tradingAmount).reversed())
+                .limit(BREADTH_LIMIT)
+                .collect(java.util.stream.Collectors.collectingAndThen(
+                        java.util.stream.Collectors.toList(),
+                        list -> rankWith(list, false, false, false)
+                ));
+    }
+
     // ─── 투자동향 ───────────────────────────────────────────────────────────────
 
     @Override
     public MarketTrend getMarketTrend(MarketType market) {
-        long seed = market == MarketType.KOSPI ? 1L : 2L;
+        long seed = switch (market) { case KOSPI -> 1L; case KOSDAQ -> 2L; case ALL -> 3L; };
         Random rng = new Random(seed);
         long foreign     = randomTrend(rng);
         long individual  = randomTrend(rng);
@@ -158,11 +199,7 @@ public class MarketService implements GetMarketUseCase {
 
     @Override
     public MarketBreadth getMarketBreadth(MarketType market) {
-        String marketName = market == MarketType.KOSPI ? "KOSPI" : "KOSDAQ";
-
-        List<StockData> filtered = findMarketDataPort.findAll().stream()
-                .filter(s -> marketName.equalsIgnoreCase(s.market()))
-                .toList();
+        List<StockData> filtered = byMarket(market);   // ALL이면 전체
 
         List<StockData> upperLimit = filtered.stream()
                 .filter(s -> s.change() >= 29.9)
@@ -197,8 +234,10 @@ public class MarketService implements GetMarketUseCase {
     // ─── 유틸 ──────────────────────────────────────────────────────────────────
 
     private List<StockData> byMarket(MarketType market) {
+        List<StockData> all = findMarketDataPort.findAll();
+        if (market == MarketType.ALL) return all;   // 전체 시장
         String name = market == MarketType.KOSPI ? "KOSPI" : "KOSDAQ";
-        return findMarketDataPort.findAll().stream()
+        return all.stream()
                 .filter(s -> name.equalsIgnoreCase(s.market()))
                 .toList();
     }
@@ -214,6 +253,7 @@ public class MarketService implements GetMarketUseCase {
                             i + 1,
                             s.symbol(),
                             s.name(),
+                            s.market(),
                             s.price(),
                             s.prevDiff(),
                             s.change(),
@@ -230,6 +270,18 @@ public class MarketService implements GetMarketUseCase {
                 .limit(limit)
                 .map(s -> new StockBreadthItem(s.symbol(), s.name(), s.price(), s.prevDiff(), s.change()))
                 .toList();
+    }
+
+    /** 갭상승 결정적 점수 — symbol 해시 가중치 + 등락률. (시가/전일종가 부재 보완) */
+    private double gapScore(StockData s) {
+        int hash = Math.abs(s.symbol().hashCode());
+        double weight = (hash % 1000) / 100.0;  // 0.00 ~ 9.99 결정적 가중치
+        return s.change() + weight;
+    }
+
+    /** 과열 결정적 점수 — 등락률 절대값 * 거래량. */
+    private double overheatScore(StockData s) {
+        return Math.abs(s.change()) * s.volume();
     }
 
     private long randomTrend(Random rng) {

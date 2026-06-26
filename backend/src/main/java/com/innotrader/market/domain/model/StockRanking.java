@@ -4,6 +4,7 @@ public record StockRanking(
         int    rank,
         String symbol,
         String name,
+        String market,         // KOSPI, KOSDAQ
         long   price,
         long   prevDiff,
         double change,

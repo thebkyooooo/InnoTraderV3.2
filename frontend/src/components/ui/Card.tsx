@@ -33,7 +33,7 @@ export function Card({ title, subtitle, children, actions, headerAction, noPaddi
           action={headerAction}
           slotProps={{
             title: { variant: 'h6', sx: { fontWeight: 600, color: 'hsl(var(--secondary-foreground) / .5)', ...titleSx } },
-            subheader: { sx: { ...subtitleSx, color: 'inherit' } },
+            subheader: { sx: { color: 'inherit', ...subtitleSx } },
           }}
           sx={ {pb: 0} }
         />

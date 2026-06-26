@@ -46,6 +46,10 @@ export interface OrderHistoryParams {
   side?: SideFilter
   fill?: FillFilter
   symbol?: string
+  /** 조회 시작일 (YYYY-MM-DD, inclusive) */
+  startDate?: string
+  /** 조회 종료일 (YYYY-MM-DD, inclusive) */
+  endDate?: string
 }
 
 // ── 응답 ─────────────────────────────────────────────────────────────────────

@@ -247,6 +247,8 @@ export const orderHandlers = [
     const sideFilter = (url.searchParams.get('side') ?? 'ALL').toUpperCase()
     const fillFilter = (url.searchParams.get('fill') ?? 'ALL').toUpperCase()
     const symbol = url.searchParams.get('symbol') || null
+    const startDate = url.searchParams.get('startDate') || null  // YYYY-MM-DD
+    const endDate = url.searchParams.get('endDate') || null      // YYYY-MM-DD
 
     const matchSide = (o: OrderRow) =>
       sideFilter === 'ALL' || (sideFilter === 'BUY' ? o.side === 'buy' : o.side === 'sell')
@@ -255,6 +257,13 @@ export const orderHandlers = [
       if (fillFilter === 'UNFILLED') return o.status !== 'CANCELED' && o.quantity - o.filledQuantity > 0
       return true
     }
+    // 주문일자(orderedAt → YYYY-MM-DD) inclusive 범위 필터. null 경계는 무시.
+    const matchDate = (o: OrderRow) => {
+      const dt = new Date(o.orderedAt)
+      const pad = (n: number) => String(n).padStart(2, '0')
+      const d = `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())}`
+      return (!startDate || d >= startDate) && (!endDate || d <= endDate)
+    }
 
     const rows = store
       .filter(o => o.accountNo === accountNo)
@@ -262,6 +271,7 @@ export const orderHandlers = [
       .filter(o => !symbol || o.symbol === symbol)
       .filter(matchSide)
       .filter(matchFill)
+      .filter(matchDate)
       .sort((a, b) => b.orderedAt.localeCompare(a.orderedAt))
 
     let totalQuantity = 0, totalFilledQuantity = 0, totalUnfilledQuantity = 0, totalCanceledQuantity = 0, totalFilledAmount = 0

@@ -5,6 +5,7 @@ import com.innotrader.order.domain.model.OrderStatus;
 import com.innotrader.order.domain.model.OrderType;
 
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
@@ -39,9 +40,13 @@ public interface OrderUseCase {
             UUID userId, String accountNo, String symbol, String originalOrderNo
     ) {}
 
-    /** 주문내역 조회 조건. {@code symbol}이 null/blank면 전체 종목. */
+    /**
+     * 주문내역 조회 조건. {@code symbol}이 null/blank면 전체 종목.
+     * {@code startDate}/{@code endDate}는 주문일자(Asia/Seoul 기준) inclusive 필터이며 null이면 해당 경계 무시.
+     */
     record HistoryQuery(
-            UUID userId, String accountNo, SideFilter sideFilter, FillFilter fillFilter, String symbol
+            UUID userId, String accountNo, SideFilter sideFilter, FillFilter fillFilter, String symbol,
+            LocalDate startDate, LocalDate endDate
     ) {}
 
     // ── Results ──────────────────────────────────────────────────────────────

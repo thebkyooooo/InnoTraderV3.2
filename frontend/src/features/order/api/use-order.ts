@@ -23,6 +23,8 @@ export function useOrderHistory(params: OrderHistoryParams, options?: { enabled?
       params.side ?? 'ALL',
       params.fill ?? 'ALL',
       params.symbol ?? '',
+      params.startDate ?? '',
+      params.endDate ?? '',
     ],
     queryFn: async () => (await orderApi.getHistory(params)).data,
     enabled: (options?.enabled ?? true) && !!accessToken && !!params.accountNo,
