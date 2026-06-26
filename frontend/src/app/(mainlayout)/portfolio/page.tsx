@@ -15,7 +15,7 @@ export default function PortfolioPage() {
       </div>
 
       {/* 주식잔고 (요약 + 보유종목) */}
-      <div className="flex-1 min-h-[360px]">
+      <div className="flex-1">
         <Holdings accountNo={accountNo} height="100%" />
       </div>
     </div>

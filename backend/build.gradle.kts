@@ -3,6 +3,7 @@
 //  using latest stable 3.4.x. Upgrade to 4.0 once GA is released.)
 
 import org.gradle.api.tasks.compile.JavaCompile
+import org.springframework.boot.gradle.tasks.run.BootRun
 
 plugins {
     alias(libs.plugins.spring.boot)
@@ -108,4 +109,15 @@ tasks.withType<JavaCompile> {
 
 tasks.named<Test>("test") {
     useJUnitPlatform()
+}
+
+// 진단: bootRun 비정상 종료 원인 격리용.
+// 다음 종료 후 backend/ 에 hs_err_pid*.log 가 생기면 JVM 네이티브 크래시,
+// 안 생기면 외부 강제 종료(세션/데몬)로 확정한다.
+tasks.named<BootRun>("bootRun") {
+    jvmArgs(
+        "-XX:ErrorFile=${projectDir}/hs_err_pid%p.log", // 크래시 덤프 경로 명시
+        "-XX:+HeapDumpOnOutOfMemoryError",              // OOM 시 힙 덤프
+        "-XX:HeapDumpPath=${projectDir}",
+    )
 }

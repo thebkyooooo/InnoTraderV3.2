@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react'
 import { QuoteBoard } from './QuoteBoard'
+import type { QuotePriceResponse } from '@/features/quote/api/quote-api'
 
 const meta = {
   title: 'Quote/QuoteBoard',
@@ -14,7 +15,8 @@ const meta = {
 export default meta
 type Story = StoryObj<typeof meta>
 
-const base = {
+// 제어형(quote 직접 주입)으로 다양한 상태를 보여준다
+const sampleQuote: QuotePriceResponse = {
   symbol:        '005930',
   name:          '삼성전자',
   market:        'KOSPI',
@@ -33,41 +35,31 @@ const base = {
 
 /** 상승 종목 */
 export const Rising: Story = {
-  args: base,
+  args: { symbol: '005930', quote: sampleQuote },
 }
 
 /** 하락 종목 */
 export const Falling: Story = {
   args: {
-    ...base,
-    name:     'SK하이닉스',
-    symbol:   '000660',
-    market:   'KOSPI',
-    price:    198500,
-    prevDiff: -1596,
-    change:   -0.80,
+    symbol: '000660',
+    quote: { ...sampleQuote, symbol: '000660', name: 'SK하이닉스', price: 198500, prevDiff: -1596, change: -0.80 },
   },
 }
 
 /** 보합 종목 */
 export const Flat: Story = {
   args: {
-    ...base,
-    name:     'NAVER',
-    symbol:   '035420',
-    market:   'KOSDAQ',
-    price:    215000,
-    prevDiff: 0,
-    change:   0,
+    symbol: '035420',
+    quote: { ...sampleQuote, symbol: '035420', name: 'NAVER', market: 'KOSDAQ', price: 215000, prevDiff: 0, change: 0 },
   },
 }
 
 /** 시장구분 없음 */
 export const NoMarket: Story = {
-  args: { ...base, market: undefined },
+  args: { symbol: '005930', quote: { ...sampleQuote, market: '' } },
 }
 
 /** 종목검색 핸들러 연결 */
 export const WithSearch: Story = {
-  args: { ...base, onStockSelect: (stock) => alert(`선택: ${stock.name}`) },
+  args: { symbol: '005930', quote: sampleQuote, onStockSelect: (stock) => alert(`선택: ${stock.name}`) },
 }

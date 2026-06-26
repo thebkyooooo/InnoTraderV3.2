@@ -56,6 +56,9 @@ public class AuthController {
     private static final String  REFRESH_COOKIE_NAME    = "refreshToken";
     private static final int     REFRESH_COOKIE_MAX_AGE = (int) Duration.ofDays(14).getSeconds();
     private static final long    ACCESS_TOKEN_EXPIRES_IN = 900L; // 15 minutes in seconds
+    // 토큰 회전 race 허용 윈도우: 직후 같은 RT로 동시 도착한 요청에 동일 토큰을 반환해
+    // 정상 동시성(다중 탭/병렬 요청/StrictMode 중복)을 재사용 공격으로 오인하지 않도록 한다.
+    private static final Duration REFRESH_ROTATION_GRACE = Duration.ofSeconds(30);
 
     private final RegisterUserUseCase registerUserUseCase;
     private final LoginUseCase        loginUseCase;
@@ -157,6 +160,15 @@ public class AuthController {
 
         // Replay-attack detection — token already consumed
         if (refreshTokenService.isAlreadyUsed(userId, jti)) {
+            // 회전 직후 동시/중복 요청(정상)일 수 있으므로 grace 윈도우 내라면
+            // 직전에 발급한 토큰 쌍을 그대로 반환 → 세션을 끊지 않는다.
+            var grace = refreshTokenService.getGrace(userId, jti);
+            if (grace != null) {
+                appendRefreshTokenCookie(response, grace.refreshToken(), REFRESH_COOKIE_MAX_AGE);
+                return ResponseEntity.ok(
+                        new TokenResponse(grace.accessToken(), "Bearer", ACCESS_TOKEN_EXPIRES_IN));
+            }
+            // grace 만료 후 재사용 → 진짜 탈취로 간주, 전 세션 무효화
             refreshTokenService.deleteAll(userId);
             appendRefreshTokenCookie(response, "", 0); // expire the cookie
             throw new BusinessException(ErrorCode.AUTH_REFRESH_TOKEN_REUSED);
@@ -181,6 +193,9 @@ public class AuthController {
 
         String newJti = jwtTokenProvider.extractJti(newRefreshToken);
         refreshTokenService.save(userId, newJti, Duration.ofDays(14));
+
+        // 회전 race 대비: 직전 jti로 곧 도착할 수 있는 동시 요청에 동일 토큰을 줄 수 있도록 캐시
+        refreshTokenService.saveGrace(userId, jti, newAccessToken, newRefreshToken, REFRESH_ROTATION_GRACE);
 
         appendRefreshTokenCookie(response, newRefreshToken, REFRESH_COOKIE_MAX_AGE);
 

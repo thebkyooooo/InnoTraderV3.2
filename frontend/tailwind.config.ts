@@ -33,6 +33,7 @@ const config: Config = {
         'h-xl':  { raw: '(min-height: 1280px)' },
         'h-2xl': { raw: '(min-height: 1600px)' },
         'h-2xl-sm': { raw: '(min-height: 1600px) and (min-width: 640px)' },
+        'h-2xl-2xl': { raw: '(min-height: 1600px) and (min-width: 1536px)' },
       },
       colors: {
         border: 'hsl(var(--border))',

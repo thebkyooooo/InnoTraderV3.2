@@ -24,11 +24,44 @@ export const axiosInstance = axios.create({
   timeout: 15_000,
 })
 
-// ─── Request Interceptor ──────────────────────────────────────────────────────
+// ─── 토큰 만료 판단 헬퍼 ──────────────────────────────────────────────────────
+
+/** JWT의 exp를 디코드해 bufferSec 이내 만료(또는 디코드 불가)면 true. */
+function isAccessTokenExpiringSoon(token: string, bufferSec = 10): boolean {
+  try {
+    const base64 = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')
+    const payload = JSON.parse(atob(base64)) as { exp?: number }
+    if (!payload.exp) return false
+    return payload.exp - Date.now() / 1000 < bufferSec
+  } catch {
+    return true
+  }
+}
+
+/** 로그인 세션 표식 쿠키(auth_session) 존재 여부. AT가 없어도 RT로 복구 가능한 상태인지 판단. */
+function hasAuthSession(): boolean {
+  return typeof document !== 'undefined' && document.cookie.includes('auth_session=1')
+}
+
+// ─── Request Interceptor (선제적 토큰 갱신) ───────────────────────────────────
 
 axiosInstance.interceptors.request.use(
-  (config: InternalAxiosRequestConfig) => {
-    const token = getAccessToken?.()
+  async (config: InternalAxiosRequestConfig) => {
+    // refresh 요청 자체는 갱신 로직에서 제외 (무한 루프 방지)
+    if (config.url?.includes('/auth/refresh')) return config
+
+    let token = getAccessToken?.() ?? null
+    // AT가 만료 임박이거나, 없지만 세션이 살아있으면(새로고침 직후) 요청 전에 미리 갱신.
+    // refreshAccessToken은 single-flight라 동시 요청에도 /refresh는 한 번만 나간다.
+    const shouldRefresh = token ? isAccessTokenExpiringSoon(token) : hasAuthSession()
+    if (shouldRefresh) {
+      try {
+        token = await refreshAccessToken()
+      } catch {
+        // 갱신 실패 시 그대로 진행 → 응답 인터셉터가 로그아웃 처리
+      }
+    }
+
     if (token) {
       config.headers.Authorization = `Bearer ${token}`
     }
@@ -37,25 +70,32 @@ axiosInstance.interceptors.request.use(
   (error) => Promise.reject(error)
 )
 
-// ─── Response Interceptor (401 → Token Refresh) ───────────────────────────────
+// ─── 공유 Refresh (single-flight) ─────────────────────────────────────────────
 
-let isRefreshing = false
-// 토큰 재발급 대기 중인 요청 큐
-let failedQueue: Array<{
-  resolve: (token: string) => void
-  reject: (error: unknown) => void
-}> = []
+let refreshPromise: Promise<string> | null = null
 
-function processQueue(error: unknown, token: string | null = null) {
-  failedQueue.forEach(({ resolve, reject }) => {
-    if (error) {
-      reject(error)
-    } else if (token) {
-      resolve(token)
-    }
-  })
-  failedQueue = []
+/**
+ * Access Token 재발급. 동시에 여러 번 호출돼도 진행 중인 단 하나의 `/refresh`
+ * 요청을 공유한다(회전형 Refresh Token의 동시성 race로 인한 세션 폭파 방지).
+ * 부트스트랩(AppLayout)과 401 응답 인터셉터가 이 함수를 함께 사용한다.
+ */
+export function refreshAccessToken(): Promise<string> {
+  if (!refreshPromise) {
+    refreshPromise = axiosInstance
+      .post<{ accessToken: string }>('/api/v1/auth/refresh')
+      .then((res) => {
+        const token = res.data.accessToken
+        setAccessToken?.(token)
+        return token
+      })
+      .finally(() => {
+        refreshPromise = null
+      })
+  }
+  return refreshPromise
 }
+
+// ─── Response Interceptor (401 → Token Refresh) ───────────────────────────────
 
 axiosInstance.interceptors.response.use(
   (response: AxiosResponse) => response,
@@ -63,64 +103,32 @@ axiosInstance.interceptors.response.use(
     const originalRequest = error.config as InternalAxiosRequestConfig & {
       _retry?: boolean
     }
+    const status = error.response?.status
 
     // /auth/me 401/403 → AT 자체가 유효하지 않음, refresh 없이 바로 로그아웃
-    if (
-      [401, 403].includes(error.response?.status) &&
-      originalRequest.url?.includes('/auth/me')
-    ) {
+    if ([401, 403].includes(status) && originalRequest.url?.includes('/auth/me')) {
       setAccessToken?.(null)
       redirectToLogin()
       return Promise.reject(error)
     }
 
-    // 401 오류이고 아직 재시도하지 않은 경우
-    if (error.response?.status === 401 && !originalRequest._retry) {
-      // /auth/refresh 자체가 401이면 무한 루프 방지
-      if (originalRequest.url?.includes('/auth/refresh')) {
-        setAccessToken?.(null)
-        return Promise.reject(error)
-      }
+    // /auth/refresh 자체가 401이면 무한 루프 방지 + 로그아웃
+    if (status === 401 && originalRequest.url?.includes('/auth/refresh')) {
+      setAccessToken?.(null)
+      return Promise.reject(error)
+    }
 
-      if (isRefreshing) {
-        // 이미 재발급 중이면 큐에 추가하여 완료 후 재시도
-        return new Promise<string>((resolve, reject) => {
-          failedQueue.push({ resolve, reject })
-        })
-          .then((token) => {
-            originalRequest.headers.Authorization = `Bearer ${token}`
-            return axiosInstance(originalRequest)
-          })
-          .catch((err) => Promise.reject(err))
-      }
-
+    // 그 외 401 → 공유 refresh로 토큰 재발급 후 원 요청 1회 재시도
+    if (status === 401 && !originalRequest._retry) {
       originalRequest._retry = true
-      isRefreshing = true
-
       try {
-        // Refresh Token(httpOnly 쿠키)으로 Access Token 재발급
-        const response = await axiosInstance.post<{ accessToken: string }>(
-          '/api/v1/auth/refresh'
-        )
-        const newToken = response.data.accessToken
-
-        // 메모리에 새 AT 저장
-        setAccessToken?.(newToken)
-
-        // 대기 중인 요청들 처리
-        processQueue(null, newToken)
-
-        // 원래 요청 재시도
-        originalRequest.headers.Authorization = `Bearer ${newToken}`
+        const token = await refreshAccessToken()
+        originalRequest.headers.Authorization = `Bearer ${token}`
         return axiosInstance(originalRequest)
       } catch (refreshError) {
-        processQueue(refreshError, null)
-        // 재발급 실패 → 로그아웃 처리
         setAccessToken?.(null)
         redirectToLogin()
         return Promise.reject(refreshError)
-      } finally {
-        isRefreshing = false
       }
     }
 

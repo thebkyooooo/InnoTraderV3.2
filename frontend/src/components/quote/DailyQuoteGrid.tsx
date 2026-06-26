@@ -1,5 +1,4 @@
 'use client'
-import { useCallback } from 'react'
 import type { ColDef } from 'ag-grid-community'
 import { quoteApi, type DailyQuoteItem } from '@/features/quote/api/quote-api'
 import { DataGrid } from '@/components/ui/DataGrid'
@@ -53,11 +52,10 @@ export interface DailyQuoteGridProps {
 }
 
 export function DailyQuoteGrid({ symbol }: DailyQuoteGridProps) {
-  const fetchFn = useCallback(
-    (cursor?: string) => quoteApi.getDaily(symbol, 100, cursor),
-    [symbol]
+  const { items, loading, loadMore } = useScrollPage<DailyQuoteItem>(
+    (cursor) => quoteApi.getDaily(symbol, 100, cursor),
+    ['quote', 'daily', symbol],
   )
-  const { items, loading, loadMore } = useScrollPage<DailyQuoteItem>(fetchFn)
 
   return (
     <DataGrid<DailyQuoteItem>

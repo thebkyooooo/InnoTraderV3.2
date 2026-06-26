@@ -14,7 +14,7 @@ export default function OrderHistoryPage() {
       </div>
 
       {/* 주문내역 (조회구분 + 요약 + 그리드) */}
-      <div className="flex-1 min-h-[360px]">
+      <div className="flex-1">
         <OrderHistory accountNo={accountNo} height="100%" />
       </div>
     </div>

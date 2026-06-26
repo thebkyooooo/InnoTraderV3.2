@@ -7,8 +7,7 @@ import { Sidebar } from './Sidebar'
 import { Footer } from './Footer'
 import { useCurrentUser } from '@/features/auth/api/use-auth'
 import { useAuthStore } from '@/store/auth-store'
-import { axiosInstance } from '@/shared/api/axios-instance'
-import { setAccessTokenInStore } from '@/store/auth-store'
+import { refreshAccessToken } from '@/shared/api/axios-instance'
 
 const DRAWER_WIDTH = 240
 
@@ -25,16 +24,14 @@ export function AppLayout({ children, mainSx }: AppLayoutProps) {
   const { data: currentUser } = useCurrentUser()
   const setUser = useAuthStore((s) => s.setUser)
 
-  // 새로고침 시 session 쿠키가 있으면 proactive refresh → isAuthenticated 복원
+  // 새로고침 시 session 쿠키가 있으면 proactive refresh → isAuthenticated 복원.
+  // 공유 single-flight(refreshAccessToken)를 사용해 인터셉터 refresh와 중복 호출되지 않게 한다.
   useEffect(() => {
     const hasSession = document.cookie.includes('auth_session=1')
     if (hasSession) {
-      axiosInstance
-        .post<{ accessToken: string }>('/api/v1/auth/refresh')
-        .then(({ data }) => setAccessTokenInStore(data.accessToken))
-        .catch(() => {
-          document.cookie = 'auth_session=; path=/; max-age=0; SameSite=Lax'
-        })
+      refreshAccessToken().catch(() => {
+        document.cookie = 'auth_session=; path=/; max-age=0; SameSite=Lax'
+      })
     }
   }, [])
 

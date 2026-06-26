@@ -1,5 +1,5 @@
 'use client'
-import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import React, { useCallback, useMemo, useState } from 'react'
 import type { ColDef, ICellRendererParams } from 'ag-grid-community'
 import InputAdornment from '@mui/material/InputAdornment'
 import DialogTitle from '@mui/material/DialogTitle'
@@ -12,13 +12,12 @@ import { Modal } from '@/components/ui/Modal'
 import { DatePicker } from '@/components/ui/DatePicker'
 import { SegmentedControl } from '@/components/ui/SegmentedControl'
 import {
-  orderApi,
   type OrderHistoryItem,
   type SideFilter,
   type FillFilter,
   type OrderStatusCode,
 } from '@/features/order/api/order-api'
-import { useAuthStore } from '@/store/auth-store'
+import { useOrderHistory, useAmendOrder, useCancelOrder } from '@/features/order/api/use-order'
 import { won, parseDigits, BUY_COLOR, SELL_COLOR } from './_format'
 
 export interface OrderHistoryProps {
@@ -86,44 +85,38 @@ const emptySummary: Summary = {
  * 기간 필터는 클라이언트에서 주문일자 기준으로 적용한다.
  */
 export function OrderHistory({ accountNo, height = 400, todayOnly = false }: OrderHistoryProps) {
-  const accessToken = useAuthStore(s => s.accessToken)
-
   const [startDate, setStartDate] = useState<Date | null>(monthAgo())
   const [endDate, setEndDate] = useState<Date | null>(new Date())
   const [side, setSide] = useState<SideFilter>('ALL')
   const [fill, setFill] = useState<FillFilter>('ALL')
 
-  const [items, setItems] = useState<OrderHistoryItem[]>([])
-  const [summary, setSummary] = useState<Summary>(emptySummary)
-  const [loading, setLoading] = useState(false)
+  const { data, isFetching: loading, refetch } = useOrderHistory({
+    accountNo,
+    side: todayOnly ? 'ALL' : side,
+    fill: todayOnly ? 'ALL' : fill,
+  })
 
-  const load = useCallback(() => {
-    if (!accessToken || !accountNo) { setItems([]); setSummary(emptySummary); return }
-    setLoading(true)
-    orderApi.getHistory({ accountNo, side: todayOnly ? 'ALL' : side, fill: todayOnly ? 'ALL' : fill })
-      .then(res => {
-        const today = fmtDate(new Date())
-        const from = todayOnly ? today : (startDate ? fmtDate(startDate) : null)
-        const to = todayOnly ? today : (endDate ? fmtDate(endDate) : null)
-        const rows = res.data.items.filter(it =>
-          (!from || it.orderDate >= from) && (!to || it.orderDate <= to))
-        setItems(rows)
-        setSummary(rows.reduce<Summary>((acc, o) => {
-          const unfilled = Math.max(0, o.quantity - o.filledQuantity)
-          acc.totalQuantity += o.quantity
-          acc.totalFilledQuantity += o.filledQuantity
-          acc.totalFilledAmount += o.filledQuantity * o.filledPrice
-          if (o.status === 'CANCELED') acc.totalCanceledQuantity += unfilled
-          else acc.totalUnfilledQuantity += unfilled
-          return acc
-        }, { ...emptySummary }))
-      })
-      .catch(() => { setItems([]); setSummary(emptySummary) })
-      .finally(() => setLoading(false))
-  }, [accessToken, accountNo, side, fill, startDate, endDate, todayOnly])
+  // 기간 필터는 클라이언트에서 주문일자 기준으로 적용한다.
+  const items = useMemo<OrderHistoryItem[]>(() => {
+    const rows = data?.items ?? []
+    const today = fmtDate(new Date())
+    const from = todayOnly ? today : (startDate ? fmtDate(startDate) : null)
+    const to = todayOnly ? today : (endDate ? fmtDate(endDate) : null)
+    return rows.filter(it =>
+      (!from || it.orderDate >= from) && (!to || it.orderDate <= to))
+  }, [data, startDate, endDate, todayOnly])
 
-  // 계좌/필터 변경 시 자동 조회
-  useEffect(() => { load() }, [load])
+  const summary = useMemo<Summary>(() => items.reduce<Summary>((acc, o) => {
+    const unfilled = Math.max(0, o.quantity - o.filledQuantity)
+    acc.totalQuantity += o.quantity
+    acc.totalFilledQuantity += o.filledQuantity
+    acc.totalFilledAmount += o.filledQuantity * o.filledPrice
+    if (o.status === 'CANCELED') acc.totalCanceledQuantity += unfilled
+    else acc.totalUnfilledQuantity += unfilled
+    return acc
+  }, { ...emptySummary }), [items])
+
+  const load = useCallback(() => { refetch() }, [refetch])
 
   // ── 정정/취소 ───────────────────────────────────────────────────────────────
   const today = fmtDate(new Date())
@@ -131,7 +124,10 @@ export function OrderHistory({ accountNo, height = 400, todayOnly = false }: Ord
   const [amendTarget, setAmendTarget] = useState<OrderHistoryItem | null>(null)
   const [amendPrice, setAmendPrice] = useState<number | ''>('')
   const [amendQty, setAmendQty] = useState<number | ''>('')
-  const [actionLoading, setActionLoading] = useState(false)
+
+  const cancelOrder = useCancelOrder()
+  const amendOrder = useAmendOrder()
+  const actionLoading = cancelOrder.isPending || amendOrder.isPending
 
   const openCancel = useCallback((it: OrderHistoryItem) => setCancelTarget(it), [])
   const openAmend = useCallback((it: OrderHistoryItem) => {
@@ -142,12 +138,10 @@ export function OrderHistory({ accountNo, height = 400, todayOnly = false }: Ord
 
   const doCancel = async () => {
     if (!cancelTarget) return
-    setActionLoading(true)
     try {
-      await orderApi.cancel({ accountNo, symbol: cancelTarget.symbol, originalOrderNo: cancelTarget.orderNo })
+      await cancelOrder.mutateAsync({ accountNo, symbol: cancelTarget.symbol, originalOrderNo: cancelTarget.orderNo })
       setCancelTarget(null)
-      load()
-    } catch { /* 에러 시 모달 유지 */ } finally { setActionLoading(false) }
+    } catch { /* 에러 시 모달 유지 */ }
   }
 
   const doAmend = async () => {
@@ -155,9 +149,8 @@ export function OrderHistory({ accountNo, height = 400, todayOnly = false }: Ord
     const qty = typeof amendQty === 'number' ? amendQty : 0
     const prc = typeof amendPrice === 'number' ? amendPrice : 0
     if (qty <= 0 || (amendTarget.orderType === 'LIMIT' && prc <= 0)) return
-    setActionLoading(true)
     try {
-      await orderApi.amend({
+      await amendOrder.mutateAsync({
         accountNo,
         symbol: amendTarget.symbol,
         originalOrderNo: amendTarget.orderNo,
@@ -166,8 +159,7 @@ export function OrderHistory({ accountNo, height = 400, todayOnly = false }: Ord
         price: prc,
       })
       setAmendTarget(null)
-      load()
-    } catch { /* 에러 시 모달 유지 */ } finally { setActionLoading(false) }
+    } catch { /* 에러 시 모달 유지 */ }
   }
 
   // 당일 미체결 주문에만 정정/취소 버튼 노출
@@ -200,7 +192,7 @@ export function OrderHistory({ accountNo, height = 400, todayOnly = false }: Ord
   ], [today, openAmend, openCancel])
 
   return (
-    <div className="flex flex-col gap-3 h-full">
+    <div className="@container flex flex-col gap-3 h-full">
       {/* 조회구분 */}
       {!todayOnly && (
       <div className="flex flex-col xs:flex-row xs:flex-wrap gap-2">
@@ -222,7 +214,7 @@ export function OrderHistory({ accountNo, height = 400, todayOnly = false }: Ord
 
       {/* 요약 */}
       {!todayOnly && (
-      <div className="grid grid-cols-1 xs:grid-cols-2 md:grid-cols-5 gap-2 shrink-0">
+      <div className="grid grid-cols-1 @[500px]:grid-cols-3 @[800px]:grid-cols-5 gap-1 @[500px]:gap-2 shrink-0">
         <SummaryItem label="주문수량" value={`${won(summary.totalQuantity)} 주`} />
         <SummaryItem label="체결수량" value={`${won(summary.totalFilledQuantity)} 주`} />
         <SummaryItem label="미체결수량" value={`${won(summary.totalUnfilledQuantity)} 주`} />
@@ -232,7 +224,7 @@ export function OrderHistory({ accountNo, height = 400, todayOnly = false }: Ord
       )}
 
       {/* 주문내역 그리드 */}
-      <div className="flex-1 min-h-0">
+      <div className="flex-1 min-h-[360px]">
         <DataGrid<OrderHistoryItem> rows={items} columnDefs={columnDefs} loading={loading} height={height} />
       </div>
 
@@ -307,7 +299,7 @@ function Row({ label, value, strong }: { label: string; value: string; strong?: 
 
 function SummaryItem({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex md:flex-col justify-between gap-0.5 p-3 py-2 md:py-3 border border-gray-200 rounded-lg bg-white">
+    <div className="flex @[500px]:flex-col justify-between gap-0.5 p-3 py-2 @[500px]:py-3 border border-gray-200 rounded-lg bg-white">
       <span className="text-xs text-gray-500">{label}</span>
       <span className="text-sm text-right font-semibold tabular-nums">{value}</span>
     </div>

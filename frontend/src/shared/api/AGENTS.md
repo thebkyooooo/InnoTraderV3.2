@@ -39,3 +39,4 @@ stompClient.subscribe('/topic/orderbook/AAPL', (msg) => { ... })
 ```
 
 <!-- MANUAL: -->
+- React Query 기반 데이터 패칭 규칙(훅 위치·`queryKey`·자율형/제어형 컴포넌트·무한스크롤·mutation·전역 staleTime 정책)은 **`frontend/docs/data-fetching.md`** 참조. 서버 데이터는 `useEffect + axios` 직접 호출 대신 React Query 훅으로만 조회한다(예외: `AnalysisChart`).

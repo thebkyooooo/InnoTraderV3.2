@@ -1,9 +1,9 @@
 'use client'
-import React, { useEffect, useState } from 'react'
+import React from 'react'
 import type { ColDef } from 'ag-grid-community'
 import { DataGrid } from '@/components/ui/DataGrid'
-import { holdingApi, type HoldingsResponse, type HoldingItem } from '@/features/holding/api/holding-api'
-import { useAuthStore } from '@/store/auth-store'
+import { type HoldingItem } from '@/features/holding/api/holding-api'
+import { useHoldings } from '@/features/holding/api/use-holding'
 
 const UP = '#ef5350', DOWN = '#4285f4'
 const fmt = (n: number) => (n ?? 0).toLocaleString('ko-KR')
@@ -35,26 +35,15 @@ export interface HoldingsProps {
  * 주식잔고 조회 API 연동.
  */
 export function Holdings({ accountNo, height = 400, showSummary = true }: HoldingsProps) {
-  const [data, setData] = useState<HoldingsResponse | null>(null)
-  const [loading, setLoading] = useState(false)
-  const accessToken = useAuthStore(s => s.accessToken)
-
-  useEffect(() => {
-    if (!accessToken || !accountNo) { setData(null); return }
-    setLoading(true)
-    holdingApi.getHoldings(accountNo)
-      .then(res => setData(res.data))
-      .catch(() => setData(null))
-      .finally(() => setLoading(false))
-  }, [accessToken, accountNo])
+  const { data, isFetching: loading } = useHoldings(accountNo)
 
   const s = data?.summary
 
   return (
-    <div className="flex flex-col gap-3 h-full">
+    <div className="@container flex flex-col gap-3 h-full">
       {/* 요약 */}
       {showSummary && (
-        <div className="grid grid-cols-1 xs:grid-cols-2 md:grid-cols-5 gap-2 shrink-0">
+        <div className="grid grid-cols-1 @[500px]:grid-cols-3 @[800px]:grid-cols-5 gap-1 @[500px]:gap-2 shrink-0">
           <SummaryItem label="총자산"     value={fmt(s?.totalAssets ?? 0)} />
           <SummaryItem label="총평가금액" value={fmt(s?.totalEvalAmount ?? 0)} />
           <SummaryItem label="원금"       value={fmt(s?.principal ?? 0)} />
@@ -64,7 +53,7 @@ export function Holdings({ accountNo, height = 400, showSummary = true }: Holdin
       )}
 
       {/* 보유종목 그리드 */}
-      <div className="flex-1 min-h-0">
+      <div className="flex-1 min-h-[360px]">
         <DataGrid<HoldingItem> rows={data?.items ?? []} columnDefs={columns} loading={loading} height={height} />
       </div>
     </div>
@@ -73,7 +62,7 @@ export function Holdings({ accountNo, height = 400, showSummary = true }: Holdin
 
 function SummaryItem({ label, value, color }: { label: string; value: string; color?: string }) {
   return (
-    <div className="flex md:flex-col justify-between gap-0.5 p-3 py-2 md:py-3 border border-gray-200 rounded-lg bg-white">
+    <div className="flex @[500px]:flex-col justify-between gap-0.5 p-3 py-2 @[500px]:py-3 border border-gray-200 rounded-lg bg-white">
       <span className="text-xs text-gray-500">{label}</span>
       <span className="text-sm text-right font-semibold tabular-nums" style={{ color }}>{value}</span>
     </div>

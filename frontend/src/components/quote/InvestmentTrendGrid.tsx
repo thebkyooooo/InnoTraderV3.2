@@ -1,5 +1,4 @@
 'use client'
-import { useCallback } from 'react'
 import type { ColDef } from 'ag-grid-community'
 import { quoteApi, type InvestmentTrendItem } from '@/features/quote/api/quote-api'
 import { DataGrid } from '@/components/ui/DataGrid'
@@ -50,11 +49,10 @@ export interface InvestmentTrendGridProps {
 }
 
 export function InvestmentTrendGrid({ symbol }: InvestmentTrendGridProps) {
-  const fetchFn = useCallback(
-    (cursor?: string) => quoteApi.getTrends(symbol, 100, cursor),
-    [symbol]
+  const { items, loading, loadMore } = useScrollPage<InvestmentTrendItem>(
+    (cursor) => quoteApi.getTrends(symbol, 100, cursor),
+    ['quote', 'trend', symbol],
   )
-  const { items, loading, loadMore } = useScrollPage<InvestmentTrendItem>(fetchFn)
 
   return (
     <DataGrid<InvestmentTrendItem>

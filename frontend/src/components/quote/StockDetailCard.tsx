@@ -1,6 +1,6 @@
 'use client'
-import React, { useState, useEffect, useCallback } from 'react'
-import { quoteApi, type QuoteDetailItem } from '@/features/quote/api/quote-api'
+import React from 'react'
+import { useStockDetail } from '@/features/quote/api/use-quote'
 import { Section } from '@/components/ui/Section'
 
 const UP   = '#ef5350'
@@ -18,20 +18,9 @@ export interface StockDetailCardProps {
 }
 
 export function StockDetailCard({ symbol }: StockDetailCardProps) {
-  const [data, setData]       = useState<QuoteDetailItem | null>(null)
-  const [loading, setLoading] = useState(false)
+  const { data, isLoading } = useStockDetail(symbol)
 
-  const fetch = useCallback(() => {
-    setLoading(true)
-    quoteApi.getDetail(symbol)
-      .then(res => setData(res.data))
-      .catch(() => {})
-      .finally(() => setLoading(false))
-  }, [symbol])
-
-  useEffect(() => { fetch() }, [fetch])
-
-  if (loading) {
+  if (isLoading && !data) {
     return <div className="text-xs text-gray-400 py-4 text-center">불러오는 중...</div>
   }
   if (!data) return null

@@ -1,7 +1,7 @@
 'use client'
-import React, { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { QuoteBoard } from '@/components/quote'
-import { quoteApi, type QuotePriceResponse } from '@/features/quote/api/quote-api'
+import { useStockPrice } from '@/features/quote/api/use-quote'
 
 const SYMBOLS = [
   { symbol: '005930', name: '삼성전자' },
@@ -11,18 +11,7 @@ const SYMBOLS = [
 
 export default function SampleComponentsQuotePage() {
   const [selectedSymbol, setSelectedSymbol] = useState(SYMBOLS[0].symbol)
-  const [data, setData] = useState<QuotePriceResponse | null>(null)
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-
-  useEffect(() => {
-    setLoading(true)
-    setError(null)
-    quoteApi.getPrice(selectedSymbol)
-      .then((res) => setData(res.data))
-      .catch(() => setError('데이터를 불러오지 못했습니다.'))
-      .finally(() => setLoading(false))
-  }, [selectedSymbol])
+  const { data, isLoading: loading, isError: error } = useStockPrice(selectedSymbol)
 
   return (
     <div className="flex flex-col gap-6 p-4">
@@ -54,25 +43,13 @@ export default function SampleComponentsQuotePage() {
       )}
 
       {error && (
-        <div className="text-sm text-red-500">{error}</div>
+        <div className="text-sm text-red-500">데이터를 불러오지 못했습니다.</div>
       )}
 
       {!loading && !error && data && (
         <QuoteBoard
           symbol={data.symbol}
-          name={data.name}
-          market={data.market}
-          price={data.price}
-          prevDiff={data.prevDiff}
-          change={data.change}
-          volume={data.volume}
-          open={data.open}
-          high={data.high}
-          low={data.low}
-          prevClose={data.prevClose}
-          upperLimit={data.upperLimit}
-          lowerLimit={data.lowerLimit}
-          tradingAmount={data.tradingAmount}
+          quote={data}
           onStockSelect={(stock) => setSelectedSymbol(stock.symbol)}
         />
       )}

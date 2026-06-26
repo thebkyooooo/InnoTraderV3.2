@@ -1,8 +1,7 @@
 'use client'
-import React, { useEffect, useState } from 'react'
+import React, { useEffect } from 'react'
 import { Select } from '@/components/ui/Select'
-import { accountApi, type Account } from '@/features/account/api/account-api'
-import { useAuthStore } from '@/store/auth-store'
+import { useAccounts } from '@/features/account/api/use-account'
 
 export interface AccountSelectProps {
   /** 선택된 계좌번호 */
@@ -30,19 +29,12 @@ export function AccountSelect({
   fullWidth = true,
   autoSelectFirst = true,
 }: AccountSelectProps) {
-  const [accounts, setAccounts] = useState<Account[]>([])
-  const accessToken = useAuthStore(s => s.accessToken)
+  const { data: accounts = [] } = useAccounts()
 
   useEffect(() => {
-    if (!accessToken) return
-    accountApi.getAccountList()
-      .then(res => {
-        setAccounts(res.data)
-        if (autoSelectFirst && !value && res.data.length > 0) onChange(res.data[0].accountNo)
-      })
-      .catch(() => setAccounts([]))
+    if (autoSelectFirst && !value && accounts.length > 0) onChange(accounts[0].accountNo)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [accessToken])
+  }, [accounts])
 
   return (
     <Select

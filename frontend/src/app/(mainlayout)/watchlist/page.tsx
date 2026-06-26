@@ -1,5 +1,5 @@
 'use client'
-import React, { useCallback, useEffect, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import type { ColDef } from 'ag-grid-community'
 import IconButton from '@mui/material/IconButton'
 import Tooltip from '@mui/material/Tooltip'
@@ -15,14 +15,22 @@ import DialogContent from '@mui/material/DialogContent'
 import DialogActions from '@mui/material/DialogActions'
 import { Select } from '@/components/ui/Select'
 import { DataGrid } from '@/components/ui/DataGrid'
-import { watchlistApi, type WatchlistGroup, type WatchlistItem } from '@/features/watchlist/api/watchlist-api'
-import { stockMasterApi, type StockQuote } from '@/features/stock-master/api/stock-master-api'
-import { Chart } from '@/components/ui/Chart'
-import { StockDetailCard } from '@/components/quote'
+import { type WatchlistGroup } from '@/features/watchlist/api/watchlist-api'
+import {
+  useWatchlistGroups,
+  useWatchlistItems,
+  useCreateWatchlistGroup,
+  useRenameWatchlistGroup,
+  useDeleteWatchlistGroup,
+  useAddWatchlistItems,
+  useRemoveWatchlistItems,
+} from '@/features/watchlist/api/use-watchlist'
+import { type StockQuote } from '@/features/stock-master/api/stock-master-api'
+import { useStockQuotes } from '@/features/stock-master/api/use-stock-master'
+import { StockDetailCard, DailyChart } from '@/components/quote'
 import { GroupFormDialog } from '@/features/watchlist/components/GroupFormDialog'
 import { StockAddDialog } from '@/features/watchlist/components/StockAddDialog'
 import { StockRemoveDialog } from '@/features/watchlist/components/StockRemoveDialog'
-import { useAuthStore } from '@/store/auth-store'
 import { ArrowForwardIosSharp, FormatIndentIncreaseOutlined } from '@mui/icons-material';
 
 // ── 그리드 ──────────────────────────────────────────────────────────────────────
@@ -34,8 +42,8 @@ const right = { textAlign: 'right' as const }
 const center = { textAlign: 'center' as const }
 
 const columns: ColDef<StockQuote>[] = [
-  { field: 'name',        headerName: '종목명',     flex: 1, minWidth: 120 },
-  { field: 'symbol',      headerName: '종목코드',   width: 100, cellStyle: center, headerClass: 'header-center' },
+  { field: 'name',        headerName: '종목명',     flex: 1, minWidth: 160 },
+  { field: 'symbol',      headerName: '종목코드',   width: 90, cellStyle: center, headerClass: 'header-center' },
   { field: 'price',       headerName: '종가',       width: 100, cellStyle: right, headerClass: 'header-right', valueFormatter: p => fmt(p.value) },
   { field: 'prevDiff',    headerName: '전일대비',   width: 100, cellStyle: p => ({ ...right, color: signColor(p.value), fontWeight: 600 }), headerClass: 'header-right', valueFormatter: p => `${p.value > 0 ? '+' : ''}${fmt(p.value)}` },
   { field: 'change',      headerName: '등락률',     width: 90,  cellStyle: p => ({ ...right, color: signColor(p.value), fontWeight: 600 }), headerClass: 'header-right', valueFormatter: p => `${p.value > 0 ? '+' : ''}${Number(p.value).toFixed(2)}%` },
@@ -52,56 +60,30 @@ type ModalType = 'group-add' | 'group-rename' | 'group-delete' | 'stock-add' | '
 // ── 페이지 ──────────────────────────────────────────────────────────────────────
 
 export default function WatchlistPage() {
-  const [groups, setGroups]           = useState<WatchlistGroup[]>([])
   const [selectedCode, setSelectedCode] = useState('')
-  const [items, setItems]             = useState<WatchlistItem[]>([])
-  const [quotes, setQuotes]           = useState<StockQuote[]>([])
-  const [loading, setLoading]         = useState(false)
   const [modal, setModal]             = useState<ModalType>(null)
   const [panelOpen, setPanelOpen] = useState(true)
   const [selectedStock, setSelectedStock] = useState<StockQuote | null>(null)
 
+  // ── 그룹 목록 ────────────────────────────────────────────────────────────────
+  // AT는 메모리 저장이라 새로고침 시 사라진다 → enabled(accessToken) 가드로
+  // 토큰이 준비된 뒤에만 조회한다.
+  const { data: groups = [] } = useWatchlistGroups()
+
   const current = groups.find(g => g.groupCode === selectedCode)
 
-  // ── 그룹 목록 ────────────────────────────────────────────────────────────────
-  const loadGroups = useCallback(async (preferCode?: string) => {
-    const res = await watchlistApi.listGroups()
-    const list = res.data
-    setGroups(list)
-    setSelectedCode(prev => {
-      const keep = preferCode ?? prev
-      if (list.some(g => g.groupCode === keep)) return keep
-      return list[0]?.groupCode ?? ''
-    })
-  }, [])
-
-  // AT는 메모리 저장이라 새로고침 시 사라진다 → 재발급으로 토큰이 준비된 뒤 조회
-  // (토큰 없이 호출하면 백엔드가 403을 반환하고 인터셉터가 복구하지 못함)
-  const accessToken = useAuthStore(s => s.accessToken)
+  // 그룹 목록이 바뀌면 선택 그룹을 동기화한다(없으면 첫 그룹).
   useEffect(() => {
-    if (!accessToken) return
-    loadGroups().catch(() => setGroups([]))
-  }, [accessToken, loadGroups])
+    setSelectedCode(prev => {
+      if (groups.some(g => g.groupCode === prev)) return prev
+      return groups[0]?.groupCode ?? ''
+    })
+  }, [groups])
 
   // ── 선택 그룹의 종목 + 시세 ──────────────────────────────────────────────────
-  const loadItems = useCallback(async (code: string) => {
-    if (!code) { setItems([]); setQuotes([]); return }
-    setLoading(true)
-    try {
-      const detail = (await watchlistApi.getItems(code)).data
-      setItems(detail.items)
-      if (detail.items.length) {
-        const q = await stockMasterApi.getBatch(detail.items.map(i => i.symbol))
-        setQuotes(q.data)
-      } else {
-        setQuotes([])
-      }
-    } finally {
-      setLoading(false)
-    }
-  }, [])
-
-  useEffect(() => { loadItems(selectedCode).catch(() => { setItems([]); setQuotes([]) }) }, [selectedCode, loadItems])
+  const { data: itemsData } = useWatchlistItems(selectedCode)
+  const items = itemsData?.items ?? []
+  const { data: quotes = [], isFetching: loading } = useStockQuotes(items.map(i => i.symbol))
 
   // ── 선택 종목 동기화 ─────────────────────────────────────────────────────────
   // 그룹이 바뀌면 선택 종목을 첫 종목으로 맞춘다(없으면 해제)
@@ -113,23 +95,27 @@ export default function WatchlistPage() {
   }, [quotes])
 
   // ── 변경 핸들러 ──────────────────────────────────────────────────────────────
+  const createGroup = useCreateWatchlistGroup()
+  const renameGroup = useRenameWatchlistGroup()
+  const deleteGroup = useDeleteWatchlistGroup()
+  const addItems = useAddWatchlistItems()
+  const removeItems = useRemoveWatchlistItems()
+
   const handleGroupSubmit = async (name: string) => {
     if (modal === 'group-add') {
-      const list = (await watchlistApi.createGroup(name)).data
-      setGroups(list)
+      const list = (await createGroup.mutateAsync(name)).data
       // 가장 큰 코드 = 방금 생성된 그룹
       const newest = list.reduce<WatchlistGroup | undefined>((m, g) => (!m || g.groupCode > m.groupCode ? g : m), undefined)
       setSelectedCode(newest?.groupCode ?? selectedCode)
     } else if (modal === 'group-rename' && selectedCode) {
-      setGroups((await watchlistApi.renameGroup(selectedCode, name)).data)
+      await renameGroup.mutateAsync({ groupCode: selectedCode, groupName: name })
     }
     setModal(null)
   }
 
   const handleGroupDelete = async () => {
     if (selectedCode) {
-      const list = (await watchlistApi.deleteGroup(selectedCode)).data
-      setGroups(list)
+      const list = (await deleteGroup.mutateAsync(selectedCode)).data
       setSelectedCode(list[0]?.groupCode ?? '')
     }
     setModal(null)
@@ -137,16 +123,14 @@ export default function WatchlistPage() {
 
   const handleStockAdd = async (symbols: string[]) => {
     if (selectedCode) {
-      await watchlistApi.addItems(selectedCode, symbols)
-      await Promise.all([loadItems(selectedCode), loadGroups(selectedCode)])
+      await addItems.mutateAsync({ groupCode: selectedCode, symbols })
     }
     setModal(null)
   }
 
   const handleStockRemove = async (symbols: string[]) => {
     if (selectedCode) {
-      await watchlistApi.removeItems(selectedCode, symbols)
-      await Promise.all([loadItems(selectedCode), loadGroups(selectedCode)])
+      await removeItems.mutateAsync({ groupCode: selectedCode, symbols })
     }
     setModal(null)
   }
@@ -159,7 +143,7 @@ export default function WatchlistPage() {
 
   // ── UI ──────────────────────────────────────────────────────────────────────
   return (
-    <div aria-pressed={panelOpen} className="flex flex-col sm:flex-row gap-4 sm:gap-0 w-full h-full relative">
+    <div aria-pressed={panelOpen} className="flex flex-col sm:flex-row gap-0 w-full h-full relative">
       <button
         type="button"
         onClick={() => setPanelOpen(v => !v)}
@@ -172,7 +156,7 @@ export default function WatchlistPage() {
 
       <div 
           aria-hidden={!panelOpen}
-          className={`@container pt-1 sm:p-6 flex-1 flex flex-col gap-4 shrink-0 overflow-hidden transition-[width,opacity] duration-300 ease-in-out ${panelOpen ? 'w-full' : 'w-full sm:w-[calc(100%-274px)]'}`}
+          className={`@container p-4 sm:p-6 flex-1 flex flex-col gap-4 shrink-0 overflow-hidden transition-[width,opacity] duration-300 ease-in-out ${panelOpen ? 'w-full' : 'w-full'}`}
         >
         {/* <h1 className="text-lg font-bold text-foreground">관심종목</h1> */}
 
@@ -208,20 +192,20 @@ export default function WatchlistPage() {
           </div>
         </div>
 
-        <div className="flex-1 gap-4 min-h-[360px]">
-          <DataGrid<StockQuote> rows={quotes} columnDefs={columns} loading={loading} height="100%" onRowClick={setSelectedStock} />
+        <div className="flex-1 min-h-[360px]">
+          <DataGrid<StockQuote> rows={quotes} columnDefs={columns} loading={loading} height="100%" onRowClick={setSelectedStock} selectionHeaderName="" selectionColumnWidth={36} />
         </div>
       </div>
 
       {/* 사이드 패널 */}
       <div
         aria-hidden={!panelOpen}
-        className={`flex shrink-0 overflow-hidden transition-[width,opacity] duration-300 ease-in-out border-gray-200 sm:bg-white ${panelOpen ? 'sm:border-l sm:w-[320px] 2xl:w-[520px] sm:opacity-100' : 'sm:w-0 sm:opacity-0'}`}
+        className={`flex p-4 pt-0 sm:p-0 shrink-0 overflow-hidden transition-[width,opacity] duration-300 ease-in-out border-gray-200 sm:bg-white ${panelOpen ? 'sm:border-l sm:w-[320px] 2xl:w-[520px] sm:opacity-100' : 'sm:w-0 sm:opacity-0'}`}
       >
         <div className="shrink-0 w-full flex flex-col gap-3 rounded-xl bg-white border border-gray-200 sm:rounded-none sm:border-none">
-          <div className="w-full sm:w-[320px] 2xl:w-[520px] flex flex-col gap-3.5 p-4">
-            {selectedStock ? (
-              <>
+          {selectedStock ? (
+            <>
+              <div className="w-full sm:w-[320px] 2xl:w-[520px] flex flex-col gap-3.5 p-4">
                 <div>
                   {/* 선택 종목 헤더 */}
                   <div className="flex items-baseline gap-2">
@@ -239,20 +223,20 @@ export default function WatchlistPage() {
                   </div>
                 </div>
 
-                {/* 일봉 차트 — symbol만 넘기면 Chart 내부에서 조회 */}
+                {/* 일봉 차트 — symbol만 넘기면 DailyChart 내부에서 조회 */}
                 <div className="rounded-lg border border-gray-200 overflow-hidden pl-2 pt-2">
-                  <Chart symbol={selectedStock.symbol} height={300} type="candlestick" />
+                  <DailyChart symbol={selectedStock.symbol} height={300} type="candlestick" />
                 </div>
 
                 {/* 종목 상세 — symbol만 넘기면 내부에서 조회 */}
                 <StockDetailCard symbol={selectedStock.symbol} />
-              </>
-            ) : (
-              <div className="items-center justify-center text-sm text-gray-400">
-                종목을 선택하세요
               </div>
-            )}
-          </div>
+            </>
+          ) : (
+            <div className="min-h-28 flex-1 content-center text-center text-sm text-gray-400">
+              종목을 선택하세요
+            </div>
+          )}
         </div>
       </div>
 

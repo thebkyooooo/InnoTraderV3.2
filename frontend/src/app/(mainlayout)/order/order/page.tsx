@@ -1,24 +1,21 @@
 'use client'
-import React, { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { Tabs } from '@/components/ui/Tabs'
 import { QuoteBoard, OrderBook } from '@/components/quote'
 import { AccountSelect, Holdings } from '@/components/account'
 import { OrderForm, OrderHistory } from '@/components/order'
-import { quoteApi, type QuotePriceResponse } from '@/features/quote/api/quote-api'
+import { useStockPrice } from '@/features/quote/api/use-quote'
 
 export default function OrderPage() {
   const [symbol, setSymbol] = useState('005930')
-  const [quote, setQuote] = useState<QuotePriceResponse | null>(null)
   const [accountNo, setAccountNo] = useState('')
   const [hogaTabValue, setHogaTabValue] = useState('dom')
   const [orderTabValue, setOrderTabValue] = useState('order-history')
   const [refreshKey, setRefreshKey] = useState(0)
 
-  useEffect(() => {
-    quoteApi.getPrice(symbol)
-      .then(res => setQuote(res.data))
-      .catch(() => setQuote(null))
-  }, [symbol])
+  // 페이지가 시세를 받아 QuoteBoard(제어형)·OrderForm에 공유한다.
+  // OrderBook도 같은 useStockPrice 키라 동시 요청은 dedupe된다.
+  const { data: quote = null } = useStockPrice(symbol)
 
   return (
     <div className="flex flex-col gap-4 w-full h-full">
@@ -28,23 +25,7 @@ export default function OrderPage() {
           {/* 현재가 (Quote Board) */}
           <div className='hidden sm:block'>
             {quote && (
-              <QuoteBoard
-                symbol={quote.symbol}
-                name={quote.name}
-                market={quote.market}
-                price={quote.price}
-                prevDiff={quote.prevDiff}
-                change={quote.change}
-                volume={quote.volume}
-                open={quote.open}
-                high={quote.high}
-                low={quote.low}
-                prevClose={quote.prevClose}
-                upperLimit={quote.upperLimit}
-                lowerLimit={quote.lowerLimit}
-                tradingAmount={quote.tradingAmount}
-                onStockSelect={stock => setSymbol(stock.symbol)}
-              />
+              <QuoteBoard symbol={quote.symbol} quote={quote} onStockSelect={stock => setSymbol(stock.symbol)} />
             )}
           </div>
 
@@ -87,23 +68,7 @@ export default function OrderPage() {
           {/* 현재가 (Quote Board) */}
           <div className='sm:hidden'>
             {quote && (
-              <QuoteBoard
-                symbol={quote.symbol}
-                name={quote.name}
-                market={quote.market}
-                price={quote.price}
-                prevDiff={quote.prevDiff}
-                change={quote.change}
-                volume={quote.volume}
-                open={quote.open}
-                high={quote.high}
-                low={quote.low}
-                prevClose={quote.prevClose}
-                upperLimit={quote.upperLimit}
-                lowerLimit={quote.lowerLimit}
-                tradingAmount={quote.tradingAmount}
-                onStockSelect={stock => setSymbol(stock.symbol)}
-              />
+              <QuoteBoard symbol={quote.symbol} quote={quote} onStockSelect={stock => setSymbol(stock.symbol)} />
             )}
           </div>
           <div className="rounded-lg border border-gray-200 bg-white p-4">

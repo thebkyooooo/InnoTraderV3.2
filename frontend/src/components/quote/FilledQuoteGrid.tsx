@@ -1,5 +1,4 @@
 'use client'
-import { useCallback } from 'react'
 import type { ColDef } from 'ag-grid-community'
 import { quoteApi, type FilledQuoteItem } from '@/features/quote/api/quote-api'
 import { DataGrid } from '@/components/ui/DataGrid'
@@ -48,11 +47,10 @@ export interface FilledQuoteGridProps {
 }
 
 export function FilledQuoteGrid({ symbol }: FilledQuoteGridProps) {
-  const fetchFn = useCallback(
-    (cursor?: string) => quoteApi.getFilled(symbol, 100, cursor),
-    [symbol]
+  const { items, loading, loadMore } = useScrollPage<FilledQuoteItem>(
+    (cursor) => quoteApi.getFilled(symbol, 100, cursor),
+    ['quote', 'filled', symbol],
   )
-  const { items, loading, loadMore } = useScrollPage<FilledQuoteItem>(fetchFn)
 
   return (
     <DataGrid<FilledQuoteItem>

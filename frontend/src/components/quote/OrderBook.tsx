@@ -1,6 +1,7 @@
 'use client'
-import React, { useEffect, useRef, useState } from 'react'
-import { quoteApi, type HogaData } from '@/features/quote/api/quote-api'
+import React, { useEffect, useRef } from 'react'
+import { type HogaData } from '@/features/quote/api/quote-api'
+import { useStockPrice, useHoga } from '@/features/quote/api/use-quote'
 
 // 색상: 매도=파랑, 매수=빨강 (한국 HTS 관례)
 const ASK = '#4285f4'
@@ -236,19 +237,12 @@ function OrderBookCanvas({ data, prevClose }: { data: HogaData; prevClose: numbe
 // ─── 컴포넌트 ─────────────────────────────────────────────────────────────────
 
 export function OrderBook({ symbol, variant = 'dom' }: OrderBookProps) {
-  const [data, setData]           = useState<HogaData | null>(null)
-  const [prevClose, setPrevClose] = useState(0)
-  const [loading, setLoading]     = useState(false)
+  // React Query — getPrice는 QuoteBoard와 같은 키라 동시/중복 요청이 dedupe된다
+  const { data, isLoading } = useHoga(symbol)
+  const { data: priceData } = useStockPrice(symbol)
+  const prevClose = priceData?.prevClose ?? 0
 
-  useEffect(() => {
-    setLoading(true)
-    Promise.all([quoteApi.getHoga(symbol), quoteApi.getPrice(symbol)])
-      .then(([h, p]) => { setData(h.data); setPrevClose(p.data.prevClose) })
-      .catch(() => setData(null))
-      .finally(() => setLoading(false))
-  }, [symbol])
-
-  if (loading && !data) return <div className="text-xs text-gray-400 py-4 text-center">불러오는 중...</div>
+  if (isLoading && !data) return <div className="text-xs text-gray-400 py-4 text-center">불러오는 중...</div>
   if (!data) return <div className="text-xs text-gray-400 py-4 text-center">호가 정보가 없습니다.</div>
 
   return variant === 'canvas'

@@ -89,7 +89,6 @@ export function useCurrentUser() {
       return res.data
     },
     enabled: isAuthenticated,
-    staleTime: 60_000,
     retry: false,
   })
 }

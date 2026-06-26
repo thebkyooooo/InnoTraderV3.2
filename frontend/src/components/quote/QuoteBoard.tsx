@@ -3,37 +3,15 @@ import React, { useState } from 'react'
 import SearchOutlinedIcon from '@mui/icons-material/SearchOutlined'
 import { Section } from '@/components/ui/Section'
 import { StockSearchModal } from './StockSearchModal'
+import { type QuotePriceResponse } from '@/features/quote/api/quote-api'
+import { useStockPrice } from '@/features/quote/api/use-quote'
 import type { StockSummary } from '@/features/stock-master/api/stock-master-api'
 
 export interface QuoteBoardProps {
   /** 종목코드 */
   symbol: string
-  /** 종목명 */
-  name: string
-  /** 시장구분 (KOSPI / KOSDAQ) */
-  market?: string
-  /** 현재가 (원) */
-  price: number
-  /** 전일대비 (양수=상승, 음수=하락) */
-  prevDiff: number
-  /** 등락률 (%) */
-  change: number
-  /** 거래량 */
-  volume: number
-  /** 시가 */
-  open: number
-  /** 고가 */
-  high: number
-  /** 저가 */
-  low: number
-  /** 전일종가 */
-  prevClose: number
-  /** 상한가 */
-  upperLimit: number
-  /** 하한가 */
-  lowerLimit: number
-  /** 거래대금 (만원 단위) */
-  tradingAmount: number
+  /** 시세 데이터(제어형). 생략하면 symbol로 내부에서 getPrice를 호출한다(자율형) */
+  quote?: QuotePriceResponse
   /** 종목 선택 콜백 */
   onStockSelect?: (stock: StockSummary) => void
 }
@@ -51,14 +29,20 @@ function formatAmount(manWon: number): string {
   return `${formatNumber(manWon)}만`
 }
 
-export function QuoteBoard({
-  symbol, name, market,
-  price, prevDiff, change,
-  volume, open, high, low, prevClose,
-  upperLimit, lowerLimit, tradingAmount,
-  onStockSelect,
-}: QuoteBoardProps) {
+export function QuoteBoard({ symbol, quote, onStockSelect }: QuoteBoardProps) {
   const [modalOpen, setModalOpen] = useState(false)
+
+  // quote가 주어지면 제어형(표시만), 없으면 symbol로 자율 조회(React Query — 동시/중복 요청 dedupe)
+  const { data: fetched } = useStockPrice(symbol, { enabled: !quote })
+
+  const q = quote ?? fetched
+  if (!q) return null
+
+  const {
+    name, market, price, prevDiff, change,
+    volume, open, high, low, prevClose,
+    upperLimit, lowerLimit, tradingAmount,
+  } = q
 
   const isUp   = prevDiff > 0
   const isDown = prevDiff < 0
@@ -83,7 +67,7 @@ export function QuoteBoard({
       <Section>
         <div className="flex gap-1 py-1 items-start">
           <span className='font-semibold'>{name}</span>
-          <span className='text-xs py-0.5'>{symbol}</span>
+          <span className='text-xs py-0.5'>{q.symbol}</span>
           {market && <span className='text-xs py-0.5'>{market}</span>}
           <SearchOutlinedIcon
             className='ml-auto cursor-pointer'

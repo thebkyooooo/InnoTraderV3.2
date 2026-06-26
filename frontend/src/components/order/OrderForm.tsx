@@ -8,9 +8,9 @@ import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
 import { SegmentedControl } from '@/components/ui/SegmentedControl'
-import { accountApi } from '@/features/account/api/account-api'
-import { orderApi, type OrderResponse, type OrderTypeCode } from '@/features/order/api/order-api'
-import { useAuthStore } from '@/store/auth-store'
+import { useOrderableAmount, useOrderableShares } from '@/features/account/api/use-account'
+import { type OrderResponse, type OrderTypeCode } from '@/features/order/api/order-api'
+import { useBuyOrder, useSellOrder } from '@/features/order/api/use-order'
 import { won, parseDigits, BUY_COLOR, SELL_COLOR } from './_format'
 
 type Side = 'buy' | 'sell'
@@ -39,20 +39,14 @@ const PCT_BUTTONS = [
  * 가격·수량 입력(천단위 콤마), 수량 비율 버튼, 주문가능금액/수량, 주문확인·완료 모달.
  */
 export function OrderForm({ accountNo, symbol, name, currentPrice, onOrdered }: OrderFormProps) {
-  const accessToken = useAuthStore(s => s.accessToken)
-
   const [side, setSide] = useState<Side>('buy')
   const [cashType, setCashType] = useState<CashType>('cash')
   const [orderType, setOrderType] = useState<OrderTypeCode>('LIMIT')
   const [price, setPrice] = useState<NumOrEmpty>('')
   const [quantity, setQuantity] = useState<NumOrEmpty>('')
 
-  const [orderableAmount, setOrderableAmount] = useState(0)  // 매수 시
-  const [orderableShares, setOrderableShares] = useState(0)  // 매도 시
-
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [doneOpen, setDoneOpen] = useState(false)
-  const [submitting, setSubmitting] = useState(false)
   const [done, setDone] = useState<{ qty: number; amount: number; side: Side } | null>(null)
 
   const isMarket = orderType === 'MARKET'
@@ -64,18 +58,14 @@ export function OrderForm({ accountNo, symbol, name, currentPrice, onOrdered }: 
   }, [currentPrice, orderType])
 
   // 주문가능금액(매수) / 주문가능수량(매도) 조회
-  useEffect(() => {
-    if (!accessToken || !accountNo) { setOrderableAmount(0); setOrderableShares(0); return }
-    if (side === 'buy') {
-      accountApi.getOrderableAmount(accountNo)
-        .then(res => setOrderableAmount(res.data.orderableAmount))
-        .catch(() => setOrderableAmount(0))
-    } else {
-      accountApi.getOrderableShares(accountNo, symbol)
-        .then(res => setOrderableShares(res.data.orderableShares))
-        .catch(() => setOrderableShares(0))
-    }
-  }, [accessToken, accountNo, symbol, side])
+  const { data: amountData } = useOrderableAmount(accountNo, { enabled: side === 'buy' })
+  const { data: sharesData } = useOrderableShares(accountNo, symbol, { enabled: side === 'sell' })
+  const orderableAmount = side === 'buy' ? (amountData?.orderableAmount ?? 0) : 0
+  const orderableShares = side === 'sell' ? (sharesData?.orderableShares ?? 0) : 0
+
+  const buyOrder = useBuyOrder()
+  const sellOrder = useSellOrder()
+  const submitting = buyOrder.isPending || sellOrder.isPending
 
   const effectivePrice = isMarket ? (currentPrice ?? 0) : (typeof price === 'number' ? price : 0)
   const qtyNum = typeof quantity === 'number' ? quantity : 0
@@ -94,10 +84,9 @@ export function OrderForm({ accountNo, symbol, name, currentPrice, onOrdered }: 
   const sideLabel = side === 'buy' ? '매수' : '매도'
 
   const submit = async () => {
-    setSubmitting(true)
     try {
       const req = { accountNo, symbol, orderType, quantity: qtyNum, price: effectivePrice }
-      const res = side === 'buy' ? await orderApi.buy(req) : await orderApi.sell(req)
+      const res = side === 'buy' ? await buyOrder.mutateAsync(req) : await sellOrder.mutateAsync(req)
       setConfirmOpen(false)
       setDone({ qty: qtyNum, amount: orderAmount, side })
       setDoneOpen(true)
@@ -105,8 +94,6 @@ export function OrderForm({ accountNo, symbol, name, currentPrice, onOrdered }: 
       onOrdered?.(res.data)
     } catch {
       setConfirmOpen(false)
-    } finally {
-      setSubmitting(false)
     }
   }
 

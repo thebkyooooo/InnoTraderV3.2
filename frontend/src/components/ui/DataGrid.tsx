@@ -29,6 +29,10 @@ interface DataGridProps<TData = Record<string, unknown>> {
   pageSize?: number
   headerHeight?: number
   rowHeight?: number
+  /** 선택 체크박스 컬럼 헤더 타이틀 (onRowClick 사용 시에만 표시) */
+  selectionHeaderName?: string
+  /** 선택 체크박스 컬럼 너비(px). 미지정 시 AG Grid 기본(~50px) */
+  selectionColumnWidth?: number
 }
 
 export function DataGrid<TData = Record<string, unknown>>({
@@ -42,6 +46,8 @@ export function DataGrid<TData = Record<string, unknown>>({
   pageSize = 20,
   headerHeight = 38,
   rowHeight = 36,
+  selectionHeaderName,
+  selectionColumnWidth,
 }: DataGridProps<TData>) {
   const handleRowClicked = useCallback(
     (event: RowClickedEvent<TData>) => {
@@ -77,6 +83,7 @@ export function DataGrid<TData = Record<string, unknown>>({
         paginationPageSize={pageSize}
         paginationPageSizeSelector={pagination ? Array.from(new Set([pageSize, 20, 50, 100])).sort((a, b) => a - b) : false}
         rowSelection={onRowClick ? { mode: 'singleRow' } : undefined}
+        selectionColumnDef={onRowClick ? { headerName: selectionHeaderName, width: selectionColumnWidth, sortable: false, resizable: false } : undefined}
         defaultColDef={{ resizable: true, sortable: true, filter: false }}
       />
     </Box>

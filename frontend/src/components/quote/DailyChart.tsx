@@ -26,10 +26,10 @@ interface OHLCBar {
   volume?: number
 }
 
-interface ChartProps {
+export interface DailyChartProps {
   /** 직접 OHLC 데이터를 넘기는 방식 (symbol 미지정 시 사용) */
   data?: OHLCBar[]
-  /** 종목코드를 넘기면 Chart 내부에서 일봉을 직접 조회한다 */
+  /** 종목코드를 넘기면 내부에서 일봉을 직접 조회한다 */
   symbol?: string
   /** symbol 조회 시 일봉 유형 (기본 'D') */
   dailyType?: DailyChartType
@@ -42,7 +42,7 @@ interface ChartProps {
 const UP_COLOR   = '#ef5350'
 const DOWN_COLOR = '#4285f4'
 
-export function Chart({ data, symbol, dailyType = 'D', count = 120, height = 400, type = 'candlestick' }: ChartProps) {
+export function DailyChart({ data, symbol, dailyType = 'D', count = 120, height = 400, type = 'candlestick' }: DailyChartProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const chartRef     = useRef<IChartApi | null>(null)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
