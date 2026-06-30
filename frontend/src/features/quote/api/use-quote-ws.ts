@@ -4,7 +4,10 @@ import { Client, type StompSubscription, type IMessage } from '@stomp/stompjs'
 import SockJS from 'sockjs-client'
 import type { QuotePriceResponse, FilledQuoteItem, InvestmentTrendItem, HogaData } from './quote-api'
 
-const WS_URL = `${process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:8080'}/ws`
+// WS 는 백엔드 도메인을 직접 가리켜야 한다. HTTP(/api/*)는 next.config rewrites 로 프록시되지만
+// WebSocket 업그레이드는 rewrites 가 프록시하지 못하므로, 상대경로(빈 base)면 프론트로 잘못 연결된다.
+// 주문용 stomp-client 와 동일하게 NEXT_PUBLIC_WS_URL(백엔드 도메인/ws)을 사용한다.
+const WS_URL = process.env.NEXT_PUBLIC_WS_URL ?? 'http://localhost:8080/ws'
 
 // ─── 시세 전용 공유 WebSocket ─────────────────────────────────────────────────
 // 현재가/체결/투자동향 토픽(모두 public)을 단일 연결로 공유한다. 같은 토픽을 여러 컴포넌트가
