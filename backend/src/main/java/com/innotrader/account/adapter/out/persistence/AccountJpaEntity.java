@@ -6,20 +6,14 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
 
 import java.util.UUID;
-
-import static lombok.AccessLevel.PROTECTED;
 
 /**
  * JPA entity for the {@code securities_accounts} table.
  */
 @Entity
 @Table(name = "securities_accounts")
-@Getter
-@NoArgsConstructor(access = PROTECTED)
 public class AccountJpaEntity extends BaseEntity {
 
     @Id
@@ -43,6 +37,16 @@ public class AccountJpaEntity extends BaseEntity {
 
     @Column(name = "orderable_amount", nullable = false)
     private long orderableAmount;
+
+    protected AccountJpaEntity() {}
+
+    public UUID getId() { return id; }
+    public UUID getUserId() { return userId; }
+    public String getAccountNo() { return accountNo; }
+    public String getAccountName() { return accountName; }
+    public String getTypeCode() { return typeCode; }
+    public String getTypeName() { return typeName; }
+    public long getOrderableAmount() { return orderableAmount; }
 
     private AccountJpaEntity(UUID id, UUID userId, String accountNo, String accountName,
                             String typeCode, String typeName, long orderableAmount) {

@@ -9,6 +9,40 @@ const lcg = (seed: number) => {
   return () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 0xffffffff }
 }
 
+/** KRX 가격대별 호가 단위 (백엔드 PriceTick 미러). */
+export function tickSize(price: number): number {
+  if (price < 2_000)   return 1
+  if (price < 5_000)   return 5
+  if (price < 20_000)  return 10
+  if (price < 50_000)  return 50
+  if (price < 200_000) return 100
+  if (price < 500_000) return 500
+  return 1_000
+}
+
+/** 가격을 호가 단위 그리드로 반올림. */
+export function roundTick(price: number): number {
+  const t = tickSize(price)
+  return Math.max(t, Math.round(price / t) * t)
+}
+
+/**
+ * 봉 내 가격 경로(시가→종가 서브 브리지)의 극값으로 고가/저가 산출.
+ * 임의 wick 가산 없이 경로가 실제 도달한 최대/최소만 사용 (백엔드 pathExtremes 미러).
+ * high ≥ max(open,close), low ≤ min(open,close).
+ */
+export function pathExtremes(open: number, close: number, amp: number, r: () => number, sub: number): [number, number] {
+  let hi = Math.max(open, close), lo = Math.min(open, close)
+  const w = new Array<number>(sub + 1); w[0] = 0
+  for (let s = 1; s <= sub; s++) w[s] = w[s - 1] + (r() - 0.5)
+  for (let s = 1; s < sub; s++) {
+    const bridge = w[s] - w[sub] * (s / sub)
+    const v = Math.round(open + (close - open) * s / sub + bridge * amp)
+    hi = Math.max(hi, v); lo = Math.min(lo, v)
+  }
+  return [hi, Math.max(100, lo)]
+}
+
 export interface DailyBar {
   date: string         // yyyyMMdd
   close: number        // 종가
@@ -29,11 +63,11 @@ export function dailySeries(price: number, prevDiff: number, volume: number, cou
   // 단일 스트림을 순차적으로 뽑는다. (count가 달라도 겹치는 인덱스는 동일)
   const rc = lcg(price * 53 + 1)
   const closes = new Array<number>(count + 1)
-  closes[0] = price
-  closes[1] = Math.max(100, price - prevDiff)
+  closes[0] = roundTick(price)
+  closes[1] = Math.max(100, roundTick(price - prevDiff))
   for (let i = 2; i <= count; i++) {
     const dc = (rc() - 0.5) * 0.04
-    closes[i] = Math.max(100, Math.round(closes[i - 1] * (1 + dc)))
+    closes[i] = Math.max(100, roundTick(Math.round(closes[i - 1] * (1 + dc))))
   }
 
   // 바 속성 (별도 단일 스트림): 시가/고가/저가/거래량
@@ -43,15 +77,20 @@ export function dailySeries(price: number, prevDiff: number, volume: number, cou
   for (let i = 0; i < count; i++) {
     const close     = closes[i]
     const prevClose = closes[i + 1]
-    const open = Math.max(100, Math.round(prevClose * (1 + (rb() - 0.5) * 0.01)))
-    const high = Math.max(close, open) + Math.round((close / 100) * rb())
-    const low  = Math.max(100, Math.min(close, open) - Math.round((close / 100) * rb()))
+    const open = Math.max(100, roundTick(Math.round(prevClose * (1 + (rb() - 0.5) * 0.01))))
+    // 고가/저가 = 당일 가격 경로의 극값 (종가가 실제 도달한 값만, 호가 단위 정렬)
+    const [hiPath, loPath] = pathExtremes(open, close, Math.max(1, Math.round(close * 0.006)), rb, 8)
+    const high = roundTick(hiPath)
+    const low  = roundTick(loPath)
     const vol  = Math.max(1000, Math.round(volume * (0.5 + rb())))
     const diff = close - prevClose
     const chg  = prevClose === 0 ? 0 : Math.round(diff * 1000 / prevClose) / 10
     const d = new Date(today); d.setDate(d.getDate() - i)
+    // 로컬(KST) 기준 yyyyMMdd — toISOString()은 UTC라 자정~오전 사이 날짜가 하루 밀려
+    // WS(KST) 날짜와 어긋나므로 사용하지 않는다.
+    const ymd = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`
     out.push({
-      date: d.toISOString().slice(0, 10).replace(/-/g, ''),
+      date: ymd,
       close, prevDiff: diff, change: chg, open, high, low,
       volume: vol, turnoverMan: Math.round(vol * close / 10000),
     })

@@ -5,6 +5,7 @@ import { Section } from '@/components/ui/Section'
 import { StockSearchModal } from './StockSearchModal'
 import { type QuotePriceResponse } from '@/features/quote/api/quote-api'
 import { useStockPrice } from '@/features/quote/api/use-quote'
+import { useStockPriceWS } from '@/features/quote/api/use-quote-ws'
 import type { StockSummary } from '@/features/stock-master/api/stock-master-api'
 
 export interface QuoteBoardProps {
@@ -32,10 +33,12 @@ function formatAmount(manWon: number): string {
 export function QuoteBoard({ symbol, quote, onStockSelect }: QuoteBoardProps) {
   const [modalOpen, setModalOpen] = useState(false)
 
-  // quote가 주어지면 제어형(표시만), 없으면 symbol로 자율 조회(React Query — 동시/중복 요청 dedupe)
-  const { data: fetched } = useStockPrice(symbol, { enabled: !quote })
+  // 제어형(quote prop): WS 없이 정적 표시
+  // 자율형: REST 초기 스냅샷 + WS 실시간 갱신 (연결 전 빈 화면 방지)
+  const { data: snapshot } = useStockPrice(symbol, { enabled: !quote })
+  const wsQuote = useStockPriceWS(symbol, !quote)
 
-  const q = quote ?? fetched
+  const q = quote ?? wsQuote ?? snapshot
   if (!q) return null
 
   const {

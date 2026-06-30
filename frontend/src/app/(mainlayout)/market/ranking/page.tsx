@@ -6,6 +6,7 @@ import { DragScroll } from '@/components/ui/DragScroll'
 import { useRanking, type RankingType } from '@/features/market/api/use-market'
 import type { StockRanking } from '@/features/market/api/market-api'
 import type { MarketType } from '@/features/market/api/market-api'
+import { number } from 'zod'
 
 // ─── 포매터 ────────────────────────────────────────────────────────────────────
 
@@ -65,12 +66,13 @@ const COL_DEFS: ColDef<StockRanking>[] = [
     headerName: '종목명',
     field: 'name',
     flex: 1,
-    minWidth: 100,
+    minWidth: 160,
   },
   {
     headerName: '현재가',
     field: 'price',
-    width: 100,
+    width: 120,
+    type: 'numericColumn',
     cellStyle: { textAlign: 'right' },
     valueFormatter: (p: ValueFormatterParams<StockRanking>) => fmtNumber(p.value),
   },
@@ -78,36 +80,41 @@ const COL_DEFS: ColDef<StockRanking>[] = [
     headerName: '전일대비',
     field: 'prevDiff',
     width: 100,
+    type: 'numericColumn',
     cellStyle: (p) => ({ textAlign: 'right', ...changeStyle(p.value ?? 0) }),
     valueFormatter: (p: ValueFormatterParams<StockRanking>) => fmtPrevDiff(p.value ?? 0),
   },
   {
     headerName: '등락률',
     field: 'change',
-    width: 85,
+    width: 100,
+    type: 'numericColumn',
     cellStyle: (p) => ({ textAlign: 'right', ...changeStyle(p.value ?? 0) }),
     valueFormatter: (p: ValueFormatterParams<StockRanking>) => fmtChange(p.value ?? 0),
   },
   {
     headerName: '거래량',
     field: 'volume',
-    width: 110,
+    width: 130,
+    type: 'numericColumn',
     cellStyle: { textAlign: 'right' },
     valueFormatter: (p: ValueFormatterParams<StockRanking>) => fmtNumber(p.value),
   },
   {
-    headerName: '시가총액',
-    field: 'marketCap',
-    width: 110,
-    cellStyle: { textAlign: 'right' },
-    valueFormatter: (p: ValueFormatterParams<StockRanking>) => fmtMarketCap(p.value),
-  },
-  {
     headerName: '거래대금',
     field: 'tradingAmount',
-    width: 110,
+    width: 130,
+    type: 'numericColumn',
     cellStyle: { textAlign: 'right' },
     valueFormatter: (p: ValueFormatterParams<StockRanking>) => fmtTradingAmount(p.value),
+  },
+  {
+    headerName: '시가총액',
+    field: 'marketCap',
+    width: 130,
+    type: 'numericColumn',
+    cellStyle: { textAlign: 'right' },
+    valueFormatter: (p: ValueFormatterParams<StockRanking>) => fmtMarketCap(p.value),
   },
   {
     headerName: '시장구분',
@@ -149,7 +156,7 @@ export default function MarketRankingPage() {
         </div>
 
         <DragScroll className="flex w-full rounded-lg">
-          <div className="flex gap-1.5 w-full">
+          <div className="flex gap-1.5 pr-4">
             {RANK_TYPES.map(({ label, value }) => (
               <Button
                 key={value}
@@ -164,7 +171,7 @@ export default function MarketRankingPage() {
         </DragScroll>
       </div>
 
-      <div className="flex-1 min-h-0">
+      <div className="flex-1 min-h-96">
         <DataGrid<StockRanking>
           rows={data}
           columnDefs={COL_DEFS}

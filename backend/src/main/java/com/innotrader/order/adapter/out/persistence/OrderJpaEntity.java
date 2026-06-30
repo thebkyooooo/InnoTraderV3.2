@@ -11,21 +11,15 @@ import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
 
 import java.time.Instant;
 import java.util.UUID;
-
-import static lombok.AccessLevel.PROTECTED;
 
 /**
  * JPA entity for the {@code orders} table.
  */
 @Entity
 @Table(name = "stock_orders")
-@Getter
-@NoArgsConstructor(access = PROTECTED)
 public class OrderJpaEntity extends BaseEntity {
 
     @Id
@@ -73,6 +67,23 @@ public class OrderJpaEntity extends BaseEntity {
 
     @Column(name = "ordered_at", nullable = false)
     private Instant orderedAt;
+
+    protected OrderJpaEntity() {}
+
+    public UUID getId() { return id; }
+    public UUID getUserId() { return userId; }
+    public String getAccountNo() { return accountNo; }
+    public String getOrderNo() { return orderNo; }
+    public String getOriginalOrderNo() { return originalOrderNo; }
+    public String getSymbol() { return symbol; }
+    public OrderSide getSide() { return side; }
+    public OrderType getOrderType() { return orderType; }
+    public long getQuantity() { return quantity; }
+    public long getPrice() { return price; }
+    public OrderStatus getStatus() { return status; }
+    public long getFilledQuantity() { return filledQuantity; }
+    public long getFilledPrice() { return filledPrice; }
+    public Instant getOrderedAt() { return orderedAt; }
 
     private OrderJpaEntity(UUID id, UUID userId, String accountNo, String orderNo, String originalOrderNo,
                            String symbol, OrderSide side, OrderType orderType, long quantity, long price,

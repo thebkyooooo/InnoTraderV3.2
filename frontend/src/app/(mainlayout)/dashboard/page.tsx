@@ -141,7 +141,7 @@ export default function DashboardPage() {
 
         <div 
           aria-hidden={!panelOpen}
-          className={`@container p-4 sm:p-6 flex-1 flex flex-col gap-4 shrink-0 overflow-hidden transition-[width,opacity] duration-300 ease-in-out ${panelOpen ? 'w-full' : 'w-full'}`}
+          className={`@container p-4 sm:p-6 flex-1 flex flex-col gap-4 shrink-0 transition-[opacity] duration-300 ease-in-out ${panelOpen ? 'w-full' : 'w-full'}`}
         >
           {/* <h1 className="text-2xl font-bold text-foreground">대시보드</h1> */}
           
@@ -273,13 +273,15 @@ export default function DashboardPage() {
                       </button>
                     </Link>
                   ) : (
-                    <div className='flex flex-col'>
+                    <div className='flex flex-col gap-2'>
                       <span className='text-gray-400 text-center'>미체결 주문이 없습니다.</span>
-                      <Link className='justify-items-center' href={'/order/history'}>
-                        <button className='flex gap-1 items-center mt-2  text-gray-500 hover:text-blue-500/90'>
-                          <span className='text-sm'>주문하기</span>
-                          <FormatIndentIncreaseOutlined sx={{ fontSize: 15 }} />
-                        </button>
+                      <Link className='self-center' href={'/order/order'}>
+                        <Button
+                          variant="outlined"
+                          size='small'
+                        >
+                          주문하기
+                        </Button>
                       </Link>
                     </div>
                   )}
@@ -300,19 +302,21 @@ export default function DashboardPage() {
                   ))}
                   {filledToday.length > 0 ? (
                     <Link href={'/order/history'} className='ml-auto'>
-                      <button className='flex gap-1 items-center mt-2  text-gray-500 hover:text-blue-500/90'>
+                      <button className='flex gap-1 items-center mt-2 text-gray-500 hover:text-blue-500/90'>
                         <span className='text-sm'>더보기</span>
                         <FormatIndentIncreaseOutlined sx={{ fontSize: 15 }} />
                       </button>
                     </Link>
                   ) : (
-                    <div className='flex flex-col'>
+                    <div className='flex flex-col gap-2'>
                       <span className='text-gray-400 text-center'>체결 주문이 없습니다.</span>
-                      <Link className='justify-items-center' href={'/order/history'}>
-                        <button className='flex gap-1 items-center mt-2 text-gray-500 hover:text-blue-500/90'>
-                          <span className='text-sm'>주문하기</span>
-                          <FormatIndentIncreaseOutlined sx={{ fontSize: 15 }} />
-                        </button>
+                      <Link className='self-center' href={'/order/order'}>
+                        <Button
+                          variant="outlined"
+                          size='small'
+                        >
+                          주문하기
+                        </Button>
                       </Link>
                     </div>
                   )}
@@ -332,15 +336,15 @@ export default function DashboardPage() {
                   ))}
                   {(holdings?.items?.length ?? 0) > 0 ? (
                     <Link href={'/portfolio'} className='ml-auto'>
-                      <button className='flex gap-1 items-center mt-2 text-gray-500 hover:text-blue-500/90'>
+                      <Button className='flex gap-1 items-center mt-2 text-gray-500 hover:text-blue-500/90'>
                         <span className='text-sm'>더보기</span>
                         <FormatIndentIncreaseOutlined sx={{ fontSize: 15 }} />
-                      </button>
+                      </Button>
                     </Link>
                   ) : (
-                    <div className='flex flex-col'>
+                    <div className='flex flex-col gap-2'>
                       <span className='text-gray-400 text-center'>보유 종목이 없습니다.</span>
-                      <Link className='justify-items-center' href={'/order/order'}>
+                      <Link className='self-center' href={'/order/order'}>
                         <Button
                           variant="outlined"
                           size='small'

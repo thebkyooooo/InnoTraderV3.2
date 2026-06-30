@@ -25,13 +25,38 @@ export interface StockRanking {
   rank: number
   symbol: string
   name: string
-  market: string       // KOSPI, KOSDAQ
+  market: string
   price: number
   prevDiff: number
-  change: number       // 등락률(%)
-  marketCap?: number   // 시가총액상위 전용
-  volume?: number      // 거래량상위 전용
-  tradingAmount?: number // 거래대금상위 전용
+  change: number
+  marketCap?: number
+  volume?: number
+  tradingAmount?: number
+}
+
+/** 시장 투자동향 (외국인/개인/기관 순매수, 억원 단위) */
+export interface MarketTrend {
+  foreign: number
+  individual: number
+  institution: number
+}
+
+/** 일별 투자동향 한 행 */
+export interface DailyTrend {
+  tradeDate: string      // YYYY-MM-DD
+  closingPrice: number
+  prevDiff: number
+  changeRate: number
+  volume: number
+  foreignNet: number     // 억원
+  individualNet: number  // 억원
+  institutionNet: number // 억원
+}
+
+/** 일별 투자동향 페이지 (커서 기반) */
+export interface DailyTrendPage {
+  items: DailyTrend[]
+  nextCursor: string | null
 }
 
 /** 시장 구분 */
@@ -72,4 +97,14 @@ export const marketApi = {
 
   /** 인기검색 종목 (상위 10) */
   getTrending: () => axiosInstance.get<StockRanking[]>(`${BASE}/trending`),
+
+  /** 시장 투자동향 (외국인/개인/기관 순매수) */
+  getMarketTrend: (market: MarketType) =>
+    axiosInstance.get<MarketTrend>(`${BASE}/trend`, { params: { market } }),
+
+  /** 일별 투자동향 (커서 기반 페이지네이션) */
+  getDailyTrends: (market: MarketType, size = 100, cursor?: string | null) =>
+    axiosInstance.get<DailyTrendPage>(`${BASE}/daily-trends`, {
+      params: { market, size, ...(cursor ? { cursor } : {}) },
+    }),
 }

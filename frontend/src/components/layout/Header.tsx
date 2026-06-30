@@ -7,9 +7,11 @@ import {
   Typography,
   Box,
   Button,
+  Tooltip,
 } from '@mui/material'
-import { Menu as MenuIcon, LogoutOutlined } from '@mui/icons-material'
+import { Menu as MenuIcon, LogoutOutlined, SensorsOutlined, SensorsOffOutlined } from '@mui/icons-material'
 import { useAuthStore } from '@/store/auth-store'
+import { useRealtimeStore } from '@/store/realtime-store'
 import { useLogout } from '@/features/auth/api/use-auth'
 
 interface HeaderProps {
@@ -18,13 +20,17 @@ interface HeaderProps {
 
 export function Header({ onMenuToggle }: HeaderProps) {
   const user = useAuthStore((s) => s.user)
+  const realtimeEnabled = useRealtimeStore((s) => s.enabled)
+  const toggleRealtime = useRealtimeStore((s) => s.toggle)
   const { mutate: logout } = useLogout()
 
   return (
     <AppBar
-      position="sticky"
+      position="fixed"
       elevation={0}
       sx={{
+        left: { xs: 0, md: '245px' },
+        width: { xs: '100%', md: 'calc(100% - 245px)' },
         bgcolor: 'background.paper',
         color: 'text.primary',
         borderBottom: '1px solid',
@@ -58,6 +64,17 @@ export function Header({ onMenuToggle }: HeaderProps) {
 
         {/* 우측 영역 */}
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+          {/* 실시간 시세 on/off */}
+          <Tooltip title={realtimeEnabled ? '실시간 켜짐' : '실시간 꺼짐'}>
+            <IconButton
+              size="small"
+              onClick={toggleRealtime}
+              aria-label={realtimeEnabled ? '실시간 끄기' : '실시간 켜기'}
+              sx={{ color: realtimeEnabled ? 'success.main' : 'text.disabled', p: 0 }}
+            >
+              {realtimeEnabled ? <SensorsOutlined fontSize="small" /> : <SensorsOffOutlined fontSize="small" />}
+            </IconButton>
+          </Tooltip>
           {user?.email && (
             <Typography
               variant="body2"

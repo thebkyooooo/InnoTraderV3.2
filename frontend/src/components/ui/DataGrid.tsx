@@ -33,6 +33,8 @@ interface DataGridProps<TData = Record<string, unknown>> {
   selectionHeaderName?: string
   /** 선택 체크박스 컬럼 너비(px). 미지정 시 AG Grid 기본(~50px) */
   selectionColumnWidth?: number
+  /** 행 고유 ID 추출자. 지정하면 rowData 갱신 시 행을 재사용해 스크롤/선택을 유지한다(실시간 갱신용). */
+  getRowId?: (row: TData) => string
 }
 
 export function DataGrid<TData = Record<string, unknown>>({
@@ -48,7 +50,13 @@ export function DataGrid<TData = Record<string, unknown>>({
   rowHeight = 36,
   selectionHeaderName,
   selectionColumnWidth,
+  getRowId,
 }: DataGridProps<TData>) {
+  const handleGetRowId = useCallback(
+    (params: { data: TData }) => getRowId!(params.data),
+    [getRowId]
+  )
+
   const handleRowClicked = useCallback(
     (event: RowClickedEvent<TData>) => {
       if (onRowClick && event.data) onRowClick(event.data)
@@ -73,6 +81,7 @@ export function DataGrid<TData = Record<string, unknown>>({
         theme={gridTheme}
         rowData={rows}
         columnDefs={columnDefs}
+        getRowId={getRowId ? handleGetRowId : undefined}
         loading={loading}
         onRowClicked={onRowClick ? handleRowClicked : undefined}
         onBodyScrollEnd={onScrollEnd ? handleBodyScrollEnd : undefined}
@@ -84,6 +93,7 @@ export function DataGrid<TData = Record<string, unknown>>({
         paginationPageSizeSelector={pagination ? Array.from(new Set([pageSize, 20, 50, 100])).sort((a, b) => a - b) : false}
         rowSelection={onRowClick ? { mode: 'singleRow' } : undefined}
         selectionColumnDef={onRowClick ? { headerName: selectionHeaderName, width: selectionColumnWidth, sortable: false, resizable: false } : undefined}
+        localeText={{ noRowsToShow: '조회된 데이터가 없습니다.' }}
         defaultColDef={{ resizable: true, sortable: true, filter: false }}
       />
     </Box>

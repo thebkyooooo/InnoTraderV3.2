@@ -108,7 +108,7 @@ public class ChartService implements GetChartUseCase {
         List<TimeChart> result = new ArrayList<>(bars.size());
         for (MockIntradaySeries.IntraBar b : bars) {
             result.add(new TimeChart(
-                    b.time(), b.close(), b.prevDiff(), b.change(),
+                    b.date(), b.time(), b.close(), b.prevDiff(), b.change(),
                     b.open(), b.high(), b.low(), b.filledVolume(), b.cumVolume()
             ));
         }

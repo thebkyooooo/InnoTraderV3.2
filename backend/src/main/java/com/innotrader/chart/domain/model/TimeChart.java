@@ -2,6 +2,7 @@ package com.innotrader.chart.domain.model;
 
 /** 분별 차트 시세 (1분/5분/10분/30분/60분). */
 public record TimeChart(
+        String date,          // yyyyMMdd (거래일)
         String time,          // HHmmss
         long   price,         // 체결가
         long   prevDiff,      // 전일대비

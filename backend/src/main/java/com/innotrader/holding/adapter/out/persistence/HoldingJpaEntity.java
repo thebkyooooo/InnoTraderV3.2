@@ -6,20 +6,14 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
 
 import java.util.UUID;
-
-import static lombok.AccessLevel.PROTECTED;
 
 /**
  * JPA entity for the {@code holdings} table.
  */
 @Entity
 @Table(name = "holdings")
-@Getter
-@NoArgsConstructor(access = PROTECTED)
 public class HoldingJpaEntity extends BaseEntity {
 
     @Id
@@ -40,6 +34,15 @@ public class HoldingJpaEntity extends BaseEntity {
 
     @Column(name = "avg_price", nullable = false)
     private long avgPrice;
+
+    protected HoldingJpaEntity() {}
+
+    public UUID getId() { return id; }
+    public UUID getUserId() { return userId; }
+    public String getAccountNo() { return accountNo; }
+    public String getSymbol() { return symbol; }
+    public long getQuantity() { return quantity; }
+    public long getAvgPrice() { return avgPrice; }
 
     private HoldingJpaEntity(UUID id, UUID userId, String accountNo, String symbol, long quantity, long avgPrice) {
         this.id = id;

@@ -4,6 +4,10 @@ export interface QuotePriceResponse {
   symbol: string
   name: string
   market: string
+  /** 서버 KST 거래일 (yyyyMMdd) — WS 실시간 메시지에만 포함 */
+  date?: string
+  /** 서버 KST 현재시각 (HHmmss) — WS 실시간 메시지에만 포함 */
+  time?: string
   price: number
   prevDiff: number
   change: number
@@ -84,6 +88,7 @@ export interface DailyChartBar {
 }
 
 export interface TimeChartBar {
+  date: string        // "20260626" (거래일)
   time: string        // "093000"
   open: number
   high: number

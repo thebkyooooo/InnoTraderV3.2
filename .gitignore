@@ -76,6 +76,12 @@ desktop.ini
 # ============================
 *.log
 logs/
+backend/gc.log*
+
+# ============================
+# Build output (Gradle/Eclipse bin)
+# ============================
+backend/bin/
 
 # ============================
 # Test / Coverage

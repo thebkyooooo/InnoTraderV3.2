@@ -4,6 +4,7 @@ import com.innotrader.common.annotation.UseCase;
 import com.innotrader.common.support.DailyBar;
 import com.innotrader.common.support.MockDailySeries;
 import com.innotrader.common.support.MockIntradaySeries;
+import com.innotrader.common.support.PriceTick;
 import com.innotrader.quote.domain.model.CurrentPrice;
 import com.innotrader.quote.domain.model.DailyQuote;
 import com.innotrader.quote.domain.model.FilledQuote;
@@ -31,7 +32,6 @@ public class QuoteService implements GetQuoteUseCase {
     private static final int  MAX_SIZE     = 9999;
     private static final int  MAX_DAILY    = 3000; // ~12년치 영업일
     private static final int  MAX_FILLED   = 9999;
-    private static final long TICK         = 50L;  // 기본 호가 단위
 
     private final FindStockBasePort findStockBasePort;
 
@@ -111,12 +111,12 @@ public class QuoteService implements GetQuoteUseCase {
         long seed = (long) base.symbol().hashCode() * 53;
         Random r = new Random(seed);
 
-        long prevClose    = base.price() - base.prevDiff();
-        long open         = Math.max(100L, Math.round(prevClose * (1 + (r.nextDouble() - 0.5) * 0.01)));
-        long high         = Math.max(base.price(), open) + Math.abs(r.nextLong() % (base.price() / 200 + 1));
-        long low          = Math.max(100L, Math.min(base.price(), open) - Math.abs(r.nextLong() % (base.price() / 200 + 1)));
-        long upperLimit   = Math.round(prevClose * 1.3);
-        long lowerLimit   = Math.round(prevClose * 0.7);
+        long prevClose    = PriceTick.round(base.price() - base.prevDiff());
+        long open         = Math.max(100L, PriceTick.round(Math.round(prevClose * (1 + (r.nextDouble() - 0.5) * 0.01))));
+        long high         = PriceTick.round(Math.max(base.price(), open) + Math.abs(r.nextLong() % (base.price() / 200 + 1)));
+        long low          = Math.max(100L, PriceTick.round(Math.min(base.price(), open) - Math.abs(r.nextLong() % (base.price() / 200 + 1))));
+        long upperLimit   = PriceTick.round(Math.round(prevClose * 1.3));
+        long lowerLimit   = PriceTick.round(Math.round(prevClose * 0.7));
         long tradingAmount = base.volume() * base.price() / 10_000L;
 
         return new CurrentPrice(
@@ -153,7 +153,8 @@ public class QuoteService implements GetQuoteUseCase {
 
         // 체결도 오늘 일봉(시가)→현재가 브리지로 생성되어 최근 체결가 = 현재가
         List<MockIntradaySeries.Tick> ticks = MockIntradaySeries.filledTicks(
-                base.symbol(), base.price(), base.prevDiff(), base.volume(), totalMinutes, MAX_FILLED, TICK);
+                base.symbol(), base.price(), base.prevDiff(), base.volume(), totalMinutes, MAX_FILLED,
+                PriceTick.tickSize(base.price()));
         List<FilledQuote> result = new ArrayList<>(ticks.size());
         for (MockIntradaySeries.Tick t : ticks) {
             result.add(new FilledQuote(
@@ -165,22 +166,23 @@ public class QuoteService implements GetQuoteUseCase {
     }
 
     private HogaData generateHoga(StockBase base) {
-        long basePrice = base.price();
+        long basePrice = PriceTick.round(base.price());
+        long tick = PriceTick.tickSize(basePrice);  // 가격대별 호가 단위
         long seed = (long) base.symbol().hashCode() * 41;
         Random r = new Random(seed);
 
         List<HogaEntry> asks = new ArrayList<>();
         List<HogaEntry> bids = new ArrayList<>();
 
-        // 매도 10호가: 현재가 위로
+        // 매도 10호가: 현재가 위로 (호가 단위 간격)
         for (int i = 1; i <= 10; i++) {
-            long price = basePrice + TICK * i;
+            long price = basePrice + tick * i;
             long vol = Math.max(100L, Math.abs(r.nextLong()) % 50000 + 1000);
             asks.add(new HogaEntry(price, vol));
         }
         // 매수 10호가: 현재가 아래로
         for (int i = 1; i <= 10; i++) {
-            long price = Math.max(TICK, basePrice - TICK * i);
+            long price = Math.max(tick, basePrice - tick * i);
             long vol = Math.max(100L, Math.abs(r.nextLong()) % 50000 + 1000);
             bids.add(new HogaEntry(price, vol));
         }
@@ -213,10 +215,10 @@ public class QuoteService implements GetQuoteUseCase {
         Random r = new Random(seed);
 
         long   parValue    = List.of(100L, 500L, 1000L, 5000L).get(r.nextInt(4));
-        long   upperLimit  = Math.round(base.price() * 1.3);
-        long   lowerLimit  = Math.round(base.price() * 0.7);
-        long   high52w     = Math.round(base.price() * (1.1 + r.nextDouble() * 0.4));
-        long   low52w      = Math.round(base.price() * (0.5 + r.nextDouble() * 0.3));
+        long   upperLimit  = PriceTick.round(Math.round(base.price() * 1.3));
+        long   lowerLimit  = PriceTick.round(Math.round(base.price() * 0.7));
+        long   high52w     = PriceTick.round(Math.round(base.price() * (1.1 + r.nextDouble() * 0.4)));
+        long   low52w      = PriceTick.round(Math.round(base.price() * (0.5 + r.nextDouble() * 0.3)));
         double per         = 8.0 + r.nextDouble() * 32;
         long   eps         = base.price() == 0 ? 0 : Math.round(base.price() / per);
         double pbr         = 0.3 + r.nextDouble() * 3.0;

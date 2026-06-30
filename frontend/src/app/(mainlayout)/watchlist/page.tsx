@@ -1,13 +1,9 @@
 'use client'
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import type { ColDef } from 'ag-grid-community'
 import IconButton from '@mui/material/IconButton'
 import Tooltip from '@mui/material/Tooltip'
-import CreateNewFolderOutlinedIcon from '@mui/icons-material/CreateNewFolderOutlined'
-import DriveFileRenameOutlineIcon from '@mui/icons-material/DriveFileRenameOutline'
-import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutlined'
-import RemoveCircleOutlineIcon from '@mui/icons-material/RemoveCircleOutlined'
-import DeleteOutlineIcon from '@mui/icons-material/DeleteOutlined'
+import { CreateNewFolderOutlined, DriveFileRenameOutline, AddCircleOutlined, RemoveCircleOutlined, DeleteOutlined, TaskAlt } from '@mui/icons-material'
 import Button from '@mui/material/Button'
 import { Modal } from '@/components/ui/Modal'
 import DialogTitle from '@mui/material/DialogTitle'
@@ -27,6 +23,7 @@ import {
 } from '@/features/watchlist/api/use-watchlist'
 import { type StockQuote } from '@/features/stock-master/api/stock-master-api'
 import { useStockQuotes } from '@/features/stock-master/api/use-stock-master'
+import { useStockPricesWS } from '@/features/quote/api/use-quote-ws'
 import { StockDetailCard, DailyChart } from '@/components/quote'
 import { GroupFormDialog } from '@/features/watchlist/components/GroupFormDialog'
 import { StockAddDialog } from '@/features/watchlist/components/StockAddDialog'
@@ -83,7 +80,20 @@ export default function WatchlistPage() {
   // ── 선택 그룹의 종목 + 시세 ──────────────────────────────────────────────────
   const { data: itemsData } = useWatchlistItems(selectedCode)
   const items = itemsData?.items ?? []
-  const { data: quotes = [], isFetching: loading } = useStockQuotes(items.map(i => i.symbol))
+  const symbols = items.map(i => i.symbol)
+  const { data: httpQuotes = [], isFetching: loading } = useStockQuotes(symbols)
+  // 여러 종목 실시간 현재가 → HTTP 스냅샷에 머지(2초마다 가격/등락/거래량 갱신)
+  const liveQuotes = useStockPricesWS(symbols)
+  const quotes = useMemo(() => httpQuotes.map(q => {
+    const live = liveQuotes[q.symbol]
+    if (!live) return q
+    return {
+      ...q,
+      price: live.price, prevDiff: live.prevDiff, change: live.change,
+      open: live.open, high: live.high, low: live.low,
+      volume: live.volume, turnoverMan: live.tradingAmount,
+    }
+  }), [httpQuotes, liveQuotes])
 
   // ── 선택 종목 동기화 ─────────────────────────────────────────────────────────
   // 그룹이 바뀌면 선택 종목을 첫 종목으로 맞춘다(없으면 해제)
@@ -174,26 +184,26 @@ export default function WatchlistPage() {
           <div className="flex flex-wrap gap-1.5 items-center ml-auto">
             <div className='w-[24px] text-xs leading-[13px]'>그룹관리</div>
             <Tooltip title="그룹추가">
-              <IconButton className='!p-0 !bg-slate-200' onClick={() => openModal('group-add')}><CreateNewFolderOutlinedIcon className='!text-[32px]' /></IconButton>
+              <IconButton className='!p-0 !bg-slate-200' onClick={() => openModal('group-add')}><CreateNewFolderOutlined className='!text-[32px]' /></IconButton>
             </Tooltip>
             <Tooltip title="그룹변경">
-              <span><IconButton className='!p-0 !bg-slate-200' onClick={() => openModal('group-rename')} disabled={!current}><DriveFileRenameOutlineIcon className='!text-[32px]' /></IconButton></span>
+              <span><IconButton className='!p-0 !bg-slate-200' onClick={() => openModal('group-rename')} disabled={!current}><DriveFileRenameOutline className='!text-[32px]' /></IconButton></span>
             </Tooltip>
             <Tooltip title="그룹삭제">
-              <span><IconButton className='!p-0 !bg-slate-200' color="error" onClick={() => openModal('group-delete')} disabled={!current}><DeleteOutlineIcon className='!text-[32px]' /></IconButton></span>
+              <span><IconButton className='!p-0 !bg-slate-200' color="error" onClick={() => openModal('group-delete')} disabled={!current}><DeleteOutlined className='!text-[32px]' /></IconButton></span>
             </Tooltip>
             <div className='w-[24px] text-xs leading-[13px] ml-2'>종목관리</div>
             <Tooltip title="종목추가">
-              <span><IconButton className='!p-0 !bg-slate-200' color="primary" onClick={() => openModal('stock-add')} disabled={!current}><AddCircleOutlineIcon className='!text-[32px]' /></IconButton></span>
+              <span><IconButton className='!p-0 !bg-slate-200' color="primary" onClick={() => openModal('stock-add')} disabled={!current}><AddCircleOutlined className='!text-[32px]' /></IconButton></span>
             </Tooltip>
             <Tooltip title="종목삭제">
-              <span><IconButton className='!p-0 !bg-slate-200' color="error" onClick={() => openModal('stock-remove')} disabled={!current || items.length === 0}><RemoveCircleOutlineIcon className='!text-[32px]' /></IconButton></span>
+              <span><IconButton className='!p-0 !bg-slate-200' color="error" onClick={() => openModal('stock-remove')} disabled={!current || items.length === 0}><RemoveCircleOutlined className='!text-[32px]' /></IconButton></span>
             </Tooltip>
           </div>
         </div>
 
         <div className="flex-1 min-h-[360px]">
-          <DataGrid<StockQuote> rows={quotes} columnDefs={columns} loading={loading} height="100%" onRowClick={setSelectedStock} selectionHeaderName="" selectionColumnWidth={36} />
+          <DataGrid<StockQuote> rows={quotes} columnDefs={columns} loading={loading} height="100%" onRowClick={setSelectedStock} selectionHeaderName="" selectionColumnWidth={36} getRowId={r => r.symbol} />
         </div>
       </div>
 
@@ -233,8 +243,9 @@ export default function WatchlistPage() {
               </div>
             </>
           ) : (
-            <div className="min-h-28 flex-1 content-center text-center text-sm text-gray-400">
-              종목을 선택하세요
+            <div className="flex flex-col gap-2  flex-1 items-center justify-center text-center text-sm text-gray-400">
+              <TaskAlt className='!text-[52px]'></TaskAlt>
+              <span>종목을 선택하세요</span>
             </div>
           )}
         </div>

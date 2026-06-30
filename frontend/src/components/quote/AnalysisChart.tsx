@@ -7,6 +7,7 @@ import {
 } from 'lightweight-charts'
 import { quoteApi, type DailyChartType } from '@/features/quote/api/quote-api'
 import * as ind from './_chartIndicators'
+import { useStockPriceWS } from '@/features/quote/api/use-quote-ws'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -94,7 +95,18 @@ function fmtCrosshairTime(time: Time): string {
   return `${p2(time.year % 100)}.${p2(time.month)}.${p2(time.day)}`
 }
 
+// 분봉 date("20260626")+time("093000") → UNIX 초.
+// crosshair/축이 getUTC* 로 렌더하므로 UTC로 만들어 KST 거래시각이 그대로 표시되게 한다.
+function timeBarToTs(date: string, time: string): number {
+  return Date.UTC(
+    +date.slice(0, 4), +date.slice(4, 6) - 1, +date.slice(6, 8),
+    +time.slice(0, 2), +time.slice(2, 4), +time.slice(4, 6),
+  ) / 1000
+}
+
 // ── Chart Builder ─────────────────────────────────────────────────────────────
+
+type BuildResult = { chart: IChartApi; mainSeries: ISeriesApi<SeriesType>; volSeries: ISeriesApi<SeriesType> | null }
 
 function buildChart(
   container: HTMLElement,
@@ -102,7 +114,7 @@ function buildChart(
   chartType: ChartType,
   activeOverlays: Set<string>,
   activeSubs: Set<string>,
-): IChartApi {
+): BuildResult {
   const isDark = document.documentElement.classList.contains('dark')
 
   const chart = createChart(container, {
@@ -126,6 +138,10 @@ function buildChart(
   const lows    = bars.map(b => b.low)
   const volumes = bars.map(b => b.volume)
 
+  // eslint-disable-next-line prefer-const
+  let mainSeries!: ISeriesApi<SeriesType>
+  let volSeries: ISeriesApi<SeriesType> | null = null
+
   // ── 가격 시리즈 (pane 0) ──────────────────────────────────────────────────
 
   const priceScale = { scaleMargins: { top: 0.08, bottom: 0.04 } }
@@ -137,18 +153,22 @@ function buildChart(
     }, 0)
     s.setData(bars.map(b => ({ time: b.time, open: b.open, high: b.high, low: b.low, close: b.close })))
     s.priceScale().applyOptions(priceScale)
+    mainSeries = s
   } else if (chartType === 'bar') {
     const s = chart.addSeries(BarSeries, { upColor: UP, downColor: DOWN, priceFormat }, 0)
     s.setData(bars.map(b => ({ time: b.time, open: b.open, high: b.high, low: b.low, close: b.close })))
     s.priceScale().applyOptions(priceScale)
+    mainSeries = s
   } else if (chartType === 'line') {
     const s = chart.addSeries(LineSeries, { color: UP, lineWidth: 2, priceFormat }, 0)
     s.setData(bars.map(b => ({ time: b.time, value: b.close })))
     s.priceScale().applyOptions(priceScale)
+    mainSeries = s
   } else {
     const s = chart.addSeries(AreaSeries, { lineColor: UP, topColor: 'rgba(239,83,80,0.25)', bottomColor: 'rgba(239,83,80,0)', priceFormat }, 0)
     s.setData(bars.map(b => ({ time: b.time, value: b.close })))
     s.priceScale().applyOptions(priceScale)
+    mainSeries = s
   }
 
   // ── 오버레이 지표 (pane 0) ────────────────────────────────────────────────
@@ -204,6 +224,7 @@ function buildChart(
         time: b.time, value: b.volume,
         color: b.close >= b.open ? 'rgba(239,83,80,0.6)' : 'rgba(66,133,244,0.6)',
       })))
+      volSeries = s
 
     } else if (id === 'macd') {
       const { macdLine, signalLine, histogram } = ind.macdIndicator(closes)
@@ -273,7 +294,7 @@ function buildChart(
   panes[0]?.setStretchFactor(4)
   for (let i = 1; i < panes.length; i++) panes[i]?.setStretchFactor(1)
 
-  return chart
+  return { chart, mainSeries, volSeries }
 }
 
 // ── 컴포넌트 ─────────────────────────────────────────────────────────────────
@@ -300,16 +321,23 @@ export function AnalysisChart({ symbol }: AnalysisChartProps) {
   const hasMoreRef          = useRef(false)
   const loadingRef          = useRef(false)
   const cursorRef           = useRef<string | null>(null)
-  const earliestTsRef       = useRef(0)
   const loadMoreFnRef       = useRef<(() => void) | null>(null)
   const savedRangeRef        = useRef<{ from: Time; to: Time } | null>(null)
   const armedRef             = useRef(true)
+  const mainSeriesRef = useRef<ISeriesApi<SeriesType> | null>(null)
+  const volSeriesRef  = useRef<ISeriesApi<SeriesType> | null>(null)
+  // 분봉 실시간 롤오버용 진행 봉(현재 기간) OHLC 누적
+  const liveMinRef = useRef<{ time: number; open: number; high: number; low: number; vol: number } | null>(null)
+  // 현재 시리즈가 어느 모드로 생성됐는지 — mode 전환 중 시간 타입 불일치 update 방지
+  const seriesModeRef = useRef<ChartMode | null>(null)
   const resetPendingRef      = useRef(false)
   const viewCountRef         = useRef(MIN_VIEW)
   const overlayRef          = useRef<HTMLDivElement>(null)
   const subRef              = useRef<HTMLDivElement>(null)
   const scrollRef           = useRef<HTMLDivElement>(null)
   const dragRef             = useRef({ active: false, startX: 0, startLeft: 0, moved: false })
+
+  const wsQuote = useStockPriceWS(symbol)
 
   // ── 데이터 로드 ────────────────────────────────────────────────────────────
 
@@ -343,25 +371,13 @@ export function AnalysisChart({ symbol }: AnalysisChartProps) {
       } else {
         const res  = await quoteApi.getChartTime(symbol, minPeriod, MIN_FETCH, cursor)
         const page = res.data
-        const periodSec = minPeriod * 60
         const reversed  = page.items.slice().reverse()
 
-        let converted: Bar[]
-        if (reset) {
-          const now = Math.floor(Date.now() / 1000)
-          converted = reversed.map((item, i) => ({
-            time: (now - (reversed.length - 1 - i) * periodSec) as Time,
-            open: item.open, high: item.high, low: item.low, close: item.price, volume: item.filledVolume,
-          }))
-          if (converted.length > 0) earliestTsRef.current = converted[0].time as number
-        } else {
-          const earliest = earliestTsRef.current
-          converted = reversed.map((item, i) => ({
-            time: (earliest - (reversed.length - i) * periodSec) as Time,
-            open: item.open, high: item.high, low: item.low, close: item.price, volume: item.filledVolume,
-          }))
-          if (converted.length > 0) earliestTsRef.current = converted[0].time as number
-        }
+        // API의 실제 거래일(date)+시각(time)으로 타임스탬프 생성 → 축 라벨이 API 값과 일치
+        const converted: Bar[] = reversed.map(item => ({
+          time: timeBarToTs(item.date, item.time) as Time,
+          open: item.open, high: item.high, low: item.low, close: item.price, volume: item.filledVolume,
+        }))
         setBars(prev => reset ? converted : [...converted, ...prev])
         cursorRef.current  = page.nextCursor
         hasMoreRef.current = page.hasNext
@@ -375,6 +391,7 @@ export function AnalysisChart({ symbol }: AnalysisChartProps) {
   // 파라미터 변경 시 리셋 로드
   useEffect(() => {
     setBars([])
+    liveMinRef.current = null   // 진행 봉 누적 상태 초기화
     loadData(true)
   }, [loadData])
 
@@ -395,8 +412,11 @@ export function AnalysisChart({ symbol }: AnalysisChartProps) {
 
     if (chartRef.current) { chartRef.current.remove(); chartRef.current = null }
 
-    const chart = buildChart(containerRef.current, bars, chartType, overlays, subs)
+    const { chart, mainSeries, volSeries } = buildChart(containerRef.current, bars, chartType, overlays, subs)
     chartRef.current = chart
+    mainSeriesRef.current = mainSeries
+    volSeriesRef.current = volSeries
+    seriesModeRef.current = mode   // 이 시리즈가 생성된 모드 기록 (전환 중 WS 갱신 가드)
 
     // crosshair 이동 → 해당 봉 OHLCV 표시 (벗어나면 최신 봉)
     const barByTime = new Map(bars.map(b => [b.time, b]))
@@ -434,8 +454,84 @@ export function AnalysisChart({ symbol }: AnalysisChartProps) {
       chart.unsubscribeCrosshairMove(crosshairHandler)
       chart.remove()
       chartRef.current = null
+      mainSeriesRef.current = null
+      volSeriesRef.current = null
+      seriesModeRef.current = null
     }
   }, [bars, chartType, overlays, subs])
+
+  // ── 실시간 현재가 반영 (전 차트 모드) ──────────────────────────────────────
+  // 분봉: 진행 봉 OHLC만 누적 갱신, 기간 경과 시 새 봉 add (캔들 거대화 방지 + 롤오버)
+  // 일봉류(D/W/M/Y): 마지막 봉의 OHLC를 현재가로 확장 갱신
+  useEffect(() => {
+    if (!wsQuote || !mainSeriesRef.current || bars.length === 0) return
+    // 시리즈가 아직 현재 모드로 재생성되지 않음(전환 중) → 시간 타입 불일치 방지 위해 skip
+    if (seriesModeRef.current !== mode) return
+
+    const lastBar = bars[bars.length - 1]
+    const price = wsQuote.price
+
+    // 갱신/추가할 봉 (time + OHLC)
+    let bar: { time: Time; open: number; high: number; low: number; close: number }
+    let volTime: Time
+    let volValue: number
+
+    if (mode === 'minute' && typeof lastBar.time === 'number' && wsQuote.date && wsQuote.time) {
+      const periodSec = minPeriod * 60
+      const periodStart = Math.floor(timeBarToTs(wsQuote.date, wsQuote.time) / periodSec) * periodSec
+
+      // 분봉 거래량 바는 분당 체결량 스케일 — wsQuote.volume(일 누적)을 기간 비율로 환산
+      // (누적값을 그대로 쓰면 거래량 바가 비정상적으로 커짐)
+      const perPeriodVol = Math.round(wsQuote.volume * minPeriod / 390)
+
+      if (periodStart > (lastBar.time as number)) {
+        // ── 기간 경과 → 새 봉 (add) ──
+        // 표준 캔들: 시가 = 기간 시작 현재가, 고가/저가는 종가가 도달할 때만 갱신(max/min)
+        let live = liveMinRef.current
+        if (!live || live.time !== periodStart) {
+          // 새 봉은 도지(시가=고가=저가=종가=현재가)로 시작
+          live = { time: periodStart, open: price, high: price, low: price, vol: perPeriodVol }
+        } else {
+          // 종가(현재가)가 고가를 넘으면 고가 갱신, 저가 밑으로 가면 저가 갱신
+          live.high = Math.max(live.high, price)
+          live.low  = Math.min(live.low, price)
+          live.vol  = perPeriodVol
+        }
+        liveMinRef.current = live
+        bar = { time: periodStart as Time, open: live.open, high: live.high, low: live.low, close: price }
+        volTime = periodStart as Time
+        volValue = live.vol
+      } else {
+        // ── 같은 기간(또는 마지막 봉) → 진행 봉 갱신 (봉 자체 OHLC만 확장) ──
+        liveMinRef.current = null
+        bar = { time: lastBar.time, open: lastBar.open, high: Math.max(lastBar.high, price), low: Math.min(lastBar.low, price), close: price }
+        volTime = lastBar.time
+        volValue = lastBar.volume
+      }
+    } else {
+      // ── 일봉/주봉/월봉/년봉: 마지막 봉을 현재가로 확장 갱신 ──
+      bar = { time: lastBar.time, open: lastBar.open, high: Math.max(lastBar.high, price), low: Math.min(lastBar.low, price), close: price }
+      volTime = lastBar.time
+      volValue = wsQuote.volume
+    }
+
+    // chartType state 클로저 대신 실제 series 타입으로 판단 → 데이터 형태 불일치 방지
+    // 전환 race로 드물게 시간 역행 update가 발생해도 차트가 깨지지 않도록 try/catch
+    try {
+      const st = mainSeriesRef.current.seriesType()
+      if (st === 'Candlestick' || st === 'Bar') {
+        mainSeriesRef.current.update({ time: bar.time, open: bar.open, high: bar.high, low: bar.low, close: bar.close })
+      } else {
+        mainSeriesRef.current.update({ time: bar.time, value: bar.close })
+      }
+      volSeriesRef.current?.update({
+        time: volTime, value: volValue,
+        color: price >= bar.open ? 'rgba(239,83,80,0.6)' : 'rgba(66,133,244,0.6)',
+      })
+    } catch {
+      // 전환 중 일시적 불일치 — 다음 틱에서 정상 갱신
+    }
+  }, [wsQuote, mode, minPeriod, bars])
 
   // ── 드롭다운 외부 클릭 닫기 ────────────────────────────────────────────────
 
@@ -500,9 +596,18 @@ export function AnalysisChart({ symbol }: AnalysisChartProps) {
     ? bars.findIndex(b => b.time === hoverBar.time)
     : bars.length - 1
   const disp = bars[dispIdx]
-  const prevClose = bars[dispIdx - 1]?.close ?? disp?.open
-  const diff = disp ? disp.close - prevClose : 0
-  const changePct = prevClose ? (diff / prevClose) * 100 : 0
+
+  // 미호버 + WS 수신 시 실시간 현재가로 레전드 대체 (전 모드)
+  // 분봉: 진행 봉(마지막 봉) 기준 — 당일 OHLC를 쓰면 캔들과 불일치하므로
+  const isLive = !hoverBar && !!wsQuote
+  const liveDisp = isLive && wsQuote
+    ? (mode === 'minute' && disp
+        ? { open: disp.open, high: Math.max(disp.high, wsQuote.price), low: Math.min(disp.low, wsQuote.price), close: wsQuote.price, volume: disp.volume }
+        : { open: wsQuote.open, high: wsQuote.high, low: wsQuote.low, close: wsQuote.price, volume: wsQuote.volume })
+    : disp
+  const prevClose = isLive && wsQuote ? wsQuote.prevClose : (bars[dispIdx - 1]?.close ?? disp?.open)
+  const diff      = isLive && wsQuote ? wsQuote.prevDiff  : (liveDisp ? liveDisp.close - prevClose : 0)
+  const changePct = isLive && wsQuote ? wsQuote.change    : (prevClose ? (diff / prevClose) * 100 : 0)
   const upColor = diff >= 0 ? UP : DOWN
   const fmt = (n: number) => Math.round(n).toLocaleString('ko-KR')
   // 각 값을 전봉 종가 대비 개별 색상 (한국 HTS 관례)
@@ -527,7 +632,7 @@ export function AnalysisChart({ symbol }: AnalysisChartProps) {
           {(['daily', 'minute'] as const).map(m => (
             <button key={m} onClick={() => setMode(m)}
               className={`px-2.5 py-1 ${mode === m ? btnActive : btnInactive} rounded-none`}>
-              {m === 'minute' ? '분봉' : '일봉'}
+              {m === 'minute' ? '분' : '일'}
             </button>
           ))}
         </div>
@@ -622,7 +727,7 @@ export function AnalysisChart({ symbol }: AnalysisChartProps) {
       <div className="relative flex-1 min-h-0 border-t border-gray-200">
         {disp && (
           <div className="absolute top-1.5 left-2 z-10 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs pointer-events-none select-none w-[calc(100%-100px)]">
-            {([['시', disp.open], ['고', disp.high], ['저', disp.low], ['종', disp.close]] as [string, number][]).map(([l, v]) => (
+            {([['시', liveDisp?.open], ['고', liveDisp?.high], ['저', liveDisp?.low], ['종', liveDisp?.close]] as [string, number][]).map(([l, v]) => (
               <span key={l} className="flex items-center gap-1">
                 <span className="text-gray-400">{l}</span>
                 <span className="font-medium tabular-nums" style={{ color: valColor(v) }}>{fmt(v)}</span>
@@ -635,7 +740,7 @@ export function AnalysisChart({ symbol }: AnalysisChartProps) {
             </span>
             <span className="flex items-center gap-1">
               <span className="text-gray-400">거래량</span>
-              <span className="font-medium tabular-nums text-gray-600">{fmt(disp.volume)}</span>
+              <span className="font-medium tabular-nums text-gray-600">{fmt(liveDisp?.volume ?? 0)}</span>
             </span>
           </div>
         )}

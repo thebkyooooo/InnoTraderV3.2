@@ -10,12 +10,8 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
 
 import java.util.UUID;
-
-import static lombok.AccessLevel.PROTECTED;
 
 /**
  * JPA entity for the {@code users} table.
@@ -25,8 +21,6 @@ import static lombok.AccessLevel.PROTECTED;
  */
 @Entity
 @Table(name = "users")
-@Getter
-@NoArgsConstructor(access = PROTECTED)
 public class UserJpaEntity extends BaseEntity {
 
     @Id
@@ -44,6 +38,14 @@ public class UserJpaEntity extends BaseEntity {
 
     @Column(name = "status", nullable = false, length = 50)
     private String status;
+
+    protected UserJpaEntity() {}
+
+    public UUID getId() { return id; }
+    public String getEmail() { return email; }
+    public String getPasswordHash() { return passwordHash; }
+    public String getRole() { return role; }
+    public String getStatus() { return status; }
 
     private UserJpaEntity(UUID id, String email, String passwordHash, String role, String status) {
         this.id           = id;

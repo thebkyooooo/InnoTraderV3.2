@@ -1,6 +1,8 @@
 'use client'
+import { useMemo } from 'react'
 import type { ColDef } from 'ag-grid-community'
 import { quoteApi, type DailyQuoteItem } from '@/features/quote/api/quote-api'
+import { useStockPriceWS } from '@/features/quote/api/use-quote-ws'
 import { DataGrid } from '@/components/ui/DataGrid'
 import { useScrollPage } from './_useScrollPage'
 
@@ -56,10 +58,30 @@ export function DailyQuoteGrid({ symbol }: DailyQuoteGridProps) {
     (cursor) => quoteApi.getDaily(symbol, 100, cursor),
     ['quote', 'daily', symbol],
   )
+  const live = useStockPriceWS(symbol)
+
+  // 최상단(오늘) 행을 실시간 시세로 갱신. 거래일이 같을 때만 덮어쓴다.
+  const rows = useMemo(() => {
+    if (!live || items.length === 0) return items
+    const top = items[0]
+    if (live.date && live.date !== top.date) return items
+    const todayLive: DailyQuoteItem = {
+      ...top,
+      price: live.price,
+      prevDiff: live.prevDiff,
+      change: live.change,
+      open: live.open,
+      high: live.high,
+      low: live.low,
+      volume: live.volume,
+      turnoverMan: live.tradingAmount,
+    }
+    return [todayLive, ...items.slice(1)]
+  }, [items, live])
 
   return (
     <DataGrid<DailyQuoteItem>
-      rows={items}
+      rows={rows}
       columnDefs={columnDefs}
       height="100%"
       loading={loading}

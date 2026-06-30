@@ -62,7 +62,7 @@ export const chartHandlers = [
 
     // 분봉은 일봉(시가→종가) 브리지로 생성되어 일봉과 일관되며 최신 봉 종가 = 현재가
     const items = minuteCandles(base.price, base.prevDiff, base.volume, intervalMin, 9999).map(b => ({
-      time: b.time, price: b.close, prevDiff: b.prevDiff, change: b.change,
+      date: b.date, time: b.time, price: b.close, prevDiff: b.prevDiff, change: b.change,
       open: b.open, high: b.high, low: b.low, filledVolume: b.filledVolume, volume: b.volume,
     }))
 

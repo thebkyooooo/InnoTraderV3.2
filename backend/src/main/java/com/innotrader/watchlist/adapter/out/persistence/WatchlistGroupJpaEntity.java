@@ -6,20 +6,14 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
 
 import java.util.UUID;
-
-import static lombok.AccessLevel.PROTECTED;
 
 /**
  * JPA entity for the {@code watchlist_groups} table.
  */
 @Entity
 @Table(name = "watchlist_groups")
-@Getter
-@NoArgsConstructor(access = PROTECTED)
 public class WatchlistGroupJpaEntity extends BaseEntity {
 
     @Id
@@ -34,6 +28,13 @@ public class WatchlistGroupJpaEntity extends BaseEntity {
 
     @Column(name = "group_name", nullable = false, length = 100)
     private String groupName;
+
+    protected WatchlistGroupJpaEntity() {}
+
+    public UUID getId() { return id; }
+    public UUID getUserId() { return userId; }
+    public String getGroupCode() { return groupCode; }
+    public String getGroupName() { return groupName; }
 
     private WatchlistGroupJpaEntity(UUID id, UUID userId, String groupCode, String groupName) {
         this.id = id;

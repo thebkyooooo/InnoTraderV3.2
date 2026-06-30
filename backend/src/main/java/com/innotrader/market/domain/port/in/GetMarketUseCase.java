@@ -1,11 +1,13 @@
 package com.innotrader.market.domain.port.in;
 
+import com.innotrader.market.domain.model.DailyTrendPage;
 import com.innotrader.market.domain.model.ExchangeRate;
 import com.innotrader.market.domain.model.IndexInfo;
 import com.innotrader.market.domain.model.MarketBreadth;
 import com.innotrader.market.domain.model.MarketTrend;
 import com.innotrader.market.domain.model.StockRanking;
 
+import java.time.LocalDate;
 import java.util.List;
 
 public interface GetMarketUseCase {
@@ -24,4 +26,5 @@ public interface GetMarketUseCase {
     List<StockRanking> getTrendingStocks();
     MarketTrend        getMarketTrend(MarketType market);
     MarketBreadth      getMarketBreadth(MarketType market);
+    DailyTrendPage     getDailyTrends(MarketType market, int size, LocalDate cursor);
 }

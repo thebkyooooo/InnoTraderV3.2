@@ -1,6 +1,6 @@
 'use client'
 import { useQuery } from '@tanstack/react-query'
-import { marketApi, type IndexInfo, type ExchangeRate, type StockRanking, type MarketType } from './market-api'
+import { marketApi, type IndexInfo, type ExchangeRate, type StockRanking, type MarketType, type MarketTrend } from './market-api'
 
 export type RankingType = 'market-cap' | 'volume' | 'advancing' | 'declining' | 'gap-up' | 'overheated'
 
@@ -75,6 +75,14 @@ export function useTrending() {
   return useQuery<StockRanking[]>({
     queryKey: ['market', 'trending'],
     queryFn: async () => (await marketApi.getTrending()).data,
+  })
+}
+
+/** 시장 투자동향 (외국인/개인/기관 순매수) */
+export function useMarketTrend(market: MarketType) {
+  return useQuery<MarketTrend>({
+    queryKey: ['market', 'trend', market],
+    queryFn: async () => (await marketApi.getMarketTrend(market)).data,
   })
 }
 

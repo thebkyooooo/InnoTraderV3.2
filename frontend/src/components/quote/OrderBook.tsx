@@ -2,6 +2,7 @@
 import React, { useEffect, useRef } from 'react'
 import { type HogaData } from '@/features/quote/api/quote-api'
 import { useStockPrice, useHoga } from '@/features/quote/api/use-quote'
+import { useHogaWS, useStockPriceWS } from '@/features/quote/api/use-quote-ws'
 
 // 색상: 매도=파랑, 매수=빨강 (한국 HTS 관례)
 const ASK = '#4285f4'
@@ -48,7 +49,7 @@ function buildRows(data: HogaData) {
 
 // ─── DOM 기반 ─────────────────────────────────────────────────────────────────
 
-function OrderBookDom({ data, prevClose }: { data: HogaData; prevClose: number }) {
+function OrderBookDom({ data, prevClose, currentPrice }: { data: HogaData; prevClose: number; currentPrice: number }) {
   const { rows, maxVol, askTotal, bidTotal } = buildRows(data)
 
   // 호가 컬럼 폭을 "호가 + 등락률" 길이에 맞춰 가변 (잔량 컬럼은 남는 폭을 균등 분배)
@@ -78,9 +79,15 @@ function OrderBookDom({ data, prevClose }: { data: HogaData; prevClose: number }
               </>
             )}
           </div>
-          {/* 호가 + 등락률 */}
+          {/* 호가 + 등락률 — 현재가와 같은 호가(최우선호가)면 테두리 */}
           <div className="flex items-center justify-center gap-1.5 tabular-nums whitespace-nowrap"
-            style={{ background: r.side === 'ask' ? ASK_BG : BID_BG, borderBottom: '1px solid #f3f4f6' }}>
+            style={{
+              background: r.side === 'ask' ? ASK_BG : BID_BG,
+              borderBottom: '1px solid #f3f4f6',
+              ...(r.price === currentPrice
+                ? { outline: '2px solid #f59e0b', outlineOffset: '-2px', position: 'relative', zIndex: 1 }
+                : {}),
+            }}>
             <span className="font-semibold" style={{ color: r.side === 'ask' ? ASK : BID }}>{fmt(r.price)}</span>
             <span style={{ color: changeColor(pctOf(r.price, prevClose)) }}>{fmtPct(pctOf(r.price, prevClose))}</span>
           </div>
@@ -109,7 +116,7 @@ function OrderBookDom({ data, prevClose }: { data: HogaData; prevClose: number }
 
 // ─── Canvas 기반 ──────────────────────────────────────────────────────────────
 
-function OrderBookCanvas({ data, prevClose }: { data: HogaData; prevClose: number }) {
+function OrderBookCanvas({ data, prevClose, currentPrice }: { data: HogaData; prevClose: number; currentPrice: number }) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const wrapRef = useRef<HTMLDivElement>(null)
 
@@ -203,6 +210,12 @@ function OrderBookCanvas({ data, prevClose }: { data: HogaData; prevClose: numbe
         if (r.side === 'ask') { ctx.moveTo(0, y + rowH); ctx.lineTo(x2, y + rowH) }
         else { ctx.moveTo(x1, y + rowH); ctx.lineTo(w, y + rowH) }
         ctx.stroke()
+
+        // 현재가와 같은 호가(최우선호가)면 호가+등락률 컬럼(x1~x2)에만 테두리
+        if (r.price === currentPrice) {
+          ctx.strokeStyle = '#f59e0b'; ctx.lineWidth = 2
+          ctx.strokeRect(x1 + 1, y + 1, (x2 - x1) - 2, rowH - 2)
+        }
       })
 
       // 푸터: 매도잔량합계 | 잔량합계 | 매수잔량합계
@@ -225,7 +238,7 @@ function OrderBookCanvas({ data, prevClose }: { data: HogaData; prevClose: numbe
     const ro = new ResizeObserver(draw)
     ro.observe(wrap)
     return () => ro.disconnect()
-  }, [data, prevClose])
+  }, [data, prevClose, currentPrice])
 
   return (
     <div ref={wrapRef} className="w-full border-y border-gray-200 overflow-hidden rounded-xl">
@@ -238,14 +251,21 @@ function OrderBookCanvas({ data, prevClose }: { data: HogaData; prevClose: numbe
 
 export function OrderBook({ symbol, variant = 'dom' }: OrderBookProps) {
   // React Query — getPrice는 QuoteBoard와 같은 키라 동시/중복 요청이 dedupe된다
-  const { data, isLoading } = useHoga(symbol)
+  const { data: httpData, isLoading } = useHoga(symbol)
+  const liveHoga = useHogaWS(symbol)          // 실시간 호가 (2초마다 갱신)
+  const liveQuote = useStockPriceWS(symbol)   // 호가와 같은 시점의 실시간 현재가
   const { data: priceData } = useStockPrice(symbol)
   const prevClose = priceData?.prevClose ?? 0
+  // 현재가는 호가와 같은 스냅샷인 WS 값 우선 → 최우선호가(매도1/매수1)와 정확히 일치
+  const currentPrice = liveQuote?.price ?? priceData?.price ?? 0
+
+  // WS 실시간 호가 우선, 최초 로딩 동안은 HTTP 스냅샷으로 대체
+  const data = liveHoga ?? httpData
 
   if (isLoading && !data) return <div className="text-xs text-gray-400 py-4 text-center">불러오는 중...</div>
   if (!data) return <div className="text-xs text-gray-400 py-4 text-center">호가 정보가 없습니다.</div>
 
   return variant === 'canvas'
-    ? <OrderBookCanvas data={data} prevClose={prevClose} />
-    : <OrderBookDom data={data} prevClose={prevClose} />
+    ? <OrderBookCanvas data={data} prevClose={prevClose} currentPrice={currentPrice} />
+    : <OrderBookDom data={data} prevClose={prevClose} currentPrice={currentPrice} />
 }

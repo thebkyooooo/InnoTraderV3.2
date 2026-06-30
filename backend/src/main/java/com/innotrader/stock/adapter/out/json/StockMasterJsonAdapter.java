@@ -2,6 +2,7 @@ package com.innotrader.stock.adapter.out.json;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.innotrader.common.support.PriceTick;
 import com.innotrader.stock.domain.model.StockMaster;
 import com.innotrader.stock.domain.port.out.LoadStockMasterPort;
 import org.springframework.core.io.ClassPathResource;
@@ -26,11 +27,20 @@ public class StockMasterJsonAdapter implements LoadStockMasterPort {
                 resource.getInputStream(),
                 new TypeReference<>() {}
         );
+        // 기본 데이터를 호가 단위로 정렬해 인메모리에 적재 → master/quotes/chart 전 API가 동일 기준 sync.
+        // 현재가·전일종가를 모두 틱 그리드에 맞추고 전일대비/등락률을 거기에 맞춰 재계산.
         this.stocks = records.stream()
-                .map(r -> new StockMaster(
-                        r.market(), r.rank(), r.name(), r.symbol(),
-                        r.price(), r.prevDiff(), r.change(),
-                        r.volume(), r.lstdShrs(), r.marketCap()))
+                .map(r -> {
+                    long price     = PriceTick.round(r.price());
+                    long prevClose = PriceTick.round(r.price() - r.prevDiff());
+                    long prevDiff  = price - prevClose;
+                    double change  = prevClose == 0 ? 0.0
+                            : Math.round(prevDiff * 1000.0 / prevClose) / 10.0;
+                    return new StockMaster(
+                            r.market(), r.rank(), r.name(), r.symbol(),
+                            price, prevDiff, change,
+                            r.volume(), r.lstdShrs(), r.marketCap());
+                })
                 .toList();
         this.symbolIndex = this.stocks.stream()
                 .collect(Collectors.toMap(StockMaster::symbol, Function.identity()));

@@ -4,13 +4,9 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
-
-import static lombok.AccessLevel.PROTECTED;
 
 /**
  * JPA entity for the {@code watchlist_items} table.
@@ -19,8 +15,6 @@ import static lombok.AccessLevel.PROTECTED;
  */
 @Entity
 @Table(name = "watchlist_items")
-@Getter
-@NoArgsConstructor(access = PROTECTED)
 public class WatchlistItemJpaEntity {
 
     @Id
@@ -35,6 +29,13 @@ public class WatchlistItemJpaEntity {
 
     @Column(name = "created_at", insertable = false, updatable = false)
     private LocalDateTime createdAt;
+
+    protected WatchlistItemJpaEntity() {}
+
+    public UUID getId() { return id; }
+    public UUID getGroupId() { return groupId; }
+    public String getSymbol() { return symbol; }
+    public LocalDateTime getCreatedAt() { return createdAt; }
 
     private WatchlistItemJpaEntity(UUID id, UUID groupId, String symbol) {
         this.id = id;

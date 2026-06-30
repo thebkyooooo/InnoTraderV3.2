@@ -16,6 +16,7 @@ import {
 } from 'lightweight-charts'
 import { type DailyChartType } from '@/features/quote/api/quote-api'
 import { useDailyChart } from '@/features/quote/api/use-quote'
+import { useStockPriceWS } from '@/features/quote/api/use-quote-ws'
 
 interface OHLCBar {
   time: string
@@ -50,6 +51,9 @@ export function DailyChart({ data, symbol, dailyType = 'D', count = 120, height 
 
   // symbol이 주어지면 내부에서 일봉을 조회(React Query — 동시/중복 요청 dedupe), 아니면 data prop 사용
   const { data: page } = useDailyChart(symbol ?? '', dailyType, count, { enabled: !!symbol && !data })
+
+  // 실시간 현재가 WS: symbol 있으면 전 dailyType에 연결
+  const wsQuote = useStockPriceWS(symbol ?? '', !!symbol)
 
   const fetched = useMemo<OHLCBar[]>(() => {
     if (!page) return []
@@ -162,6 +166,22 @@ export function DailyChart({ data, symbol, dailyType = 'D', count = 120, height 
       seriesRef.current = null
     }
   }, [bars, height, type])
+
+  // 실시간 현재가 반영 (전 dailyType)
+  // 마지막 봉의 기존 time을 그대로 사용 → series 데이터의 time 형식/순서와 항상 일치
+  useEffect(() => {
+    if (!wsQuote || !seriesRef.current || !symbol || bars.length === 0) return
+
+    const targetTime = bars[bars.length - 1].time as Time
+
+    // type state 클로저 대신 실제 series 타입으로 판단 → 데이터 형태 불일치 방지
+    const st = seriesRef.current.seriesType()
+    if (st === 'Candlestick' || st === 'Bar') {
+      seriesRef.current.update({ time: targetTime, open: wsQuote.open, high: wsQuote.high, low: wsQuote.low, close: wsQuote.price })
+    } else {
+      seriesRef.current.update({ time: targetTime, value: wsQuote.price })
+    }
+  }, [wsQuote, symbol, bars])
 
   return <Box ref={containerRef} sx={{ width: '100%', height }} />
 }

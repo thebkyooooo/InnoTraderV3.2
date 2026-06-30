@@ -1,4 +1,5 @@
 import { http, HttpResponse } from 'msw'
+import { STOCK_POOL, type StockItem } from '../data/stock-master-data'
 
 const BASE_URL = `${process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:8080'}/api/public/market`
 
@@ -8,48 +9,6 @@ const rng = (seed: number) => {
   let s = seed
   return () => { s = (s * 1664525 + 1013904223) & 0xffffffff; return (s >>> 0) / 0xffffffff }
 }
-
-// ─── 목업 종목 풀 (100개) ──────────────────────────────────────────────────────
-
-interface StockItem {
-  rank: number
-  symbol: string
-  name: string
-  market: string
-  price: number
-  prevDiff: number
-  change: number
-  marketCap: number
-  volume: number
-  tradingAmount: number
-}
-
-const buildStockPool = (): StockItem[] =>
-  Array.from({ length: 100 }, (_, i) => {
-    const r       = rng(i * 31 + 7777)
-    const market  = i < 60 ? 'KOSPI' : 'KOSDAQ'
-    const code    = String((i * 17 + 1000) % 1000000).padStart(6, '0')
-    const price   = Math.round(5000 + r() * 495000)
-    const prevDiff = Math.round(price * (r() - 0.5) * 0.06)
-    const change  = Math.round((prevDiff / price) * 1000) / 10
-    const marketCap = Math.round(price * (500000 + r() * 5000000) / 10000)
-    const volume  = Math.round(100000 + r() * 10000000)
-    const tradingAmount = Math.round(volume * price / 10000)
-    return {
-      rank: 0,
-      symbol: code,
-      name: `종목${i + 1}`,
-      market,
-      price,
-      prevDiff,
-      change,
-      marketCap,
-      volume,
-      tradingAmount,
-    }
-  })
-
-const STOCK_POOL = buildStockPool()
 
 // market === 'ALL'이면 전체, 아니면 시장 필터
 const byMarket = (market: string) =>
@@ -238,7 +197,50 @@ export const marketHandlers = [
     return HttpResponse.json(items)
   }),
 
-  // 5. GET /trend
+  // 5. GET /daily-trends — 일별 투자동향 (커서 기반)
+  http.get(`${BASE_URL}/daily-trends`, ({ request }) => {
+    const url    = new URL(request.url)
+    const market = (url.searchParams.get('market') ?? 'KOSPI').toUpperCase()
+    const size   = Math.min(Number(url.searchParams.get('size') ?? '100'), 9999)
+    const cursor = url.searchParams.get('cursor') // YYYY-MM-DD | null
+
+    const basePrice = market === 'KOSDAQ' ? 845 : 8713
+    const mSeed     = market === 'KOSDAQ' ? 999_999 : 0
+
+    // 시작일: cursor 전날부터, 없으면 오늘부터
+    const start = cursor ? new Date(cursor) : new Date()
+    start.setDate(start.getDate() - (cursor ? 1 : 0))
+
+    const items: object[] = []
+    const d = new Date(start)
+
+    while (items.length < size) {
+      // 주말 제외
+      if (d.getDay() !== 0 && d.getDay() !== 6) {
+        const dateSeed = d.getFullYear() * 10_000 + (d.getMonth() + 1) * 100 + d.getDate() + mSeed
+        const r = rng(dateSeed)
+        const prevDiff    = Math.round((r() - 0.5) * basePrice * 0.05)
+        const changeRate  = Math.round((prevDiff / basePrice) * 10_000) / 100
+        const closingPrice = basePrice + Math.round((r() - 0.48) * basePrice * 0.08)
+        const volume      = Math.round(300_000_000 + r() * 300_000_000)
+        const foreignNet  = Math.round((r() - 0.5) * 8_000)
+        const individualNet = Math.round((r() - 0.5) * 10_000)
+        const institutionNet = -(foreignNet + individualNet)
+        const yyyy = d.getFullYear()
+        const mm   = String(d.getMonth() + 1).padStart(2, '0')
+        const dd   = String(d.getDate()).padStart(2, '0')
+        items.push({ tradeDate: `${yyyy}-${mm}-${dd}`, closingPrice, prevDiff, changeRate, volume, foreignNet, individualNet, institutionNet })
+      }
+      d.setDate(d.getDate() - 1)
+    }
+
+    const nextCursor = items.length === size
+      ? (items[items.length - 1] as { tradeDate: string }).tradeDate
+      : null
+    return HttpResponse.json({ items, nextCursor })
+  }),
+
+  // 6. GET /trend
   http.get(`${BASE_URL}/trend`, ({ request }) => {
     const url    = new URL(request.url)
     const market = url.searchParams.get('market') ?? 'KOSPI'

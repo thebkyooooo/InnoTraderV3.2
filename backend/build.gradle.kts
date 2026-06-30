@@ -75,15 +75,9 @@ dependencies {
     implementation(libs.mapstruct)
     annotationProcessor(libs.mapstruct.processor)
 
-    // Lombok
-    compileOnly(libs.lombok)
-    annotationProcessor(libs.lombok)
-
     // Test
     testImplementation(libs.spring.boot.starter.test)
     testImplementation(libs.archunit.junit5)
-    testCompileOnly(libs.lombok)
-    testAnnotationProcessor(libs.lombok)
 }
 
 // QueryDSL APT: place generated Q-types under build/generated/querydsl
@@ -116,8 +110,10 @@ tasks.named<Test>("test") {
 // 안 생기면 외부 강제 종료(세션/데몬)로 확정한다.
 tasks.named<BootRun>("bootRun") {
     jvmArgs(
-        "-XX:ErrorFile=${projectDir}/hs_err_pid%p.log", // 크래시 덤프 경로 명시
-        "-XX:+HeapDumpOnOutOfMemoryError",              // OOM 시 힙 덤프
+        "-XX:ErrorFile=${projectDir}/hs_err_pid%p.log",
+        "-XX:+HeapDumpOnOutOfMemoryError",
         "-XX:HeapDumpPath=${projectDir}",
+        "-Xlog:gc*:file=${projectDir}/gc.log:time,uptime:filecount=3,filesize=10m",
+        "-XX:TieredStopAtLevel=1", // JIT C2 비활성화 — 크래시 재현 안되면 JIT 버그
     )
 }

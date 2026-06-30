@@ -67,6 +67,8 @@ export function AppLayout({ children, mainSx }: AppLayoutProps) {
       >
         {/* 헤더 */}
         <Header onMenuToggle={handleMenuToggle} />
+        {/* fixed 헤더 높이만큼 밀어내는 spacer */}
+        <Box sx={{ flexShrink: 0, minHeight: { xs: '46px', sm: '54px' } }} />
 
         {/* 콘텐츠 */}
         <Box

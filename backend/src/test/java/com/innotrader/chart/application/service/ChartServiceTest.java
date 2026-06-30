@@ -2,7 +2,6 @@ package com.innotrader.chart.application.service;
 
 import com.innotrader.chart.domain.model.DailyChart;
 import com.innotrader.chart.domain.model.TimeChart;
-import com.innotrader.chart.domain.port.in.GetChartUseCase;
 import com.innotrader.chart.domain.port.in.GetChartUseCase.ChartPage;
 import com.innotrader.chart.domain.port.in.GetChartUseCase.DailyType;
 import com.innotrader.chart.domain.port.in.GetChartUseCase.TimeType;

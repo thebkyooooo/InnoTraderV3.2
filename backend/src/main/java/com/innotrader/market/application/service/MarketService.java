@@ -7,10 +7,13 @@ import com.innotrader.market.domain.model.MarketBreadth;
 import com.innotrader.market.domain.model.MarketTrend;
 import com.innotrader.market.domain.model.StockBreadthItem;
 import com.innotrader.market.domain.model.StockRanking;
+import com.innotrader.market.domain.model.DailyTrendPage;
 import com.innotrader.market.domain.port.in.GetMarketUseCase;
+import com.innotrader.market.domain.port.out.FindDailyTrendPort;
 import com.innotrader.market.domain.port.out.FindMarketDataPort;
 import com.innotrader.market.domain.port.out.FindMarketDataPort.StockData;
 
+import java.time.LocalDate;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Random;
@@ -23,9 +26,11 @@ public class MarketService implements GetMarketUseCase {
     private static final int BREADTH_LIMIT = 10;
 
     private final FindMarketDataPort findMarketDataPort;
+    private final FindDailyTrendPort findDailyTrendPort;
 
-    public MarketService(FindMarketDataPort findMarketDataPort) {
+    public MarketService(FindMarketDataPort findMarketDataPort, FindDailyTrendPort findDailyTrendPort) {
         this.findMarketDataPort = findMarketDataPort;
+        this.findDailyTrendPort = findDailyTrendPort;
     }
 
     // ─── 지수 ──────────────────────────────────────────────────────────────────
@@ -37,7 +42,7 @@ public class MarketService implements GetMarketUseCase {
         // base = 기준값(현재가). 전일대비/등락률만 변동 생성한다.
         List<IndexSpec> specs = List.of(
                 new IndexSpec("KS11",   "코스피",       8713.42),
-                new IndexSpec("KQ11",   "코스닥",         845.24),
+                new IndexSpec("KQ11",   "코스닥",          845.24),
                 new IndexSpec("DJI",    "DOW",          50866.78),
                 new IndexSpec("COMP",   "NASDAQ",       22881.38),
                 new IndexSpec("INX",    "S&P 500",       7383.74),
@@ -94,7 +99,7 @@ public class MarketService implements GetMarketUseCase {
                 .limit(RANKING_LIMIT)
                 .collect(java.util.stream.Collectors.collectingAndThen(
                         java.util.stream.Collectors.toList(),
-                        list -> rankWith(list, true, false, false)
+                        list -> rankWith(list)
                 ));
     }
 
@@ -105,7 +110,7 @@ public class MarketService implements GetMarketUseCase {
                 .limit(RANKING_LIMIT)
                 .collect(java.util.stream.Collectors.collectingAndThen(
                         java.util.stream.Collectors.toList(),
-                        list -> rankWith(list, false, true, false)
+                        list -> rankWith(list)
                 ));
     }
 
@@ -116,7 +121,7 @@ public class MarketService implements GetMarketUseCase {
                 .limit(RANKING_LIMIT)
                 .collect(java.util.stream.Collectors.collectingAndThen(
                         java.util.stream.Collectors.toList(),
-                        list -> rankWith(list, false, false, true)
+                        list -> rankWith(list)
                 ));
     }
 
@@ -128,7 +133,7 @@ public class MarketService implements GetMarketUseCase {
                 .limit(RANKING_LIMIT)
                 .collect(java.util.stream.Collectors.collectingAndThen(
                         java.util.stream.Collectors.toList(),
-                        list -> rankWith(list, false, false, false)
+                        list -> rankWith(list)
                 ));
     }
 
@@ -140,7 +145,7 @@ public class MarketService implements GetMarketUseCase {
                 .limit(RANKING_LIMIT)
                 .collect(java.util.stream.Collectors.collectingAndThen(
                         java.util.stream.Collectors.toList(),
-                        list -> rankWith(list, false, false, false)
+                        list -> rankWith(list)
                 ));
     }
 
@@ -155,7 +160,7 @@ public class MarketService implements GetMarketUseCase {
                 .limit(RANKING_LIMIT)
                 .collect(java.util.stream.Collectors.collectingAndThen(
                         java.util.stream.Collectors.toList(),
-                        list -> rankWith(list, false, false, false)
+                        list -> rankWith(list)
                 ));
     }
 
@@ -167,7 +172,7 @@ public class MarketService implements GetMarketUseCase {
                 .limit(RANKING_LIMIT)
                 .collect(java.util.stream.Collectors.collectingAndThen(
                         java.util.stream.Collectors.toList(),
-                        list -> rankWith(list, false, false, false)
+                        list -> rankWith(list)
                 ));
     }
 
@@ -179,7 +184,7 @@ public class MarketService implements GetMarketUseCase {
                 .limit(BREADTH_LIMIT)
                 .collect(java.util.stream.Collectors.collectingAndThen(
                         java.util.stream.Collectors.toList(),
-                        list -> rankWith(list, false, false, false)
+                        list -> rankWith(list)
                 ));
     }
 
@@ -242,10 +247,7 @@ public class MarketService implements GetMarketUseCase {
                 .toList();
     }
 
-    private List<StockRanking> rankWith(List<StockData> sorted,
-                                        boolean withMarketCap,
-                                        boolean withVolume,
-                                        boolean withTradingAmount) {
+    private List<StockRanking> rankWith(List<StockData> sorted) {
         return IntStream.range(0, sorted.size())
                 .mapToObj(i -> {
                     StockData s = sorted.get(i);
@@ -257,9 +259,9 @@ public class MarketService implements GetMarketUseCase {
                             s.price(),
                             s.prevDiff(),
                             s.change(),
-                            withMarketCap   ? s.marketCap()    : null,
-                            withVolume      ? s.volume()       : null,
-                            withTradingAmount ? s.tradingAmount() : null
+                            s.marketCap(),
+                            s.volume(),
+                            s.tradingAmount()
                     );
                 })
                 .toList();
@@ -294,5 +296,17 @@ public class MarketService implements GetMarketUseCase {
 
     private static double round1(double v) {
         return Math.round(v * 10.0) / 10.0;
+    }
+
+    // ─── 일별 투자동향 ─────────────────────────────────────────────────────────
+
+    @Override
+    public DailyTrendPage getDailyTrends(MarketType market, int size, LocalDate cursor) {
+        int clampedSize = Math.min(Math.max(size, 1), 9999);
+        var items = findDailyTrendPort.findByMarket(market, clampedSize, cursor);
+        LocalDate nextCursor = items.size() == clampedSize
+                ? items.get(items.size() - 1).tradeDate()
+                : null;
+        return new DailyTrendPage(items, nextCursor);
     }
 }

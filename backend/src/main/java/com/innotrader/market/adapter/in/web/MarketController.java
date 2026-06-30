@@ -1,5 +1,7 @@
 package com.innotrader.market.adapter.in.web;
 
+import com.innotrader.market.adapter.in.web.dto.DailyTrendPageResponse;
+import com.innotrader.market.adapter.in.web.dto.DailyTrendResponse;
 import com.innotrader.market.adapter.in.web.dto.ExchangeRateResponse;
 import com.innotrader.market.adapter.in.web.dto.IndexInfoResponse;
 import com.innotrader.market.adapter.in.web.dto.MarketBreadthResponse;
@@ -10,12 +12,14 @@ import com.innotrader.market.domain.port.in.GetMarketUseCase.MarketType;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.time.LocalDate;
 import java.util.List;
 
 /**
@@ -186,6 +190,23 @@ public class MarketController {
     ) {
         MarketType marketType = parseMarketType(market);
         return ResponseEntity.ok(MarketBreadthResponse.from(getMarketUseCase.getMarketBreadth(marketType)));
+    }
+
+    @Operation(summary = "시장 일별 투자동향 조회 (순매수)", description = "일자별 종가/거래량/외국인·개인·기관 순매수. 커서 기반 페이지네이션.")
+    @GetMapping("/daily-trends")
+    public ResponseEntity<DailyTrendPageResponse> getDailyTrends(
+            @Parameter(description = "시장 구분 (ALL/KOSPI/KOSDAQ)", example = "ALL")
+            @RequestParam(defaultValue = "ALL") String market,
+            @Parameter(description = "조회 건수 (1~9999, 기본 100)")
+            @RequestParam(defaultValue = "100") int size,
+            @Parameter(description = "커서 (YYYY-MM-DD). 이 날짜 이전 데이터 조회. 첫 페이지는 생략.")
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate cursor
+    ) {
+        var page = getMarketUseCase.getDailyTrends(parseMarketType(market), size, cursor);
+        return ResponseEntity.ok(new DailyTrendPageResponse(
+                page.items().stream().map(DailyTrendResponse::from).toList(),
+                page.nextCursor()
+        ));
     }
 
     // ─── 유틸 ────────────────────────────────────────────────────────────────

@@ -5,6 +5,7 @@ import { QuoteBoard, OrderBook } from '@/components/quote'
 import { AccountSelect, Holdings } from '@/components/account'
 import { OrderForm, OrderHistory } from '@/components/order'
 import { useStockPrice } from '@/features/quote/api/use-quote'
+import { useStockPriceWS } from '@/features/quote/api/use-quote-ws'
 
 export default function OrderPage() {
   const [symbol, setSymbol] = useState('005930')
@@ -14,8 +15,10 @@ export default function OrderPage() {
   const [refreshKey, setRefreshKey] = useState(0)
 
   // 페이지가 시세를 받아 QuoteBoard(제어형)·OrderForm에 공유한다.
-  // OrderBook도 같은 useStockPrice 키라 동시 요청은 dedupe된다.
-  const { data: quote = null } = useStockPrice(symbol)
+  // REST 초기 스냅샷(연결 전 빈 화면 방지) + WS 실시간 갱신 → 공유 quote가 2초마다 갱신된다.
+  const { data: snapshot = null } = useStockPrice(symbol)
+  const wsQuote = useStockPriceWS(symbol)
+  const quote = wsQuote ?? snapshot
 
   return (
     <div className="flex flex-col gap-4 w-full h-full">

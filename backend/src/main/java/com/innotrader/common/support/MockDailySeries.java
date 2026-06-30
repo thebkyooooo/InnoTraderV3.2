@@ -41,11 +41,11 @@ public final class MockDailySeries {
         // 종가 체인 (단일 스트림): 오늘=basePrice, 어제=전일종가, 그 이전은 랜덤워크
         Random rc = new Random((long) h * 53 + 1);
         long[] closes = new long[count + 1];
-        closes[0] = basePrice;
-        closes[1] = Math.max(100L, basePrice - prevDiff);
+        closes[0] = PriceTick.round(basePrice);
+        closes[1] = Math.max(100L, PriceTick.round(basePrice - prevDiff));
         for (int i = 2; i <= count; i++) {
             double dc = (rc.nextDouble() - 0.5) * 0.04;
-            closes[i] = Math.max(100L, Math.round(closes[i - 1] * (1 + dc)));
+            closes[i] = Math.max(100L, PriceTick.round(Math.round(closes[i - 1] * (1 + dc))));
         }
 
         // 바 속성 (별도 단일 스트림): 시가/고가/저가/거래량
@@ -54,9 +54,11 @@ public final class MockDailySeries {
         for (int i = 0; i < count; i++) {
             long close     = closes[i];
             long prevClose = closes[i + 1];
-            long open = Math.max(100L, Math.round(prevClose * (1 + (rb.nextDouble() - 0.5) * 0.01)));
-            long high = Math.max(close, open) + Math.abs(rb.nextLong() % (close / 100 + 1));
-            long low  = Math.max(100L, Math.min(close, open) - Math.abs(rb.nextLong() % (close / 100 + 1)));
+            long open = Math.max(100L, PriceTick.round(Math.round(prevClose * (1 + (rb.nextDouble() - 0.5) * 0.01))));
+            // 고가/저가 = 당일 가격 경로(시가→종가 서브 브리지)의 극값 — 종가가 실제 도달한 값만 (호가 단위 정렬)
+            long[] hl = pathExtremes(open, close, Math.max(1L, Math.round(close * 0.006)), rb);
+            long high = PriceTick.round(hl[0]);
+            long low  = PriceTick.round(hl[1]);
             long vol  = Math.max(1000L, Math.round(baseVolume * (0.5 + rb.nextDouble())));
             long diff = close - prevClose;
             double chg = prevClose == 0 ? 0 : Math.round(diff * 1000.0 / prevClose) / 10.0;
@@ -115,6 +117,25 @@ public final class MockDailySeries {
             result.add(new DailyBar(dates.get(k), close, diff, chg, open, high, low, vol, vol * close / 10_000L));
         }
         return result;
+    }
+
+    /**
+     * 봉 내 가격 경로(시가→종가 서브 브리지)의 극값으로 고가/저가 산출.
+     * 임의 wick 가산 없이, 경로가 실제 도달한 최대/최소만 사용. high ≥ max(open,close), low ≤ min(open,close).
+     */
+    private static long[] pathExtremes(long open, long close, long amp, Random r) {
+        long hi = Math.max(open, close);
+        long lo = Math.min(open, close);
+        final int SUB = 8;
+        double[] w = new double[SUB + 1];
+        for (int s = 1; s <= SUB; s++) w[s] = w[s - 1] + (r.nextDouble() - 0.5);
+        for (int s = 1; s < SUB; s++) {
+            double bridge = w[s] - w[SUB] * ((double) s / SUB);
+            long v = Math.round(open + (double) (close - open) * s / SUB + bridge * amp);
+            hi = Math.max(hi, v);
+            lo = Math.min(lo, v);
+        }
+        return new long[]{ hi, Math.max(100L, lo) };
     }
 
     private static String periodKey(String yyyymmdd, Period p) {

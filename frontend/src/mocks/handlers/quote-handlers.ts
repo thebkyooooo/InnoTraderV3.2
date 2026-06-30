@@ -1,6 +1,7 @@
 import { http, HttpResponse } from 'msw'
-import { dailySeries } from './_dailySeries'
+import { dailySeries, roundTick, tickSize } from './_dailySeries'
 import { filledTicks } from './_intradaySeries'
+import { STOCK_POOL } from '../data/stock-master-data'
 
 const BASE_URL = `${process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:8080'}/api/public/quotes`
 
@@ -17,11 +18,18 @@ const rng = (seed: number) => {
   return () => { s = (s * 1664525 + 1013904223) & 0xffffffff; return (s >>> 0) / 0xffffffff }
 }
 
-const SYMBOLS: Record<string, { name: string; market: string; price: number; prevDiff: number; volume: number; marketCap: number; lstdShrs: number }> = {
-  '005930': { name: '삼성전자',   market: 'KOSPI',  price: 72300,  prevDiff: 870,   volume: 12456789, marketCap: 431000000, lstdShrs: 5846278608 },
-  '000660': { name: 'SK하이닉스', market: 'KOSPI',  price: 198500, prevDiff: -1596, volume: 3214567,  marketCap: 144000000, lstdShrs: 712702365 },
-  '035420': { name: 'NAVER',     market: 'KOSDAQ', price: 215000, prevDiff: 1075,  volume: 987654,   marketCap: 35000000,  lstdShrs: 164263395 },
-}
+// STOCK_POOL 350종목 전체로 SYMBOLS 빌드 (lstdShrs = marketCap 기반 추산)
+const SYMBOLS = Object.fromEntries(
+  STOCK_POOL.map(s => [s.symbol, {
+    name:      s.name,
+    market:    s.market,
+    price:     s.price,
+    prevDiff:  s.prevDiff,
+    volume:    s.volume,
+    marketCap: s.marketCap,
+    lstdShrs:  Math.round(s.marketCap * 1_000_000 / s.price),
+  }])
+)
 
 // ─── 일별 시세 ────────────────────────────────────────────────────────────────
 
@@ -33,28 +41,39 @@ export const quoteHandlers = [
     const base   = SYMBOLS[symbol]
     if (!base) return HttpResponse.json({ message: '종목을 찾을 수 없습니다.' }, { status: 404 })
 
-    const r         = rng(base.price * 53)
-    const prevClose = base.price - base.prevDiff
-    const open      = Math.max(100, Math.round(prevClose * (1 + (r() - 0.5) * 0.01)))
-    const high      = Math.max(base.price, open) + Math.round(base.price * 0.005)
-    const low       = Math.max(100, Math.min(base.price, open) - Math.round(base.price * 0.005))
-    const change    = Math.round(base.prevDiff * 1000 / (prevClose || 1)) / 10
+    const prevClose  = roundTick(base.price - base.prevDiff)
+    const upperLimit = roundTick(Math.round(prevClose * 1.3))
+    const lowerLimit = Math.max(100, roundTick(Math.round(prevClose * 0.7)))
+
+    // 시가: 날짜 씨앗으로 당일 고정 (장중 변하지 않음, 호가 단위 정렬)
+    const now     = new Date()
+    const daySeed = now.getUTCFullYear() * 10000 + (now.getUTCMonth() + 1) * 100 + now.getUTCDate()
+    const rDay    = rng(base.price * 53 + daySeed)
+    const open    = Math.max(lowerLimit, Math.min(upperLimit, roundTick(Math.round(prevClose * (1 + (rDay() - 0.5) * 0.01)))))
+
+    // 현재가: 2초마다 변동 시뮬레이션 (호가 단위 스냅)
+    const nowTick = Math.floor(Date.now() / 2000)
+    const rNow    = rng(base.price * 53 + nowTick)
+    const r1 = rNow(), r2 = rNow(), r3 = rNow(), r4 = rNow()
+    const price    = Math.max(lowerLimit, Math.min(upperLimit, roundTick(base.price + Math.round(base.price * (r1 - 0.5) * 0.006))))
+    const prevDiff = price - prevClose
+    const change   = Math.round(prevDiff * 1000 / (prevClose || 1)) / 10
+
+    // 고가/저가: 전일대비 기반 당일 스윙 범위 (호가 단위 정렬)
+    const swing = Math.max(Math.abs(base.prevDiff), Math.round(base.price * 0.005))
+    const high  = Math.min(upperLimit, roundTick(Math.max(open, price) + Math.round(swing * (0.5 + r2 * 0.5))))
+    const low   = Math.max(lowerLimit, roundTick(Math.min(open, price) - Math.round(swing * (0.5 + r3 * 0.5))))
+
+    // 거래량: KST 장시간(9:00~15:30) 진행 비율로 스케일
+    const kstMin   = (now.getUTCHours() * 60 + now.getUTCMinutes() + 9 * 60) % (24 * 60)
+    const tradePct = kstMin < 540 ? 0.05 : kstMin > 930 ? 1.0 : (kstMin - 540) / 390
+    const volume   = Math.round(base.volume * (tradePct * 0.85 + 0.1) * (0.95 + r4 * 0.1))
+    const tradingAmount = Math.round(volume * price / 10000)
 
     return HttpResponse.json({
-      symbol,
-      name:          base.name,
-      market:        base.market,
-      price:         base.price,
-      prevDiff:      base.prevDiff,
-      change,
-      volume:        base.volume,
-      open,
-      high,
-      low,
-      prevClose,
-      upperLimit:    Math.round(prevClose * 1.3),
-      lowerLimit:    Math.round(prevClose * 0.7),
-      tradingAmount: Math.round(base.volume * base.price / 10000),
+      symbol, name: base.name, market: base.market,
+      price, prevDiff, change, volume, open, high, low, prevClose,
+      upperLimit, lowerLimit, tradingAmount,
     })
   }),
 
@@ -94,7 +113,7 @@ export const quoteHandlers = [
     const totalMinutes = kstMin < OPEN_MIN ? 0 : kstMin > CLOSE_MIN ? 390 : kstMin - OPEN_MIN
 
     // 체결도 오늘 일봉(시가)→현재가 브리지로 생성되어 최근 체결가 = 현재가 (최신순)
-    const items = filledTicks(base.price, base.prevDiff, base.volume, totalMinutes, 9999, 50)
+    const items = filledTicks(base.price, base.prevDiff, base.volume, totalMinutes, 9999, tickSize(base.price))
 
     const page = items.slice(offset, offset + size)
     const hasNext = offset + size < items.length
@@ -109,12 +128,14 @@ export const quoteHandlers = [
     if (!base) return HttpResponse.json({ message: '종목을 찾을 수 없습니다.' }, { status: 404 })
 
     const r = rng(base.price * 41)
+    const basePrice = roundTick(base.price)
+    const tick = tickSize(basePrice)  // 가격대별 호가 단위
     const asks = Array.from({ length: 10 }, (_, i) => ({
-      price: base.price + 50 * (i + 1),
+      price: basePrice + tick * (i + 1),
       volume: Math.round(1000 + r() * 49000),
     }))
     const bids = Array.from({ length: 10 }, (_, i) => ({
-      price: Math.max(50, base.price - 50 * (i + 1)),
+      price: Math.max(tick, basePrice - tick * (i + 1)),
       volume: Math.round(1000 + r() * 49000),
     }))
     return HttpResponse.json({ asks, bids })
