@@ -1,7 +1,7 @@
 'use client'
 import React, { useState, useMemo } from 'react'
 import type { ColDef, ValueFormatterParams } from 'ag-grid-community'
-import { SegmentedControl, Card, DataGrid } from '@/components/ui'
+import { SegmentedControl, Section, DataGrid } from '@/components/ui'
 import { marketApi } from '@/features/market/api/market-api'
 import type { MarketType, DailyTrend } from '@/features/market/api/market-api'
 import { useScrollPage } from '@/components/quote/_useScrollPage'
@@ -175,7 +175,7 @@ export default function MarketTrendPage() {
       </div>
 
       {/* 일별 투자동향 그리드 — 스크롤 끝에서 자동으로 다음 페이지 로드 */}
-      <div className="flex-1 min-h-96">
+      <Section className="flex-1 min-h-96 ">
         <DataGrid<DailyTrend>
           rows={items}
           columnDefs={COL_DEFS}
@@ -183,7 +183,7 @@ export default function MarketTrendPage() {
           loading={loading}
           onScrollEnd={loadMore}
         />
-      </div>
+      </Section>
 
     </div>
   )

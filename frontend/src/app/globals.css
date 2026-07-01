@@ -155,3 +155,10 @@
 .ag-header-cell.header-right .ag-header-cell-label {
   justify-content: flex-end;
 }
+
+/* AG 페이지네이션 스타일 설정 */
+.ag-root-wrapper {
+  border-bottom: 1px solid #eee !important;
+  border-bottom-left-radius: 0 !important;
+  border-bottom-right-radius: 0 !important;
+}

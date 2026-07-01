@@ -1,7 +1,7 @@
 'use client'
 import React, { useState, useMemo } from 'react'
 import type { ColDef, ValueFormatterParams } from 'ag-grid-community'
-import { SegmentedControl, Button, DataGrid } from '@/components/ui'
+import { SegmentedControl, Button, DataGrid, Section } from '@/components/ui'
 import { DragScroll } from '@/components/ui/DragScroll'
 import { useRanking, type RankingType } from '@/features/market/api/use-market'
 import type { StockRanking } from '@/features/market/api/market-api'
@@ -171,7 +171,7 @@ export default function MarketRankingPage() {
         </DragScroll>
       </div>
 
-      <div className="flex-1 min-h-96">
+      <Section className="flex-1 min-h-96">
         <DataGrid<StockRanking>
           rows={data}
           columnDefs={COL_DEFS}
@@ -180,7 +180,7 @@ export default function MarketRankingPage() {
           pagination
           pageSize={20}
         />
-      </div>
+      </Section>
     </div>
   )
 }
