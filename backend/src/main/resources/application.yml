@@ -41,6 +41,8 @@ jwt:
   refresh-token-validity-seconds: 1209600
 
 app:
+  # 실시간 시세 WebSocket 브로드캐스트 주기 (ms). 환경변수 BROADCAST_MS 로 재정의 가능.
+  broadcast-ms: ${BROADCAST_MS:1000}
   # 리프레시 토큰 쿠키 SameSite — 동일 도메인이면 Strict, 교차 도메인(Railway 등)이면 None
   refresh-cookie:
     same-site: ${REFRESH_COOKIE_SAMESITE:Strict}

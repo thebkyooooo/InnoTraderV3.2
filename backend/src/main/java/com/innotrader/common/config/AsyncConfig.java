@@ -2,8 +2,10 @@ package com.innotrader.common.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.scheduling.TaskScheduler;
 import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.scheduling.annotation.EnableScheduling;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
@@ -37,5 +39,15 @@ public class AsyncConfig {
                 .name("async-vt-", 0)
                 .factory()
         );
+    }
+
+    /** 브로드캐스터 단독 스레드 — 런타임 재스케줄링을 위해 별도 TaskScheduler 사용. */
+    @Bean(name = "broadcastTaskScheduler")
+    public TaskScheduler broadcastTaskScheduler() {
+        ThreadPoolTaskScheduler scheduler = new ThreadPoolTaskScheduler();
+        scheduler.setPoolSize(1);
+        scheduler.setThreadNamePrefix("broadcast-sched-");
+        scheduler.initialize();
+        return scheduler;
     }
 }

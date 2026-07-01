@@ -8,5 +8,6 @@ import { accountHandlers } from './handlers/account-handlers'
 import { holdingHandlers } from './handlers/holding-handlers'
 import { orderHandlers } from './handlers/order-handlers'
 import { healthHandlers } from './handlers/health-handlers'
+import { adminHandlers } from './handlers/admin-handlers'
 
-export const handlers = [...healthHandlers, ...authHandlers, ...stockMasterHandlers, ...quoteHandlers, ...chartHandlers, ...marketHandlers, ...watchlistHandlers, ...accountHandlers, ...holdingHandlers, ...orderHandlers]
+export const handlers = [...healthHandlers, ...authHandlers, ...adminHandlers, ...stockMasterHandlers, ...quoteHandlers, ...chartHandlers, ...marketHandlers, ...watchlistHandlers, ...accountHandlers, ...holdingHandlers, ...orderHandlers]

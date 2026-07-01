@@ -8,10 +8,12 @@ import com.innotrader.quote.adapter.in.web.dto.StockPriceMessage;
 import com.innotrader.quote.domain.model.HogaEntry;
 import com.innotrader.quote.domain.port.out.FindStockBasePort;
 import com.innotrader.quote.domain.port.out.FindStockBasePort.StockBase;
+import jakarta.annotation.PostConstruct;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.event.EventListener;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
-import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.scheduling.TaskScheduler;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.messaging.SessionDisconnectEvent;
 import org.springframework.web.socket.messaging.SessionSubscribeEvent;
@@ -27,12 +29,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ScheduledFuture;
 
 /**
  * 실시간 종목 시세 WebSocket 브로드캐스터.
  *
  * <p>클라이언트가 {@code /topic/quote/price/{symbol}} 을 구독하면
- * 2초마다({@link #BROADCAST_MS}) 시뮬레이션 현재가를 해당 채널로 push한다.
+ * 2초마다({@link #broadcastMs}) 시뮬레이션 현재가를 해당 채널로 push한다.
  *
  * <ul>
  *   <li>구독 추적: {@link SessionSubscribeEvent} / {@link SessionUnsubscribeEvent} / {@link SessionDisconnectEvent}</li>
@@ -48,8 +51,12 @@ public class StockPriceBroadcaster {
     private static final String TOPIC_HOGA   = "/topic/quote/hoga/";
     private static final ZoneId KST = ZoneId.of("Asia/Seoul");
     private static final DateTimeFormatter TIME_FMT = DateTimeFormatter.ofPattern("HHmmss");
-    /** 브로드캐스트/시세 시드 주기(ms). @Scheduled와 nowTick 분모가 항상 동일하도록 한 곳에서 관리. */
-    private static final long BROADCAST_MS = 1000L;
+    /** 브로드캐스트 주기(ms). 런타임에 reschedule() 로 변경 가능. */
+    @org.springframework.beans.factory.annotation.Value("${app.broadcast-ms:1000}")
+    private volatile long broadcastMs;
+
+    private final TaskScheduler taskScheduler;
+    private ScheduledFuture<?> scheduledFuture;
 
     /** symbol → (sessionId → 해당 symbol 활성 구독 수). 한 세션이 price/filled/trend 를
      *  동시에 구독할 수 있으므로(공유 연결) 카운트로 관리한다. 카운트가 0이 되면 세션을 뺀다. */
@@ -78,9 +85,36 @@ public class StockPriceBroadcaster {
     private final SimpMessagingTemplate messaging;
     private final FindStockBasePort findStockBase;
 
-    public StockPriceBroadcaster(SimpMessagingTemplate messaging, FindStockBasePort findStockBase) {
-        this.messaging    = messaging;
-        this.findStockBase = findStockBase;
+    public StockPriceBroadcaster(SimpMessagingTemplate messaging,
+                                 FindStockBasePort findStockBase,
+                                 @Qualifier("broadcastTaskScheduler") TaskScheduler taskScheduler) {
+        this.messaging      = messaging;
+        this.findStockBase  = findStockBase;
+        this.taskScheduler  = taskScheduler;
+    }
+
+    @PostConstruct
+    public void init() {
+        reschedule(broadcastMs);
+    }
+
+    /** 현재 브로드캐스트 주기(ms) 반환. */
+    public long getCurrentIntervalMs() {
+        return broadcastMs;
+    }
+
+    /**
+     * 브로드캐스트 주기를 런타임에 변경한다.
+     * 기존 스케줄을 취소하고 새 주기로 재스케줄링한다.
+     *
+     * @param ms 새 주기 (100~60000ms)
+     */
+    public synchronized void reschedule(long ms) {
+        if (scheduledFuture != null) {
+            scheduledFuture.cancel(false);
+        }
+        broadcastMs = ms;
+        scheduledFuture = taskScheduler.scheduleAtFixedRate(this::broadcast, Duration.ofMillis(ms));
     }
 
     // ─── 구독 이벤트 추적 ─────────────────────────────────────────────────────
@@ -135,13 +169,12 @@ public class StockPriceBroadcaster {
         return null;
     }
 
-    // ─── 주기마다 구독 종목 브로드캐스트 (BROADCAST_MS) ──────────────────────
+    // ─── 주기마다 구독 종목 브로드캐스트 (broadcastMs) ──────────────────────
 
     /** 한 번의 시세 시뮬레이션 결과 — 현재가/체결/투자동향/호가 메시지(같은 시점). */
     private record Snapshot(StockPriceMessage price, FilledMessage filled,
                             InvestmentTrendMessage trend, HogaMessage hoga) {}
 
-    @Scheduled(fixedRate = BROADCAST_MS)
     public void broadcast() {
         symbolSubs.forEach((symbol, subs) -> {
             if (!subs.isEmpty()) {
@@ -194,7 +227,7 @@ public class StockPriceBroadcaster {
     }
 
     private Snapshot simulate(StockBase base) {
-        long nowTick  = System.currentTimeMillis() / BROADCAST_MS;
+        long nowTick  = System.currentTimeMillis() / broadcastMs;
         long prevClose  = PriceTick.round(base.price() - base.prevDiff());
         long upperLimit = PriceTick.round(Math.round(prevClose * 1.3));
         long lowerLimit = Math.max(100L, PriceTick.round(Math.round(prevClose * 0.7)));
@@ -220,20 +253,21 @@ public class StockPriceBroadcaster {
         // 넘을 때만 현재가가 1틱씩 움직인다(= 가격 변동이 호가 단위로 발생).
         // 스텝 진폭은 최소 1틱 이상 — 고가 종목(틱이 큰)도 워크가 틱 경계를 넘어 현재가가 갱신되도록.
         long tick = PriceTick.tickSize(base.price());
-        // nowTick은 BROADCAST_MS마다 1씩만 증가 → 연속 정수에 LCG를 한 번만 쓰면 출력이 거의 선형(상관)이라
+        // nowTick은 broadcastMs마다 1씩만 증가 → 연속 정수에 LCG를 한 번만 쓰면 출력이 거의 선형(상관)이라
         // 매 틱 난수가 미미하게만 변해 가격이 멈춘다. 큰 상수로 곱해 잘 섞은 뒤 시드한다.
         int seed = (int) (((base.price() * 53L + nowTick * 2654435761L)) & 0xFFFFFFFFL);
-        int s1 = lcg(seed), s2 = lcg(s1), s3 = lcg(s2), s4 = lcg(s3);
+        int s1 = lcg(seed), s2 = lcg(s1), s3 = lcg(s2), s4 = lcg(s3), s5 = lcg(s4), s6 = lcg(s5), s7 = lcg(s6);
         long prevWalk = lastPrice.getOrDefault(base.symbol(), base.price());
-        double amp    = Math.max(base.price() * 0.0015, tick * 2);  // 스텝 진폭(틱 2배 이상 보장)
+        double amp    = Math.max(base.price() * 0.0004, tick * 0.8);  // 분봉 진폭 과대 방지 (기존: 0.0015, tick*2)
         double step   = (rand(s1) - 0.5) * 2.0 * amp;
         // 약한 평균회귀 — base에서 너무 멀리 벗어나지 않게만 끌어당기되, 한 방향 추세도 허용해
         // 매 푸시마다 가격이 눈에 띄게 움직이도록 한다.
-        double revert = (base.price() - prevWalk) * 0.15;
+        double revert = (base.price() - prevWalk) * 0.4;   // 기존: 0.15 → API 기준가와의 갭 최소화
         double delta  = step + revert;
-        // 매 푸시마다 최소 1틱 이상 이동 보장 — 같은 현재가가 반복되지 않도록.
-        if (Math.abs(delta) < tick) {
-            delta = (rand(s2) < 0.5 ? -tick : tick);
+        // 25% 확률로만 최소 1틱 이동 강제 — 분봉 현재 봉이 인접 봉 대비 비정상적으로 커지는 현상 방지.
+        // s7 로 방향 결정해 s2 의 확률 판정과 분리.
+        if (Math.abs(delta) < tick && rand(s2) < 0.25) {
+            delta = (rand(s7) < 0.5 ? -tick : tick);
         }
         long walk  = clamp(lowerLimit, upperLimit, Math.round(prevWalk + delta));
         lastPrice.put(base.symbol(), walk);                         // 연속 워크 보존
@@ -259,6 +293,11 @@ public class StockPriceBroadcaster {
         }
         high = Math.min(upperLimit, Math.max(high, baseHigh));   // baseHigh 하한 보장 → 고가는 절대 안 내려감
         low  = Math.max(lowerLimit, Math.min(low, baseLow));     // baseLow 상한 보장 → 저가는 절대 안 올라감
+        // 실시간 화면에서 고가/저가가 눈에 띄게 갱신되도록 매 푸시마다 1틱 확률적 확장.
+        // 고가는 오르기만 하고 저가는 내리기만 하므로 단조성 보장은 유지된다.
+        long drift = PriceTick.tickSize(price);
+        if (rand(s5) < 0.5) high = Math.min(upperLimit, high + drift);
+        if (rand(s6) < 0.5) low  = Math.max(lowerLimit, low  - drift);
         dayHigh.put(base.symbol(), high);
         dayLow.put(base.symbol(), low);
 
@@ -274,7 +313,7 @@ public class StockPriceBroadcaster {
         // 체결방향: 직전 워크 대비 (상승=매수, 하락=매도)
         boolean buy = walk >= prevWalk;
         // 체결수량: 하루 거래량을 장중 2초 푸시 횟수로 분배 + 변동(×0.3~1.7)으로 독립 생성.
-        double pushesPerDay = 390.0 * 60_000.0 / BROADCAST_MS;   // 장중(390분) 푸시 횟수 ≈ 11,700
+        double pushesPerDay = 390.0 * 60_000.0 / broadcastMs;   // 장중(390분) 푸시 횟수 ≈ 11,700
         long filledVolume = Math.max(1L, Math.round(base.volume() / pushesPerDay * (0.3 + rand(s3) * 1.4)));
         // 당일 누적 매수/매도 체결량. 거래일이 바뀌면(=장중 첫 진입) 진행률 기반으로 시작값을 추정해
         // 페이지 진입 즉시 현실적인 누적거래량을 보이게 하고, 이후 매 푸시 체결량을 누적한다.

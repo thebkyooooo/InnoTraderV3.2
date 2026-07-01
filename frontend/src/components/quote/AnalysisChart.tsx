@@ -127,7 +127,7 @@ function buildChart(
       vertLines: { color: isDark ? '#313244' : '#e5e7eb' },
       horzLines: { color: isDark ? '#313244' : '#e5e7eb' },
     },
-    timeScale: { timeVisible: true, secondsVisible: false, borderColor: isDark ? '#313244' : '#e5e7eb' },
+    timeScale: { timeVisible: true, secondsVisible: false, borderColor: isDark ? '#313244' : '#e5e7eb', rightOffset: 5 },
     rightPriceScale: { borderColor: isDark ? '#313244' : '#e5e7eb' },
     localization: { timeFormatter: fmtCrosshairTime, priceFormatter: (p: number) => Math.round(p).toLocaleString('ko-KR') },
     crosshair: { mode: 1 },
@@ -441,7 +441,7 @@ export function AnalysisChart({ symbol }: AnalysisChartProps) {
       const view = viewCountRef.current
       const n = bars.length
       if (view > 0 && n > view) {
-        chart.timeScale().setVisibleLogicalRange({ from: n - view, to: n - 1 })
+        chart.timeScale().setVisibleLogicalRange({ from: n - view, to: n + 4 })
       } else {
         chart.timeScale().fitContent()
       }
@@ -502,11 +502,17 @@ export function AnalysisChart({ symbol }: AnalysisChartProps) {
         volTime = periodStart as Time
         volValue = live.vol
       } else {
-        // ── 같은 기간(또는 마지막 봉) → 진행 봉 갱신 (봉 자체 OHLC만 확장) ──
-        liveMinRef.current = null
-        bar = { time: lastBar.time, open: lastBar.open, high: Math.max(lastBar.high, price), low: Math.min(lastBar.low, price), close: price }
+        // ── 같은 기간(또는 마지막 봉) → 진행 봉 갱신 (liveMinRef로 누적 추적) ──
+        let live = liveMinRef.current
+        if (!live || live.time !== (lastBar.time as number)) {
+          live = { time: lastBar.time as number, open: lastBar.open, high: lastBar.high, low: lastBar.low, vol: lastBar.volume }
+        }
+        live.high = Math.max(live.high, price)
+        live.low  = Math.min(live.low,  price)
+        liveMinRef.current = live
+        bar = { time: lastBar.time, open: live.open, high: live.high, low: live.low, close: price }
         volTime = lastBar.time
-        volValue = lastBar.volume
+        volValue = live.vol
       }
     } else {
       // ── 일봉/주봉/월봉/년봉: 마지막 봉을 현재가로 확장 갱신 ──
@@ -602,7 +608,7 @@ export function AnalysisChart({ symbol }: AnalysisChartProps) {
   const isLive = !hoverBar && !!wsQuote
   const liveDisp = isLive && wsQuote
     ? (mode === 'minute' && disp
-        ? { open: disp.open, high: Math.max(disp.high, wsQuote.price), low: Math.min(disp.low, wsQuote.price), close: wsQuote.price, volume: disp.volume }
+        ? (() => { const lv = liveMinRef.current; return { open: lv?.open ?? disp.open, high: Math.max(lv?.high ?? disp.high, wsQuote.price), low: Math.min(lv?.low ?? disp.low, wsQuote.price), close: wsQuote.price, volume: disp.volume } })()
         : { open: wsQuote.open, high: wsQuote.high, low: wsQuote.low, close: wsQuote.price, volume: wsQuote.volume })
     : disp
   const prevClose = isLive && wsQuote ? wsQuote.prevClose : (bars[dispIdx - 1]?.close ?? disp?.open)

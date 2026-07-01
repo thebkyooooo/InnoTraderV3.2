@@ -11,22 +11,23 @@ export default function QuoteOrderbookPage() {
       {/* 현재가 (Quote Board) 컴포넌트 — symbol만 넘기면 내부에서 조회 */}
       <QuoteBoard symbol={symbol} onStockSelect={stock => setSymbol(stock.symbol)} />
 
-      {/* 호가 컴포넌트 */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="flex-1 flex flex-col gap-2">
-          <span className="text-sm font-semibold text-gray-600">DOM 기반</span>
-          <div className='border border-gray-200 rounded-xl p-2 bg-white'>
-            <OrderBook symbol={symbol} variant="dom" />
+      <div className="flex gap-4">
+        {/* 호가 컴포넌트 */}
+        <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="flex-1 flex flex-col gap-2">
+            <div className='border border-gray-200 rounded-xl px-4 py-4 bg-white'>
+              <span className="text-sm font-semibold text-gray-600">호가 DOM</span>
+              <OrderBook symbol={symbol} variant="dom" />
+            </div>
           </div>
-        </div>
-        <div className="flex-1 flex flex-col gap-2">
-          <span className="text-sm font-semibold text-gray-600">Canvas 기반</span>
-          <div className='border border-gray-200 rounded-xl p-2 bg-white'>
-            <OrderBook symbol={symbol} variant="canvas" />
+          <div className="flex-1 flex flex-col gap-2">
+            <div className='border border-gray-200 rounded-xl px-4 py-4 bg-white'>
+              <span className="text-sm font-semibold text-gray-600">호가 Canvas</span>
+              <OrderBook symbol={symbol} variant="canvas" />
+            </div>
           </div>
         </div>
       </div>
-
     </div>
   )
 }
