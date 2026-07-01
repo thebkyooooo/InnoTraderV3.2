@@ -39,7 +39,7 @@ const COL_DEFS: ColDef<DailyTrend>[] = [
     headerName: '일자',
     field: 'tradeDate',
     flex:1,
-    minWidth: 110,
+    minWidth: 120,
     sortable: false,
     cellStyle: { textAlign: 'left' },
     valueFormatter: (p: ValueFormatterParams<DailyTrend>) => fmtDate(p.value),
