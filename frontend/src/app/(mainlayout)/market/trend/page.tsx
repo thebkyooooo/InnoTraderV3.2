@@ -41,7 +41,7 @@ const COL_DEFS: ColDef<DailyTrend>[] = [
     flex:1,
     minWidth: 110,
     sortable: false,
-    cellStyle: { textAlign: 'center' },
+    cellStyle: { textAlign: 'left' },
     valueFormatter: (p: ValueFormatterParams<DailyTrend>) => fmtDate(p.value),
   },
   {
