@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/Input'
 import { Modal } from '@/components/ui/Modal'
 import { DatePicker } from '@/components/ui/DatePicker'
 import { SegmentedControl } from '@/components/ui/SegmentedControl'
+import { Section } from '@/components/ui/Section'
 import {
   type OrderHistoryItem,
   type SideFilter,
@@ -214,9 +215,9 @@ export function OrderHistory({ accountNo, height = 400, todayOnly = false }: Ord
       )}
 
       {/* 주문내역 그리드 */}
-      <div className="flex-1 min-h-[360px]">
+      <Section className='flex-1 min-h-[360px] shrink-0'>
         <DataGrid<OrderHistoryItem> rows={items} columnDefs={columnDefs} loading={loading} height={height} />
-      </div>
+      </Section>
 
       {/* 취소 확인 모달 */}
       <Modal open={!!cancelTarget} onClose={() => setCancelTarget(null)} maxWidth={300}>

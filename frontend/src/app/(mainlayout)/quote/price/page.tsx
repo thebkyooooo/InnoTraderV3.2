@@ -25,36 +25,40 @@ export default function QuotePricePage() {
           </div>
 
           {/* 호가 컴포넌트 */}
-          <div className="shrink-0 flex flex-col">
-            <Tabs
-              value={hogaTabValue}
-              onChange={(v) => setHogaTabValue(String(v))}
-              tabs={[
-                { value: 'dom', label: '호가 Dom' },
-                { value: 'canvas', label: '호가 Canvas' },
-              ]}
-            />
-            <div className="border border-gray-200 rounded-lg bg-white p-2">
-              {hogaTabValue === 'dom' && <OrderBook symbol={symbol} variant="dom" />}
-              {hogaTabValue === 'canvas' && <OrderBook symbol={symbol} variant="canvas" />}
+          <div className="border border-gray-200 rounded-lg bg-white p-4">
+            <div className="shrink-0 flex flex-col">
+              <Tabs
+                value={hogaTabValue}
+                onChange={(v) => setHogaTabValue(String(v))}
+                tabs={[
+                  { value: 'dom', label: '호가 Dom' },
+                  { value: 'canvas', label: '호가 Canvas' },
+                ]}
+              />
+              {/* <div className="border border-gray-200 rounded-lg bg-white p-2"> */}
+                {hogaTabValue === 'dom' && <OrderBook symbol={symbol} variant="dom" />}
+                {hogaTabValue === 'canvas' && <OrderBook symbol={symbol} variant="canvas" />}
+              {/* </div> */}
             </div>
           </div>
           
           {/* 체결 / 일별 / 투자동향 — 탭 전환 */}
-          <div className="shrink-0 flex flex-col">
-            <Tabs
-              value={tabValue}
-              onChange={(v) => setTabValue(String(v))}
-              tabs={[
-                { value: 'filled', label: '체결' },
-                { value: 'daily', label: '일별' },
-                { value: 'trend', label: '투자동향' },
-              ]}
-            />
-            <div className="h-[260px]">
-              {tabValue === 'filled' && <FilledQuoteGrid symbol={symbol} />}
-              {tabValue === 'daily'  && <DailyQuoteGrid symbol={symbol} />}
-              {tabValue === 'trend'  && <InvestmentTrendGrid symbol={symbol} />}
+          <div className="border border-gray-200 rounded-lg bg-white p-4">
+            <div className="shrink-0 flex flex-col">
+              <Tabs
+                value={tabValue}
+                onChange={(v) => setTabValue(String(v))}
+                tabs={[
+                  { value: 'filled', label: '체결' },
+                  { value: 'daily', label: '일별' },
+                  { value: 'trend', label: '투자동향' },
+                ]}
+              />
+              <div className="h-[260px]">
+                {tabValue === 'filled' && <FilledQuoteGrid symbol={symbol} />}
+                {tabValue === 'daily'  && <DailyQuoteGrid symbol={symbol} />}
+                {tabValue === 'trend'  && <InvestmentTrendGrid symbol={symbol} />}
+              </div>
             </div>
           </div>
         </div>

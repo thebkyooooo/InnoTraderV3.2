@@ -140,7 +140,7 @@ export default function MarketRankingPage() {
 
   return (
     <div className="flex flex-col gap-4 w-full h-full">
-      <div className="flex flex-col xs:flex-row gap-4">
+      <div className="flex flex-row gap-4">
         <div>
           <SegmentedControl
             value={marketSeg}

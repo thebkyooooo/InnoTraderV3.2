@@ -22,9 +22,9 @@ const SPEED_OPTIONS = [
   { value: 100,  label: '0.1초' },
   { value: 200,  label: '0.2초' },
   { value: 500,  label: '0.5초' },
-  { value: 1000, label: '1초' },
-  { value: 2000, label: '2초' },
-  { value: 5000, label: '5초' },
+  { value: 1000, label: '1.0초' },
+  { value: 2000, label: '2.0초' },
+  { value: 5000, label: '5.0초' },
 ]
 
 interface HeaderProps {

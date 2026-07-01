@@ -49,44 +49,43 @@ interface RankingSectionProps {
 
 function RankingSection({ title, value, onChange, rows }: RankingSectionProps) {
   return (
-    <div className='w-full flex flex-col gap-2'>
-      <div className='w-full flex gap-2 justify-between items-center'>
-        <h2 className='text-sm font-semibold'>{title}</h2>
-        <SegmentedControl
-          value={value}
-          onChange={onChange}
-          options={[
-            { label: '전체', value: 'all' },
-            { label: '코스피', value: 'kospi' },
-            { label: '코스닥', value: 'kosdaq' },
-          ]}
-          size="small"
-          sx={{height: 32}}
-        />
-      </div>
+    <div className='@container w-full flex flex-col gap-2'>
+      
 
       <Card>
-        <div className='flex flex-col gap-2'>
-          <ul className='flex flex-col gap-2 min-h-[327px]'>
-            {rows.slice(0, 7).map((s, i) => {
-              const up = s.change >= 0
-              const color = up ? 'text-red-500' : 'text-blue-500'
-              const sign = up ? '+' : '-'
-              return (
-                <li key={`${s.symbol}-${i}`} className='flex-1 flex justify-between text-sm font-semibold gap-2.5'>
-                  <div>{s.name}</div>
-                  <div className='flex flex-col items-end'>
-                    <p>{s.price.toLocaleString()}</p>
-                    <p className={`text-[12px] font-normal ${color} whitespace-nowrap`}>
-                      <span className="mr-0.5">{sign}{Math.abs(s.prevDiff).toLocaleString()}</span>
-                      <span>({sign}{Math.abs(s.change)}%)</span>
-                    </p>
-                  </div>
-                </li>
-              )
-            })}
-          </ul>
+        <div className='w-full flex flex-col @[280px]:flex-row gap-2 justify-between mt-1 mb-4'>
+          <h2 className='text-sm text-gray-500 font-semibold'>{title}</h2>
+          <SegmentedControl
+            value={value}
+            onChange={onChange}
+            options={[
+              { label: '전체', value: 'all' },
+              { label: '코스피', value: 'kospi' },
+              { label: '코스닥', value: 'kosdaq' },
+            ]}
+            size="small"
+            sx={{height: 32, minWidth: '152px', marginLeft: 'auto'}}
+          />
         </div>
+        <ul className='flex flex-col gap-2 min-h-[327px]'>
+          {rows.slice(0, 7).map((s, i) => {
+            const up = s.change >= 0
+            const color = up ? 'text-red-500' : 'text-blue-500'
+            const sign = up ? '+' : '-'
+            return (
+              <li key={`${s.symbol}-${i}`} className='flex flex-col @[220px]:flex-row justify-between text-sm font-semibold'>
+                <div>{s.name}</div>
+                <div className='flex flex-col items-end'>
+                  <p>{s.price.toLocaleString()}</p>
+                  <p className={`text-[12px] font-normal ${color} whitespace-nowrap`}>
+                    <span className="mr-0.5">{sign}{Math.abs(s.prevDiff).toLocaleString()}</span>
+                    <span>({sign}{Math.abs(s.change)}%)</span>
+                  </p>
+                </div>
+              </li>
+            )
+          })}
+        </ul>
       </Card>
     </div>
   )
@@ -162,12 +161,12 @@ export default function DashboardPage() {
           </DragScroll>
 
           <div className='w-full grid grid-cols-1 @[500px]:grid-cols-2 @[1024px]:grid-cols-3 gap-4'>
-            <RankingSection title='시가총액상위' value={segment01} onChange={setSegment01} rows={marketCapRows} />
-            <RankingSection title='거래량상위' value={segment02} onChange={setSegment02} rows={volumeRows} />
-            <RankingSection title='상승종목' value={segment03} onChange={setSegment03} rows={advancingRows} />
-            <RankingSection title='하락종목' value={segment04} onChange={setSegment04} rows={decliningRows} />
-            <RankingSection title='갭상승종목' value={segment05} onChange={setSegment05} rows={gapUpRows} />
-            <RankingSection title='투자심리과열종목' value={segment06} onChange={setSegment06} rows={overheatedRows} />
+            <RankingSection title='시가총액' value={segment01} onChange={setSegment01} rows={marketCapRows} />
+            <RankingSection title='거래량' value={segment02} onChange={setSegment02} rows={volumeRows} />
+            <RankingSection title='상승' value={segment03} onChange={setSegment03} rows={advancingRows} />
+            <RankingSection title='하락' value={segment04} onChange={setSegment04} rows={decliningRows} />
+            <RankingSection title='갭상승' value={segment05} onChange={setSegment05} rows={gapUpRows} />
+            <RankingSection title='투자심리과열' value={segment06} onChange={setSegment06} rows={overheatedRows} />
           </div>
 
           {/* 인기검색종목 */}

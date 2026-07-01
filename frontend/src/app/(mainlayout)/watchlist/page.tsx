@@ -11,6 +11,7 @@ import DialogContent from '@mui/material/DialogContent'
 import DialogActions from '@mui/material/DialogActions'
 import { Select } from '@/components/ui/Select'
 import { DataGrid } from '@/components/ui/DataGrid'
+import { Section } from '@/components/ui/Section'
 import { type WatchlistGroup } from '@/features/watchlist/api/watchlist-api'
 import {
   useWatchlistGroups,
@@ -204,9 +205,9 @@ export default function WatchlistPage() {
           </div>
         </div>
 
-        <div className="flex-1 min-h-[360px]">
+        <Section className='flex-1 min-h-[360px] shrink-0'>
           <DataGrid<StockQuote> rows={quotes} columnDefs={columns} loading={loading} height="100%" onRowClick={setSelectedStock} selectionHeaderName="" selectionColumnWidth={36} getRowId={r => r.symbol} />
-        </div>
+        </Section>
       </div>
 
       {/* 사이드 패널 */}

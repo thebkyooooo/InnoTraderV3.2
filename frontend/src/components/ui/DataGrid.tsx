@@ -76,7 +76,7 @@ export function DataGrid<TData = Record<string, unknown>>({
   )
 
   return (
-    <Box sx={{ height, width: '100%', padding:'6px', border: '1px solid #eee', borderRadius: '8px', background: 'hsl(var(--background) / .8)' }}>
+    <Box sx={{ height, width: '100%', padding:'0', borderTop: '1px solid #eee', borderRadius: '8px', background: 'hsl(var(--background) / .8)' }}>
       <AgGridReact<TData>
         theme={gridTheme}
         rowData={rows}

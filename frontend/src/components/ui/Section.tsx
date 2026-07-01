@@ -19,7 +19,7 @@ export function Section({ title, description, children, actions, noPadding = fal
   const hasHeader = title || description || actions
 
   return (
-    <Paper variant="outlined" className={className} sx={{ overflow: 'hidden' }}>
+    <Paper variant="outlined" className={className} sx={{ display: 'flex', overflow: 'hidden' }}>
       {hasHeader && (
         <>
           <Box
@@ -49,7 +49,7 @@ export function Section({ title, description, children, actions, noPadding = fal
           <Divider />
         </>
       )}
-      <Box sx={{ px: noPadding ? 0 : 2, py: noPadding ? 0 : 2 }}>
+      <Box sx={{ px: noPadding ? 0 : 2, py: noPadding ? 0 : 2, width: '100%' }}>
         {children}
       </Box>
     </Paper>
