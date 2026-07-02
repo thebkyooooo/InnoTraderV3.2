@@ -13,6 +13,7 @@ import {
   Typography,
   useTheme,
   useMediaQuery,
+  IconButton,
 } from '@mui/material'
 import {
   ExpandLess,
@@ -25,8 +26,10 @@ import {
   DataExploration,
   PieChart,
   Settings,
+  Close,
 } from '@mui/icons-material'
 import { MENU_ITEMS, type MenuItem } from '@/config/menu.config'
+import { isAbsolute } from 'path'
 
 const DRAWER_WIDTH = 240
 
@@ -133,11 +136,14 @@ function MenuItemRow({ item, depth = 0, onNavigate }: MenuItemRowProps) {
   )
 }
 
-function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
+function SidebarContent({ onNavigate, onClose }: { onNavigate?: () => void; onClose?: () => void }) {
+  const theme = useTheme()
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'))
+
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       {/* 로고 영역 */}
-      <Box sx={{ px: 2.5, pt: 2, pb: 1  }}>
+      <Box sx={{ px: 2.5, pt: 2, pb: 1, position: 'relative'  }}>
         <Typography
           variant="h6"
           color="primary"
@@ -145,6 +151,25 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
         >
           InnoTrader
         </Typography>
+
+        {isMobile && (
+          <IconButton
+            onClick={onClose}
+            aria-label="사이드바 닫기"
+            size="small"
+            disableRipple
+            sx={{
+              position: 'absolute',
+              top: 15,
+              right: 14,
+              color: 'grey.700',
+              bgcolor: 'transparent',
+              '&:hover': { color: 'grey.500', bgcolor: 'transparent' },
+            }}
+          >
+            <Close fontSize="medium" sx={{ fontWeight: 700 }} />
+          </IconButton>
+        )}
       </Box>
 
       {/* 메뉴 목록 */}
@@ -198,7 +223,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
           transition: 'transform 0.25s ease',
         }}
       >
-        <SidebarContent onNavigate={isMobile ? onClose : undefined} />
+        <SidebarContent onNavigate={isMobile ? onClose : undefined} onClose={onClose} />
       </Box>
     </>
   )

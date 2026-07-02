@@ -16,6 +16,7 @@ const gridTheme = themeQuartz.withParams({
   headerRowBorder: { style: 'solid', width: 1, color: BORDER },
   wrapperBorder: false, // 외곽 보더는 Box가 담당
   oddRowBackgroundColor: 'transparent',
+  rangeSelectionBorderColor: 'transparent', // 셀 클릭 시 생기는 포커스 테두리 제거
 })
 
 interface DataGridProps<TData = Record<string, unknown>> {
@@ -29,6 +30,8 @@ interface DataGridProps<TData = Record<string, unknown>> {
   pageSize?: number
   headerHeight?: number
   rowHeight?: number
+  /** 선택 체크박스 컬럼 표시 여부 (기본: onRowClick 지정 시 true). 클릭만 필요하고 체크박스가 불필요하면 false */
+  showSelectionColumn?: boolean
   /** 선택 체크박스 컬럼 헤더 타이틀 (onRowClick 사용 시에만 표시) */
   selectionHeaderName?: string
   /** 선택 체크박스 컬럼 너비(px). 미지정 시 AG Grid 기본(~50px) */
@@ -48,10 +51,12 @@ export function DataGrid<TData = Record<string, unknown>>({
   pageSize = 20,
   headerHeight = 38,
   rowHeight = 36,
+  showSelectionColumn = true,
   selectionHeaderName,
   selectionColumnWidth,
   getRowId,
 }: DataGridProps<TData>) {
+  const selectable = !!onRowClick && showSelectionColumn
   const handleGetRowId = useCallback(
     (params: { data: TData }) => getRowId!(params.data),
     [getRowId]
@@ -91,8 +96,8 @@ export function DataGrid<TData = Record<string, unknown>>({
         pagination={pagination}
         paginationPageSize={pageSize}
         paginationPageSizeSelector={pagination ? Array.from(new Set([pageSize, 20, 50, 100])).sort((a, b) => a - b) : false}
-        rowSelection={onRowClick ? { mode: 'singleRow' } : undefined}
-        selectionColumnDef={onRowClick ? { headerName: selectionHeaderName, width: selectionColumnWidth, sortable: false, resizable: false } : undefined}
+        rowSelection={selectable ? { mode: 'singleRow' } : undefined}
+        selectionColumnDef={selectable ? { headerName: selectionHeaderName, width: selectionColumnWidth, sortable: false, resizable: false } : undefined}
         localeText={{ noRowsToShow: '조회된 데이터가 없습니다.' }}
         defaultColDef={{ resizable: true, sortable: true, filter: false }}
       />

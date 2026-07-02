@@ -15,6 +15,8 @@ export interface QuoteBoardProps {
   quote?: QuotePriceResponse
   /** 종목 선택 콜백 */
   onStockSelect?: (stock: StockSummary) => void
+  /** 현재가 클릭 콜백 — 클릭한 가격을 전달 (주문폼 가격 채우기 등) */
+  onPriceClick?: (price: number) => void
 }
 
 const UP_COLOR   = '#ef5350'
@@ -30,7 +32,7 @@ function formatAmount(manWon: number): string {
   return `${formatNumber(manWon)}만`
 }
 
-export function QuoteBoard({ symbol, quote, onStockSelect }: QuoteBoardProps) {
+export function QuoteBoard({ symbol, quote, onStockSelect, onPriceClick }: QuoteBoardProps) {
   const [modalOpen, setModalOpen] = useState(false)
 
   // 제어형(quote prop): WS 없이 정적 표시
@@ -78,7 +80,12 @@ export function QuoteBoard({ symbol, quote, onStockSelect }: QuoteBoardProps) {
           />
         </div>
         <div className="flex gapx-2 py-1 items-end">
-          <span className='text-2xl font-semibold'>{formatNumber(price)}원</span>
+          <span
+            className={`text-2xl font-semibold${onPriceClick ? ' cursor-pointer' : ''}`}
+            onClick={onPriceClick ? () => onPriceClick(price) : undefined}
+          >
+            {formatNumber(price)}원
+          </span>
           <span className='text-sm py-0.5' style={{ color }}>
             {arrow}{formatNumber(Math.abs(prevDiff))} {isUp ? '+' : isDown ? '-' : ''}{Math.abs(change).toFixed(2)}%
           </span>

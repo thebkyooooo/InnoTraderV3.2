@@ -1,5 +1,5 @@
 'use client'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, keepPreviousData } from '@tanstack/react-query'
 import { quoteApi, type QuotePriceResponse, type HogaData, type QuoteDetailItem, type DailyChartType } from './quote-api'
 
 // 시세 조회 React Query 훅.
@@ -12,6 +12,10 @@ export function useStockPrice(symbol: string, options?: { enabled?: boolean }) {
     queryKey: ['quote', 'price', symbol],
     queryFn: async () => (await quoteApi.getPrice(symbol)).data,
     enabled: (options?.enabled ?? true) && !!symbol,
+    // 종목 전환 시 새 데이터가 올 때까지 이전 종목 데이터를 유지 — 화면이 순간 비어
+    // 레이아웃이 줄었다 늘어나며 스크롤 위치가 clamp되는 것을 방지 (처음 조회하는
+    // 종목에서만 발생: 캐시가 있는 종목은 로딩 중에도 기존 데이터가 즉시 표시됨)
+    placeholderData: keepPreviousData,
   })
 }
 
@@ -21,6 +25,8 @@ export function useHoga(symbol: string, options?: { enabled?: boolean }) {
     queryKey: ['quote', 'hoga', symbol],
     queryFn: async () => (await quoteApi.getHoga(symbol)).data,
     enabled: (options?.enabled ?? true) && !!symbol,
+    // 종목 전환 시 "불러오는 중" 문구로 축소됐다 복원되며 스크롤이 튀는 것 방지
+    placeholderData: keepPreviousData,
   })
 }
 

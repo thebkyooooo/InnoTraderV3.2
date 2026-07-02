@@ -29,13 +29,15 @@ export interface HoldingsProps {
   height?: number | string
   /** 상단 요약(총자산/총평가금액/원금/총수익금/총수익률) 표시 여부 (기본 true) */
   showSummary?: boolean
+  /** 행(종목) 클릭 콜백 — 클릭한 종목코드를 전달 (주문화면 종목 전환 등) */
+  onSymbolSelect?: (symbol: string) => void
 }
 
 /**
  * 주식잔고 — 요약(총자산/총평가금액/원금/총수익금/총수익률) + 보유종목 그리드.
  * 주식잔고 조회 API 연동.
  */
-export function Holdings({ accountNo, height = 400, showSummary = true }: HoldingsProps) {
+export function Holdings({ accountNo, height = 400, showSummary = true, onSymbolSelect }: HoldingsProps) {
   const { data, isFetching: loading } = useHoldings(accountNo)
 
   const s = data?.summary
@@ -55,8 +57,15 @@ export function Holdings({ accountNo, height = 400, showSummary = true }: Holdin
       )}
 
       {/* 보유종목 그리드 */}
-      <Section className='flex-1 min-h-[360px] shrink-0'>
-        <DataGrid<HoldingItem> rows={data?.items ?? []} columnDefs={columns} loading={loading} height={height} />
+      <Section className='flex-1 min-h-[260px] shrink-0'>
+        <DataGrid<HoldingItem>
+          rows={data?.items ?? []}
+          columnDefs={columns}
+          loading={loading}
+          height={height}
+          onRowClick={onSymbolSelect ? row => onSymbolSelect(row.symbol) : undefined}
+          showSelectionColumn={false}
+        />
       </Section>
     </div>
   )

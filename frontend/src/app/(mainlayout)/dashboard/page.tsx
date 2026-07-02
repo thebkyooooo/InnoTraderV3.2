@@ -53,8 +53,8 @@ function RankingSection({ title, value, onChange, rows }: RankingSectionProps) {
       
 
       <Card>
-        <div className='w-full flex flex-col @[280px]:flex-row gap-2 justify-between mt-1 mb-4'>
-          <h2 className='text-sm text-gray-500 font-semibold'>{title}</h2>
+        <div className='w-full flex flex-col @[280px]:flex-row gap-2 @[300px]:justify-between mt-1 mb-4'>
+          <div className='text-sm text-gray-500 font-semibold border-b-2 border-gray-400 pb-3 mr-auto'>{title}</div>
           <SegmentedControl
             value={value}
             onChange={onChange}
@@ -160,7 +160,7 @@ export default function DashboardPage() {
             </div>
           </DragScroll>
 
-          <div className='w-full grid grid-cols-1 @[500px]:grid-cols-2 @[1024px]:grid-cols-3 gap-4'>
+          <div className='w-full grid grid-cols-1 @[580px]:grid-cols-2 @[1024px]:grid-cols-3 gap-4'>
             <RankingSection title='시가총액' value={segment01} onChange={setSegment01} rows={marketCapRows} />
             <RankingSection title='거래량' value={segment02} onChange={setSegment02} rows={volumeRows} />
             <RankingSection title='상승' value={segment03} onChange={setSegment03} rows={advancingRows} />

@@ -115,8 +115,8 @@ function TrendSummaryCard({ title, value }: { title: string; value: number | und
   const formatted = value == null ? '-' : fmtNet(value)
   const color = value == null ? 'inherit' : value > 0 ? '#e53e3e' : value < 0 ? '#3182ce' : 'inherit'
   return (
-    <div className="w-full flex @[500px]:flex-col justify-between gap-0.5 p-3 py-2 @[500px]:py-3 border border-gray-200 rounded-lg bg-white">
-      <span className="text-sm text-gray-500">{title}</span>
+    <div className="w-full flex justify-between gap-0.5 px-4 py-2.5 border border-gray-200 rounded-lg bg-white">
+      <span className="text-xs text-gray-500">{title}</span>
       <span className="text-lg text-right font-semibold tabular-nums"style={{ color }}>{formatted}</span>
     </div>
   )
@@ -168,7 +168,7 @@ export default function MarketTrendPage() {
       </div>
 
       {/* 당일 순매수 요약 — daily-trends 첫 번째 행(최신 영업일) 기준 */}
-      <div className="flex gap-1 flex-col @[500px]:flex-row @[500px]:gap-2">
+      <div className="flex gap-1 flex-col @[600px]:flex-row @[600px]:gap-2">
         <TrendSummaryCard title="외국인 순매수" value={items[0]?.foreignNet} />
         <TrendSummaryCard title="개인 순매수"   value={items[0]?.individualNet} />
         <TrendSummaryCard title="기관 순매수"   value={items[0]?.institutionNet} />

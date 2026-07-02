@@ -30,6 +30,8 @@ export interface OrderBookProps {
   symbol: string
   /** 렌더링 방식 — 'dom'(기본) 또는 'canvas'. 높이는 행 수 기준으로 양쪽 동일 고정 */
   variant?: OrderBookVariant
+  /** 호가 클릭 콜백 — 클릭한 가격을 전달 (주문폼 가격 채우기 등) */
+  onPriceClick?: (price: number) => void
 }
 
 interface Row { price: number; askVol: number; bidVol: number; side: 'ask' | 'bid' }
@@ -49,7 +51,7 @@ function buildRows(data: HogaData) {
 
 // ─── DOM 기반 ─────────────────────────────────────────────────────────────────
 
-function OrderBookDom({ data, prevClose, currentPrice }: { data: HogaData; prevClose: number; currentPrice: number }) {
+function OrderBookDom({ data, prevClose, currentPrice, onPriceClick }: { data: HogaData; prevClose: number; currentPrice: number; onPriceClick?: (price: number) => void }) {
   const { rows, maxVol, askTotal, bidTotal } = buildRows(data)
 
   // 호가 컬럼 폭을 "호가 + 등락률" 길이에 맞춰 가변 (잔량 컬럼은 남는 폭을 균등 분배)
@@ -80,7 +82,8 @@ function OrderBookDom({ data, prevClose, currentPrice }: { data: HogaData; prevC
             )}
           </div>
           {/* 호가 + 등락률 — 현재가와 같은 호가(최우선호가)면 테두리 */}
-          <div className="flex items-center justify-center gap-1.5 tabular-nums whitespace-nowrap"
+          <div className={`flex items-center justify-center gap-1.5 tabular-nums whitespace-nowrap${onPriceClick ? ' cursor-pointer' : ''}`}
+            onClick={onPriceClick ? () => onPriceClick(r.price) : undefined}
             style={{
               background: r.side === 'ask' ? ASK_BG : BID_BG,
               borderBottom: '1px solid #f3f4f6',
@@ -116,9 +119,21 @@ function OrderBookDom({ data, prevClose, currentPrice }: { data: HogaData; prevC
 
 // ─── Canvas 기반 ──────────────────────────────────────────────────────────────
 
-function OrderBookCanvas({ data, prevClose, currentPrice }: { data: HogaData; prevClose: number; currentPrice: number }) {
+function OrderBookCanvas({ data, prevClose, currentPrice, onPriceClick }: { data: HogaData; prevClose: number; currentPrice: number; onPriceClick?: (price: number) => void }) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const wrapRef = useRef<HTMLDivElement>(null)
+
+  // 캔버스는 DOM 요소가 아니라 클릭 시 y좌표로 행을 역산해 가격을 찾는다 (헤더/행/풋터 높이는 DOM과 동일)
+  const handleCanvasClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (!onPriceClick) return
+    const rect = e.currentTarget.getBoundingClientRect()
+    const y = e.clientY - rect.top
+    const { rows } = buildRows(data)
+    if (y < HEADER_H || y >= HEADER_H + rows.length * ROW_H) return
+    const index = Math.floor((y - HEADER_H) / ROW_H)
+    const row = rows[index]
+    if (row) onPriceClick(row.price)
+  }
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -242,14 +257,14 @@ function OrderBookCanvas({ data, prevClose, currentPrice }: { data: HogaData; pr
 
   return (
     <div ref={wrapRef} className="w-full border-y border-gray-200 overflow-hidden rounded-xl">
-      <canvas ref={canvasRef} className="block" />
+      <canvas ref={canvasRef} className={`block${onPriceClick ? ' cursor-pointer' : ''}`} onClick={handleCanvasClick} />
     </div>
   )
 }
 
 // ─── 컴포넌트 ─────────────────────────────────────────────────────────────────
 
-export function OrderBook({ symbol, variant = 'dom' }: OrderBookProps) {
+export function OrderBook({ symbol, variant = 'dom', onPriceClick }: OrderBookProps) {
   // React Query — getPrice는 QuoteBoard와 같은 키라 동시/중복 요청이 dedupe된다
   const { data: httpData, isLoading } = useHoga(symbol)
   const liveHoga = useHogaWS(symbol)          // 실시간 호가 (2초마다 갱신)
@@ -266,6 +281,6 @@ export function OrderBook({ symbol, variant = 'dom' }: OrderBookProps) {
   if (!data) return <div className="text-xs text-gray-400 py-4 text-center">호가 정보가 없습니다.</div>
 
   return variant === 'canvas'
-    ? <OrderBookCanvas data={data} prevClose={prevClose} currentPrice={currentPrice} />
-    : <OrderBookDom data={data} prevClose={prevClose} currentPrice={currentPrice} />
+    ? <OrderBookCanvas data={data} prevClose={prevClose} currentPrice={currentPrice} onPriceClick={onPriceClick} />
+    : <OrderBookDom data={data} prevClose={prevClose} currentPrice={currentPrice} onPriceClick={onPriceClick} />
 }

@@ -23,6 +23,8 @@ export interface OrderFormProps {
   name: string
   /** 현재가 — 지정가 기본값 및 시장가 주문금액 추정에 사용 */
   currentPrice?: number
+  /** 외부(QuoteBoard 현재가·OrderBook 호가) 클릭으로 가격을 주입 — nonce가 바뀔 때마다 반영 */
+  priceSignal?: { price: number; nonce: number } | null
   /** 주문 완료 후 콜백 (주문내역 새로고침 등) */
   onOrdered?: (res: OrderResponse) => void
 }
@@ -38,7 +40,7 @@ const PCT_BUTTONS = [
  * 주문폼 — 매수/매도 탭, 주문구분(현금/신용), 주문유형(지정가/시장가),
  * 가격·수량 입력(천단위 콤마), 수량 비율 버튼, 주문가능금액/수량, 주문확인·완료 모달.
  */
-export function OrderForm({ accountNo, symbol, name, currentPrice, onOrdered }: OrderFormProps) {
+export function OrderForm({ accountNo, symbol, name, currentPrice, priceSignal, onOrdered }: OrderFormProps) {
   const [side, setSide] = useState<Side>('buy')
   const [cashType, setCashType] = useState<CashType>('cash')
   const [orderType, setOrderType] = useState<OrderTypeCode>('LIMIT')
@@ -51,11 +53,25 @@ export function OrderForm({ accountNo, symbol, name, currentPrice, onOrdered }: 
 
   const isMarket = orderType === 'MARKET'
 
+  // 종목 변경 시 가격 입력을 비워 새 종목의 현재가로 다시 프리필되게 한다
+  useEffect(() => {
+    setPrice('')
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [symbol])
+
   // 지정가 진입 시 현재가로 가격 프리필
   useEffect(() => {
     if (!isMarket && price === '' && currentPrice) setPrice(currentPrice)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentPrice, orderType])
+
+  // QuoteBoard 현재가·OrderBook 호가 클릭 → 지정가로 전환 후 클릭한 값 반영
+  useEffect(() => {
+    if (!priceSignal) return
+    setOrderType('LIMIT')
+    setPrice(priceSignal.price)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [priceSignal?.nonce])
 
   // 주문가능금액(매수) / 주문가능수량(매도) 조회
   const { data: amountData } = useOrderableAmount(accountNo, { enabled: side === 'buy' })

@@ -43,7 +43,7 @@ export function Header({ onMenuToggle }: HeaderProps) {
   useEffect(() => {
     broadcastApi.getInterval()
       .then(r => setBroadcastMs(r.data.ms))
-      .catch(() => setBroadcastMs(1000))
+      .catch(() => setBroadcastMs(2000))
   }, [])
 
   const handleSelect = (_: React.MouseEvent, v: number | null) => {
@@ -68,7 +68,7 @@ export function Header({ onMenuToggle }: HeaderProps) {
           color: 'text.primary',
           borderBottom: '1px solid',
           borderColor: 'divider',
-          zIndex: (theme) => theme.zIndex.drawer + 1,
+          // zIndex: (theme) => theme.zIndex.drawer + 1,
           borderRadius: { md: '10px 0 0 0' },
         }}
       >
@@ -146,17 +146,17 @@ export function Header({ onMenuToggle }: HeaderProps) {
         open={modalOpen}
         onClose={() => setModalOpen(false)}
         title="시세 갱신 속도"
-        maxWidth="230px"
+        maxWidth="260px"
       >
         <ToggleButtonGroup
           exclusive
           orientation="vertical"
           value={broadcastMs}
           onChange={handleSelect}
-          sx={{ width: '100%' }}
+          sx={{ width: '100%', display: 'flex !important', flexDirection: 'row', gap: 1.5, flexWrap: 'wrap', justifyContent: 'center' }}
         >
           {SPEED_OPTIONS.map(opt => (
-            <ToggleButton key={opt.value} value={opt.value} sx={{ justifyContent: 'flex-start', py: 0.5 }}>
+            <ToggleButton key={opt.value} value={opt.value} sx={{ border: '1px solid #eee !important', borderRadius: '20px !important', px: 1.5, py: 0.5, mt: '0 !important' }}>
               {opt.label}
             </ToggleButton>
           ))}

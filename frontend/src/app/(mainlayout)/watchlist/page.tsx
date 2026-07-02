@@ -107,6 +107,12 @@ export default function WatchlistPage() {
     })
   }, [quotes])
 
+  // 사이드 패널 상단 현재가 실시간 반영 — quotes(WS 병합본)에서 같은 심볼을 매 렌더 조회
+  const displayStock = useMemo(() => {
+    if (!selectedStock) return null
+    return quotes.find(q => q.symbol === selectedStock.symbol) ?? selectedStock
+  }, [quotes, selectedStock])
+
   // ── 변경 핸들러 ──────────────────────────────────────────────────────────────
   const createGroup = useCreateWatchlistGroup()
   const renameGroup = useRenameWatchlistGroup()
@@ -216,33 +222,33 @@ export default function WatchlistPage() {
         className={`flex p-4 pt-0 sm:p-0 shrink-0 overflow-hidden transition-[width,opacity] duration-300 ease-in-out border-gray-200 sm:bg-white ${panelOpen ? 'sm:border-l sm:w-[320px] 2xl:w-[520px] sm:opacity-100' : 'sm:w-0 sm:opacity-0'}`}
       >
         <div className="shrink-0 w-full flex flex-col gap-3 rounded-xl bg-white border border-gray-200 sm:rounded-none sm:border-none">
-          {selectedStock ? (
+          {displayStock ? (
             <>
               <div className="w-full sm:w-[320px] 2xl:w-[520px] flex flex-col gap-3.5 p-4">
                 <div>
                   {/* 선택 종목 헤더 */}
                   <div className="flex items-baseline gap-2">
-                    <span className="text-base font-bold text-foreground truncate">{selectedStock.name}</span>
-                    <span className="text-xs text-gray-500">{selectedStock.symbol}</span>
+                    <span className="text-base font-bold text-foreground truncate">{displayStock.name}</span>
+                    <span className="text-xs text-gray-500">{displayStock.symbol}</span>
                   </div>
                   <div className="flex items-baseline gap-2">
-                    <span className="text-xl font-bold tabular-nums" style={{ color: signColor(selectedStock.prevDiff) }}>
-                      {fmt(selectedStock.price)}
+                    <span className="text-xl font-bold tabular-nums" style={{ color: signColor(displayStock.prevDiff) }}>
+                      {fmt(displayStock.price)}
                     </span>
-                    <span className="text-sm font-medium tabular-nums" style={{ color: signColor(selectedStock.prevDiff) }}>
-                      {selectedStock.prevDiff > 0 ? '+' : ''}{fmt(selectedStock.prevDiff)}
-                      {' '}({selectedStock.change > 0 ? '+' : ''}{Number(selectedStock.change).toFixed(2)}%)
+                    <span className="text-sm font-medium tabular-nums" style={{ color: signColor(displayStock.prevDiff) }}>
+                      {displayStock.prevDiff > 0 ? '+' : ''}{fmt(displayStock.prevDiff)}
+                      {' '}({displayStock.change > 0 ? '+' : ''}{Number(displayStock.change).toFixed(2)}%)
                     </span>
                   </div>
                 </div>
 
                 {/* 일봉 차트 — symbol만 넘기면 DailyChart 내부에서 조회 */}
                 <div className="rounded-lg border border-gray-200 overflow-hidden pl-2 pt-2">
-                  <DailyChart symbol={selectedStock.symbol} height={300} type="candlestick" />
+                  <DailyChart symbol={displayStock.symbol} height={300} type="candlestick" />
                 </div>
 
                 {/* 종목 상세 — symbol만 넘기면 내부에서 조회 */}
-                <StockDetailCard symbol={selectedStock.symbol} />
+                <StockDetailCard symbol={displayStock.symbol} />
               </div>
             </>
           ) : (

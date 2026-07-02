@@ -26,6 +26,8 @@ export interface OrderHistoryProps {
   height?: number | string
   /** 당일 모드 — 조회옵션·요약을 감추고 당일 데이터만 조회 (기본 false) */
   todayOnly?: boolean
+  /** 행(종목) 클릭 콜백 — 클릭한 종목코드를 전달 (주문화면 종목 전환 등) */
+  onSymbolSelect?: (symbol: string) => void
 }
 
 const STATUS_COLOR: Record<OrderStatusCode, string> = {
@@ -43,6 +45,7 @@ const numFmt = (p: { value: number }) => won(p.value ?? 0)
 
 const baseColumns: ColDef<OrderHistoryItem>[] = [
   { field: 'orderDate', headerName: '주문일자', width: 120 },
+  
   { field: 'name', headerName: '종목명', flex: 1, minWidth: 110,
     cellStyle: p => ({ color: p.data?.side === 'buy' ? BUY_COLOR : SELL_COLOR, fontWeight: 600 }), filter: true },
   { field: 'sideName', headerName: '주문구분', width: 100, headerClass: 'header-center',
@@ -85,7 +88,7 @@ const emptySummary: Summary = {
  * 주문내역 — 조회구분(계좌·기간·주문구분·체결구분) + 요약 + 주문내역 그리드.
  * 기간 필터는 백엔드에서 주문일자(startDate/endDate) 기준으로 적용한다.
  */
-export function OrderHistory({ accountNo, height = 400, todayOnly = false }: OrderHistoryProps) {
+export function OrderHistory({ accountNo, height = 400, todayOnly = false, onSymbolSelect }: OrderHistoryProps) {
   const [startDate, setStartDate] = useState<Date | null>(monthAgo())
   const [endDate, setEndDate] = useState<Date | null>(new Date())
   const [side, setSide] = useState<SideFilter>('ALL')
@@ -168,11 +171,11 @@ export function OrderHistory({ accountNo, height = 400, todayOnly = false }: Ord
         if (!it || !isCancelable(it, today)) return null
         return (
           <div className="flex items-center justify-center gap-1 h-full">
-            <button type="button" onClick={e => { e.currentTarget.blur(); openAmend(it) }}
+            <button type="button" onClick={e => { e.stopPropagation(); e.currentTarget.blur(); openAmend(it) }}
               className="px-2 py-0.5 text-xs rounded border border-gray-300 text-gray-700 hover:bg-gray-50">
               정정
             </button>
-            <button type="button" onClick={e => { e.currentTarget.blur(); openCancel(it) }}
+            <button type="button" onClick={e => { e.stopPropagation(); e.currentTarget.blur(); openCancel(it) }}
               className="px-2 py-0.5 text-xs rounded border border-gray-300 text-red-600 hover:bg-red-50">
               취소
             </button>
@@ -216,8 +219,15 @@ export function OrderHistory({ accountNo, height = 400, todayOnly = false }: Ord
       )}
 
       {/* 주문내역 그리드 */}
-      <Section className='flex-1 min-h-[360px] shrink-0'>
-        <DataGrid<OrderHistoryItem> rows={items} columnDefs={columnDefs} loading={loading} height={height} />
+      <Section className='flex-1 min-h-[260px] shrink-0'>
+        <DataGrid<OrderHistoryItem>
+          rows={items}
+          columnDefs={columnDefs}
+          loading={loading}
+          height={height}
+          onRowClick={onSymbolSelect ? row => onSymbolSelect(row.symbol) : undefined}
+          showSelectionColumn={false}
+        />
       </Section>
 
       {/* 취소 확인 모달 */}
