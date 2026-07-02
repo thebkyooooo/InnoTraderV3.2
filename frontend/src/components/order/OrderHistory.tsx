@@ -42,7 +42,7 @@ const center = { textAlign: 'center' as const }
 const numFmt = (p: { value: number }) => won(p.value ?? 0)
 
 const baseColumns: ColDef<OrderHistoryItem>[] = [
-  { field: 'orderDate', headerName: '주문일자', width: 110 },
+  { field: 'orderDate', headerName: '주문일자', width: 120 },
   { field: 'name', headerName: '종목명', flex: 1, minWidth: 110,
     cellStyle: p => ({ color: p.data?.side === 'buy' ? BUY_COLOR : SELL_COLOR, fontWeight: 600 }), filter: true },
   { field: 'symbol', headerName: '종목코드', width: 100, cellStyle: center, headerClass: 'header-center' },
@@ -205,7 +205,8 @@ export function OrderHistory({ accountNo, height = 400, todayOnly = false }: Ord
 
       {/* 요약 */}
       {!todayOnly && (
-      <div className="grid grid-cols-1 @[500px]:grid-cols-3 @[800px]:grid-cols-5 gap-1 @[500px]:gap-2 shrink-0">
+      <div className="grid grid-cols-1 shrink-0 gap-0 p-4 border border-gray-200 rounded-lg bg-white
+        @[500px]:grid-cols-3 @[800px]:grid-cols-5 @[500px]:gap-2 @[500px]:p-0 @[500px]:border-0 @[500px]:bg-transparent">
         <SummaryItem label="주문수량" value={`${won(summary.totalQuantity)} 주`} />
         <SummaryItem label="체결수량" value={`${won(summary.totalFilledQuantity)} 주`} />
         <SummaryItem label="미체결수량" value={`${won(summary.totalUnfilledQuantity)} 주`} />
@@ -290,7 +291,8 @@ function Row({ label, value, strong }: { label: string; value: string; strong?: 
 
 function SummaryItem({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex @[500px]:flex-col justify-between gap-0.5 p-3 py-2 @[500px]:py-3 border border-gray-200 rounded-lg bg-white">
+    <div className="flex  justify-between gap-0.5 py-0.5 
+      @[500px]:flex-col @[500px]:py-3 @[500px]:border border-gray-200 rounded-lg bg-white @[500px]:p-3">
       <span className="text-xs text-gray-500">{label}</span>
       <span className="text-sm text-right font-semibold tabular-nums">{value}</span>
     </div>

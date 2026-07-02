@@ -148,7 +148,7 @@ export default function DashboardPage() {
           <DragScroll className='flex w-full rounded-lg border-l border-r border-gray-200 min-h-[129px]'>
             <div className='flex gap-2 w-full'>
               {indexes.map(idx => (
-                <Card key={idx.code} title={idx.name} subtitle={fmt2(idx.price)} sx={{width: '100%', minWidth: '200px', pr: 7}} titleSx={{fontSize: '14px'}} subtitleSx={{fontSize: '24px'}}>
+                <Card key={idx.code} title={idx.name} subtitle={fmt2(idx.price)} sx={{width: '100%', minWidth: '200px', pr: 7}} titleSx={{fontSize: '14px'}} subtitleSx={{fontSize: '24px', fontWeight: 500}}>
                   <ul className='flex flex-col text-sm'>
                     <li className={`flex-1 flex gap-1 ${pnlClass(idx.prevDiff)}`}>
                       <span>{signed2(idx.prevDiff)}</span>

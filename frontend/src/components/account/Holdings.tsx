@@ -44,21 +44,13 @@ export function Holdings({ accountNo, height = 400, showSummary = true }: Holdin
     <div className="@container flex flex-col gap-3 h-full">
       {/* 요약 */}
       {showSummary && (
-        <div>
-          <div className="hidden @[500px]:grid grid-cols-1 @[500px]:grid-cols-3 @[800px]:grid-cols-5 gap-1 @[500px]:gap-2 shrink-0">
-            <SummaryItem label="총자산"     value={fmt(s?.totalAssets ?? 0)} />
-            <SummaryItem label="총평가금액" value={fmt(s?.totalEvalAmount ?? 0)} />
-            <SummaryItem label="원금"       value={fmt(s?.principal ?? 0)} />
-            <SummaryItem label="총수익금"   value={`${sign(s?.totalProfit ?? 0)}${fmt(s?.totalProfit ?? 0)}`} color={signColor(s?.totalProfit ?? 0)} />
-            <SummaryItem label="총수익률"   value={`${sign(s?.totalProfitRate ?? 0)}${Number(s?.totalProfitRate ?? 0).toFixed(2)}%`} color={signColor(s?.totalProfitRate ?? 0)} />
-          </div>
-          <div className="flex gap-1 flex-col border border-gray-200 rounded-lg bg-white shrink-0 p-4 @[500px]:hidden">
-            <SummaryItem label="총자산"     value={fmt(s?.totalAssets ?? 0)} />
-            <SummaryItem label="총평가금액" value={fmt(s?.totalEvalAmount ?? 0)} />
-            <SummaryItem label="원금"       value={fmt(s?.principal ?? 0)} />
-            <SummaryItem label="총수익금"   value={`${sign(s?.totalProfit ?? 0)}${fmt(s?.totalProfit ?? 0)}`} color={signColor(s?.totalProfit ?? 0)} />
-            <SummaryItem label="총수익률"   value={`${sign(s?.totalProfitRate ?? 0)}${Number(s?.totalProfitRate ?? 0).toFixed(2)}%`} color={signColor(s?.totalProfitRate ?? 0)} />
-          </div>
+        <div className="grid grid-cols-1 shrink-0 gap-0 p-4 border border-gray-200 rounded-lg bg-white
+          @[500px]:grid-cols-3 @[800px]:grid-cols-5 @[500px]:gap-2 @[500px]:p-0 @[500px]:border-0 @[500px]:bg-transparent">
+          <SummaryItem label="총자산"     value={fmt(s?.totalAssets ?? 0)} />
+          <SummaryItem label="총평가금액" value={fmt(s?.totalEvalAmount ?? 0)} />
+          <SummaryItem label="원금"       value={fmt(s?.principal ?? 0)} />
+          <SummaryItem label="총수익금"   value={`${sign(s?.totalProfit ?? 0)}${fmt(s?.totalProfit ?? 0)}`} color={signColor(s?.totalProfit ?? 0)} />
+          <SummaryItem label="총수익률"   value={`${sign(s?.totalProfitRate ?? 0)}${Number(s?.totalProfitRate ?? 0).toFixed(2)}%`} color={signColor(s?.totalProfitRate ?? 0)} />
         </div>
       )}
 
@@ -73,12 +65,8 @@ export function Holdings({ accountNo, height = 400, showSummary = true }: Holdin
 function SummaryItem({ label, value, color }: { label: string; value: string; color?: string }) {
   return (
     <div>
-      <div className="hidden @[500px]:flex @[500px]:flex-col justify-between gap-0.5 p-3 py-2 @[500px]:py-3 border border-gray-200 rounded-lg bg-white">
-        <span className="text-xs text-gray-500">{label}</span>
-        <span className="text-sm text-right font-semibold tabular-nums" style={{ color }}>{value}</span>
-      </div>
-
-      <div className="flex justify-between gap-0.5 @[500px]:hidden">
+      <div className="flex  justify-between gap-0.5 py-0.5 
+        @[500px]:flex-col @[500px]:py-3 @[500px]:border border-gray-200 rounded-lg bg-white @[500px]:p-3">
         <span className="text-xs text-gray-500">{label}</span>
         <span className="text-sm text-right font-semibold tabular-nums" style={{ color }}>{value}</span>
       </div>
