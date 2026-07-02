@@ -45,7 +45,6 @@ const baseColumns: ColDef<OrderHistoryItem>[] = [
   { field: 'orderDate', headerName: '주문일자', width: 120 },
   { field: 'name', headerName: '종목명', flex: 1, minWidth: 110,
     cellStyle: p => ({ color: p.data?.side === 'buy' ? BUY_COLOR : SELL_COLOR, fontWeight: 600 }), filter: true },
-  { field: 'symbol', headerName: '종목코드', width: 100, cellStyle: center, headerClass: 'header-center' },
   { field: 'sideName', headerName: '주문구분', width: 100, headerClass: 'header-center',
     cellStyle: p => ({ ...center, color: p.data?.side === 'buy' ? BUY_COLOR : SELL_COLOR, fontWeight: 600 }), filter: true },
   { field: 'quantity', headerName: '주문수량', width: 100, cellStyle: right, headerClass: 'header-right', valueFormatter: numFmt },
@@ -58,10 +57,11 @@ const baseColumns: ColDef<OrderHistoryItem>[] = [
     valueGetter: p => (p.data ? p.data.filledQuantity * p.data.filledPrice : 0), valueFormatter: numFmt },
   { field: 'orderTypeName', headerName: '주문유형', width: 100, cellStyle: center, filter: true },
   { field: 'statusName', headerName: '주문상태', width: 100, cellStyle: p => ({
-      ...center, color: STATUS_COLOR[(p.data?.status ?? 'RECEIVED')], fontWeight: 600 }), filter: true },
+      ...center, color: STATUS_COLOR[(p.data?.status ?? 'RECEIVED')], fontWeight: 600 }), filter: true },  
   { field: 'orderNo', headerName: '주문번호', width: 120, headerClass: 'header-center', cellStyle: center },
   { headerName: '주문시간', width: 100, cellStyle: center, headerClass: 'header-center',
     valueGetter: p => p.data?.orderTime ?? '' },
+  { field: 'symbol', headerName: '종목코드', width: 100, cellStyle: center, headerClass: 'header-center' },
 ]
 
 const fmtDate = (d: Date) =>
@@ -157,7 +157,7 @@ export function OrderHistory({ accountNo, height = 400, todayOnly = false }: Ord
   const columnDefs = useMemo<ColDef<OrderHistoryItem>[]>(() => [
     ...baseColumns,
     {
-      headerName: '주문관리',
+      headerName: '정정/취소',
       width: 100,
       // pinned: 'right',
       sortable: false,
