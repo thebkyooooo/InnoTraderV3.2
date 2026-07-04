@@ -180,7 +180,7 @@ export default function WatchlistPage() {
         {/* <h1 className="text-lg font-bold text-foreground">관심종목</h1> */}
 
         <div className="flex flex-wrap items-center gap-2">
-          <div className="min-w-[200px]">
+          <div className="min-w-[200px] pt-2">
             <Select
               fullWidth size="small" label="관심그룹 선택"
               value={selectedCode}

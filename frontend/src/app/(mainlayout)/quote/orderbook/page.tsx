@@ -17,7 +17,7 @@ export default function QuoteOrderbookPage() {
 
       <div className="flex-1 flex flex-col @[640px]:flex-row @[640px]:items-start gap-4 w-full">
         {/* 호가 */}
-        <div className="shrink-0 flex-1 flex flex-col border border-gray-200 rounded-lg bg-white p-4">
+        <div className="shrink-0 @[640px]:flex-1 flex flex-col border border-gray-200 rounded-lg bg-white p-4">
           <Tabs
             value={hogaTabValue}
             onChange={v => setHogaTabValue(String(v))}

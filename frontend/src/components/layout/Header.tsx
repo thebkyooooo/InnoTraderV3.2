@@ -1,5 +1,6 @@
 'use client'
 import React, { useEffect, useState } from 'react'
+import { usePathname } from 'next/navigation'
 import {
   AppBar,
   Toolbar,
@@ -17,6 +18,7 @@ import { useAuthStore } from '@/store/auth-store'
 import { useRealtimeStore } from '@/store/realtime-store'
 import { useLogout } from '@/features/auth/api/use-auth'
 import { broadcastApi } from '@/features/admin/api/broadcast-api'
+import { getPageTitle } from '@/config/menu.config'
 
 const SPEED_OPTIONS = [
   { value: 100,  label: '0.1초' },
@@ -32,6 +34,8 @@ interface HeaderProps {
 }
 
 export function Header({ onMenuToggle }: HeaderProps) {
+  const pathname = usePathname()
+  const pageTitle = getPageTitle(pathname)
   const user = useAuthStore((s) => s.user)
   const realtimeEnabled = useRealtimeStore((s) => s.enabled)
   const toggleRealtime = useRealtimeStore((s) => s.toggle)
@@ -72,7 +76,7 @@ export function Header({ onMenuToggle }: HeaderProps) {
           borderRadius: { md: '10px 0 0 0' },
         }}
       >
-        <Toolbar sx={{ gap: 1, minHeight: { xs: '46px !important', sm: '54px !important' } }}>
+        <Toolbar sx={{ gap: 1, minHeight: '54px !important' }}>
           <IconButton
             edge="start"
             aria-label="메뉴 열기"
@@ -83,13 +87,25 @@ export function Header({ onMenuToggle }: HeaderProps) {
             <MenuIcon />
           </IconButton>
 
-          <Typography
+          {/* <Typography
             variant="h6"
             color="primary"
-            sx={{ letterSpacing: '-0.5px', fontWeight: 700, display: { xs: 'block', md: 'none' } }}
+            sx={{ letterSpacing: '-0.5px', fontWeight: 700, display: { xs: 'none', sm: 'block' } }}
           >
             InnoTrader
-          </Typography>
+          </Typography> */}
+
+          {pageTitle && (
+            <>
+              <Typography
+                variant="subtitle1"
+                color="text.secondary"
+                sx={{ fontSize: '18px', fontWeight: 600 }}
+              >
+                {pageTitle}
+              </Typography>
+            </>
+          )}
 
           <Box sx={{ flex: 1 }} />
 

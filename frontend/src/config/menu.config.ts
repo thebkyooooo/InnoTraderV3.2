@@ -74,3 +74,23 @@ export const MENU_ITEMS: MenuItem[] = [
     requiredAuth: true,
   },
 ]
+
+/** MENU_ITEMS를 평탄화(부모+자식 모두 포함) — 경로 매칭용. */
+function flattenMenuItems(items: MenuItem[]): MenuItem[] {
+  return items.flatMap((item) => [item, ...(item.children ? flattenMenuItems(item.children) : [])])
+}
+
+const FLAT_MENU_ITEMS = flattenMenuItems(MENU_ITEMS)
+
+/**
+ * 현재 경로에 해당하는 화면 타이틀 조회 (헤더 표시용).
+ * 정확히 일치하는 항목을 우선하고, 없으면 하위 경로가 시작되는 부모 항목으로 대체한다.
+ */
+export function getPageTitle(pathname: string): string | undefined {
+  const exact = FLAT_MENU_ITEMS.find((item) => item.path === pathname)
+  if (exact) return exact.label
+  const prefixMatch = FLAT_MENU_ITEMS
+    .filter((item) => pathname.startsWith(item.path))
+    .sort((a, b) => b.path.length - a.path.length)[0]
+  return prefixMatch?.label
+}
