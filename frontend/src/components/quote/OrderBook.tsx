@@ -24,6 +24,43 @@ const pctOf = (price: number, prevClose: number) => (prevClose > 0 ? ((price - p
 // 등락 색상: 상승 빨강 / 하락 파랑 / 보합 회색
 const changeColor = (p: number) => (p > 0 ? '#ef5350' : p < 0 ? '#4285f4' : '#6b7280')
 
+// ─── Canvas 고정폭 숫자(tabular-nums) 흉내 ─────────────────────────────────────
+// Canvas 2D는 font-variant-numeric(tabular-nums)를 지원하지 않아 숫자마다 폭이 달라져
+// DOM(OrderBookDom)과 폭이 어긋나 보인다. 숫자(0-9) 글자만 "0"의 폭으로 고정 칸에
+// 가운데 정렬해 그려서 DOM의 tabular-nums와 동일한 느낌을 흉내낸다. 콤마/마침표/%/+/- 등
+// 숫자가 아닌 문자는 원래 폭 그대로 둔다(CSS tabular-nums도 숫자에만 적용됨).
+function tabularWidth(ctx: CanvasRenderingContext2D, text: string): number {
+  const digitWidth = ctx.measureText('0').width
+  let total = 0
+  for (const ch of text) total += ch >= '0' && ch <= '9' ? digitWidth : ctx.measureText(ch).width
+  return total
+}
+
+function fillTabularText(
+  ctx: CanvasRenderingContext2D,
+  text: string,
+  x: number,
+  y: number,
+  align: 'left' | 'right' | 'center' = 'left',
+): number {
+  const digitWidth = ctx.measureText('0').width
+  const chars = [...text]
+  const widths = chars.map((ch) => (ch >= '0' && ch <= '9' ? digitWidth : ctx.measureText(ch).width))
+  const total = widths.reduce((a, b) => a + b, 0)
+  const startX = align === 'right' ? x - total : align === 'center' ? x - total / 2 : x
+
+  const prevAlign = ctx.textAlign
+  ctx.textAlign = 'left'
+  let cx = startX
+  chars.forEach((ch, i) => {
+    const w = widths[i]
+    ctx.fillText(ch, ch >= '0' && ch <= '9' ? cx + (digitWidth - w) / 2 : cx, y)
+    cx += w
+  })
+  ctx.textAlign = prevAlign
+  return total
+}
+
 export type OrderBookVariant = 'dom' | 'canvas'
 
 export interface OrderBookProps {
@@ -148,13 +185,17 @@ function OrderBookCanvas({ data, prevClose, currentPrice, onPriceClick }: { data
       const headerH = HEADER_H, footerH = FOOTER_H, rowH = ROW_H
       const totalH = headerH + rows.length * rowH + footerH
 
+      // DOM(OrderBookDom)과 동일한 폰트를 써야 폭·모양이 일치한다. Canvas는 tabular-nums를
+      // 지원하지 않으므로 숫자는 fillTabularText/tabularWidth로 고정폭을 흉내낸다.
+      const fontFamily = getComputedStyle(wrap).fontFamily || 'system-ui, sans-serif'
+
       // 호가 컬럼 폭을 "호가 + 등락률" 텍스트 폭에 맞춰 가변
       const ctxM = canvas.getContext('2d')
       if (!ctxM) return
       let maxMid = 0
       for (const r of rows) {
-        ctxM.font = '600 12px sans-serif'; const pw = ctxM.measureText(fmt(r.price)).width
-        ctxM.font = '12px sans-serif';     const cw = ctxM.measureText(fmtPct(pctOf(r.price, prevClose))).width
+        ctxM.font = `600 12px ${fontFamily}`; const pw = tabularWidth(ctxM, fmt(r.price))
+        ctxM.font = `12px ${fontFamily}`;     const cw = tabularWidth(ctxM, fmtPct(pctOf(r.price, prevClose)))
         maxMid = Math.max(maxMid, pw + 6 + cw)
       }
       const midW = Math.min(w * 0.6, maxMid + 16)
@@ -180,7 +221,7 @@ function OrderBookCanvas({ data, prevClose, currentPrice, onPriceClick }: { data
 
       // 헤더
       ctx.fillStyle = '#f9fafb'; ctx.fillRect(0, 0, w, headerH)
-      ctx.fillStyle = '#6b7280'; ctx.font = '500 12px sans-serif'
+      ctx.fillStyle = '#6b7280'; ctx.font = `500 12px ${fontFamily}`
       ctx.textAlign = 'right';  ctx.fillText('매도잔량', x1 - 8, headerH / 2)
       ctx.textAlign = 'center'; ctx.fillText('호가', priceCenter, headerH / 2)
       ctx.textAlign = 'left';   ctx.fillText('매수잔량', x2 + 8, headerH / 2)
@@ -198,26 +239,25 @@ function OrderBookCanvas({ data, prevClose, currentPrice, onPriceClick }: { data
         if (r.side === 'ask') {
           const bw = (r.askVol / maxVol) * x1
           ctx.fillStyle = ASK_BAR; ctx.fillRect(x1 - bw, y, bw, rowH)
-          ctx.fillStyle = ASK; ctx.font = '12px sans-serif'; ctx.textAlign = 'right'
-          ctx.fillText(fmt(r.askVol), x1 - 8, y + rowH / 2)
+          ctx.fillStyle = ASK; ctx.font = `12px ${fontFamily}`
+          fillTabularText(ctx, fmt(r.askVol), x1 - 8, y + rowH / 2, 'right')
         } else {
           const bw = (r.bidVol / maxVol) * (w - x2)
           ctx.fillStyle = BID_BAR; ctx.fillRect(x2, y, bw, rowH)
-          ctx.fillStyle = BID; ctx.font = '12px sans-serif'; ctx.textAlign = 'left'
-          ctx.fillText(fmt(r.bidVol), x2 + 8, y + rowH / 2)
+          ctx.fillStyle = BID; ctx.font = `12px ${fontFamily}`
+          fillTabularText(ctx, fmt(r.bidVol), x2 + 8, y + rowH / 2, 'left')
         }
 
         // 호가 + 등락률 (그룹을 priceCenter 중심으로 배치)
         const priceText = fmt(r.price)
         const pctText = fmtPct(pctOf(r.price, prevClose))
-        ctx.font = '600 12px sans-serif'; const pw = ctx.measureText(priceText).width
-        ctx.font = '12px sans-serif';     const cw = ctx.measureText(pctText).width
+        ctx.font = `600 12px ${fontFamily}`; const pw = tabularWidth(ctx, priceText)
+        ctx.font = `12px ${fontFamily}`;     const cw = tabularWidth(ctx, pctText)
         const startX = priceCenter - (pw + 6 + cw) / 2
-        ctx.textAlign = 'left'
-        ctx.fillStyle = r.side === 'ask' ? ASK : BID; ctx.font = '600 12px sans-serif'
-        ctx.fillText(priceText, startX, y + rowH / 2)
-        ctx.fillStyle = changeColor(pctOf(r.price, prevClose)); ctx.font = '12px sans-serif'
-        ctx.fillText(pctText, startX + pw + 6, y + rowH / 2)
+        ctx.fillStyle = r.side === 'ask' ? ASK : BID; ctx.font = `600 12px ${fontFamily}`
+        fillTabularText(ctx, priceText, startX, y + rowH / 2, 'left')
+        ctx.fillStyle = changeColor(pctOf(r.price, prevClose)); ctx.font = `12px ${fontFamily}`
+        fillTabularText(ctx, pctText, startX + pw + 6, y + rowH / 2, 'left')
 
         // 행 구분선 (값이 있는 영역만)
         ctx.strokeStyle = '#f3f4f6'; ctx.lineWidth = 1
@@ -236,10 +276,10 @@ function OrderBookCanvas({ data, prevClose, currentPrice, onPriceClick }: { data
       // 푸터: 매도잔량합계 | 잔량합계 | 매수잔량합계
       const fy = headerH + rows.length * rowH
       ctx.fillStyle = '#f9fafb'; ctx.fillRect(0, fy, w, footerH)
-      ctx.font = '500 12px sans-serif'
-      ctx.fillStyle = ASK; ctx.textAlign = 'right'; ctx.fillText(fmt(askTotal), x1 - 8, fy + footerH / 2)
+      ctx.font = `500 12px ${fontFamily}`
+      ctx.fillStyle = ASK; fillTabularText(ctx, fmt(askTotal), x1 - 8, fy + footerH / 2, 'right')
       ctx.fillStyle = '#6b7280'; ctx.textAlign = 'center'; ctx.fillText('잔량', priceCenter, fy + footerH / 2)
-      ctx.fillStyle = BID; ctx.textAlign = 'left'; ctx.fillText(fmt(bidTotal), x2 + 8, fy + footerH / 2)
+      ctx.fillStyle = BID; fillTabularText(ctx, fmt(bidTotal), x2 + 8, fy + footerH / 2, 'left')
 
       // 헤더 하단 / 풋터 상단 가로선 (외곽 테두리는 래퍼 div가 담당)
       ctx.strokeStyle = '#e5e7eb'; ctx.lineWidth = 1
