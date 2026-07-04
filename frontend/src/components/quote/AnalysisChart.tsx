@@ -732,7 +732,7 @@ export function AnalysisChart({ symbol }: AnalysisChartProps) {
       {/* 차트 영역 */}
       <div className="relative flex-1 min-h-0 border-t border-gray-200">
         {disp && (
-          <div className="absolute top-1.5 left-2 z-10 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs pointer-events-none select-none w-[calc(100%-100px)]">
+          <div className="absolute top-1.5 left-0.5 z-10 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs pointer-events-none select-none w-[calc(100%-100px)]">
             {([['시', liveDisp?.open], ['고', liveDisp?.high], ['저', liveDisp?.low], ['종', liveDisp?.close]] as [string, number][]).map(([l, v]) => (
               <span key={l} className="flex items-center gap-1">
                 <span className="text-gray-400">{l}</span>

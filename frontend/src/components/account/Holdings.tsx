@@ -1,10 +1,12 @@
 'use client'
-import React from 'react'
+import React, { useMemo } from 'react'
 import type { ColDef } from 'ag-grid-community'
 import { DataGrid } from '@/components/ui/DataGrid'
 import { Section } from '@/components/ui/Section'
 import { type HoldingItem } from '@/features/holding/api/holding-api'
 import { useHoldings } from '@/features/holding/api/use-holding'
+import { useAccountActivitySync } from '@/features/order/api/use-order'
+import { useStockPricesWS } from '@/features/quote/api/use-quote-ws'
 
 const UP = '#ef5350', DOWN = '#4285f4'
 const fmt = (n: number) => (n ?? 0).toLocaleString('ko-KR')
@@ -15,12 +17,12 @@ const center = { textAlign: 'center' as const }
 
 const columns: ColDef<HoldingItem>[] = [
   { field: 'name',         headerName: '종목명',   flex: 1, minWidth: 120 },
-  { field: 'quantity',     headerName: '보유수량', width: 100, cellStyle: right, valueFormatter: p => fmt(p.value), headerClass: 'header-right' },
-  { field: 'avgPrice',     headerName: '평균단가', width: 110, cellStyle: right, valueFormatter: p => fmt(p.value), headerClass: 'header-right' },
-  { field: 'currentPrice', headerName: '현재가',   width: 110, cellStyle: right, valueFormatter: p => fmt(p.value), headerClass: 'header-right' },
   { field: 'evalAmount',   headerName: '평가금액', width: 130, cellStyle: right, valueFormatter: p => fmt(p.value), headerClass: 'header-right' },
   { field: 'profit',       headerName: '수익금',   width: 120, cellStyle: p => ({ ...right, color: signColor(p.value), fontWeight: 600 }), valueFormatter: p => `${sign(p.value)}${fmt(p.value)}`, headerClass: 'header-right' },
   { field: 'profitRate',   headerName: '수익률',   width: 90,  cellStyle: p => ({ ...right, color: signColor(p.value), fontWeight: 600 }), valueFormatter: p => `${sign(p.value)}${Number(p.value).toFixed(2)}%`, headerClass: 'header-right' },
+  { field: 'currentPrice', headerName: '현재가',   width: 110, cellStyle: right, valueFormatter: p => fmt(p.value), headerClass: 'header-right' },
+  { field: 'avgPrice',     headerName: '평균단가', width: 110, cellStyle: right, valueFormatter: p => fmt(p.value), headerClass: 'header-right' },
+  { field: 'quantity',     headerName: '보유수량', width: 100, cellStyle: right, valueFormatter: p => fmt(p.value), headerClass: 'header-right' },
   { field: 'symbol',       headerName: '종목코드', width: 100, cellStyle: center, headerClass: 'header-center' },
 ]
 
@@ -38,9 +40,34 @@ export interface HoldingsProps {
  * 주식잔고 조회 API 연동.
  */
 export function Holdings({ accountNo, height = 400, showSummary = true, onSymbolSelect }: HoldingsProps) {
+  // 서버에서 주문 접수/정정/취소/체결(지정가 자동체결 포함)이 발생하면 보유종목 실시간 재조회
+  useAccountActivitySync(accountNo)
+
   const { data, isFetching: loading } = useHoldings(accountNo)
 
-  const s = data?.summary
+  // 실시간 현재가 병합 — 보유종목의 현재가/평가금액/손익/수익률을 실시간 시세로 재계산
+  const symbols = useMemo(() => (data?.items ?? []).map(h => h.symbol), [data])
+  const liveQuotes = useStockPricesWS(symbols)
+  const items = useMemo(() => (data?.items ?? []).map(h => {
+    const live = liveQuotes[h.symbol]
+    if (!live) return h
+    const evalAmount = h.quantity * live.price
+    const cost = h.quantity * h.avgPrice
+    const profit = evalAmount - cost
+    const profitRate = cost === 0 ? 0 : Math.round(profit * 10000 / cost) / 100
+    return { ...h, currentPrice: live.price, evalAmount, profit, profitRate }
+  }), [data, liveQuotes])
+
+  // 총평가금액/총수익금/총수익률도 실시간 병합된 종목 기준으로 재계산 (예수금은 시세와 무관하므로 스냅샷 유지)
+  const s = useMemo(() => {
+    if (!data?.summary) return undefined
+    const totalEvalAmount = items.reduce((sum, h) => sum + h.evalAmount, 0)
+    const principal = data.summary.principal
+    const totalProfit = totalEvalAmount - principal
+    const totalProfitRate = principal === 0 ? 0 : Math.round(totalProfit * 10000 / principal) / 100
+    const cash = data.summary.totalAssets - data.summary.totalEvalAmount
+    return { totalAssets: totalEvalAmount + cash, totalEvalAmount, principal, totalProfit, totalProfitRate }
+  }, [data, items])
 
   return (
     <div className="@container flex flex-col gap-3 h-full">
@@ -59,12 +86,13 @@ export function Holdings({ accountNo, height = 400, showSummary = true, onSymbol
       {/* 보유종목 그리드 */}
       <Section className='flex-1 min-h-[260px] shrink-0'>
         <DataGrid<HoldingItem>
-          rows={data?.items ?? []}
+          rows={items}
           columnDefs={columns}
           loading={loading}
           height={height}
           onRowClick={onSymbolSelect ? row => onSymbolSelect(row.symbol) : undefined}
           showSelectionColumn={false}
+          getRowId={h => h.symbol}
         />
       </Section>
     </div>
@@ -77,7 +105,7 @@ function SummaryItem({ label, value, color }: { label: string; value: string; co
       <div className="flex  justify-between gap-0.5 py-0.5 
         @[500px]:flex-col @[500px]:py-3 @[500px]:border border-gray-200 rounded-lg bg-white @[500px]:p-3">
         <span className="text-xs text-gray-500">{label}</span>
-        <span className="text-sm text-right font-semibold tabular-nums" style={{ color }}>{value}</span>
+        <span className="text-md text-right font-semibold tabular-nums" style={{ color }}>{value}</span>
       </div>
     </div>
   )

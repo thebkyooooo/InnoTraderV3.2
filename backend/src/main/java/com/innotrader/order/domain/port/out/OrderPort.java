@@ -22,6 +22,9 @@ public interface OrderPort {
     /** 계좌별 주문 존재 여부 (시드 멱등 판단용). */
     boolean existsByAccount(UUID userId, String accountNo);
 
+    /** 전체 계좌의 미체결 지정가 주문(RECEIVED/PARTIAL) — 체결 매칭 엔진 스캔용. */
+    List<Order> findActiveLimitOrders();
+
     /** 계좌별 주문 전체 삭제 (재시드용). */
     void deleteByAccount(UUID userId, String accountNo);
 

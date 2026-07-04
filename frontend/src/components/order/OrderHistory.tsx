@@ -18,7 +18,7 @@ import {
   type FillFilter,
   type OrderStatusCode,
 } from '@/features/order/api/order-api'
-import { useOrderHistory, useAmendOrder, useCancelOrder } from '@/features/order/api/use-order'
+import { useOrderHistory, useAmendOrder, useCancelOrder, useAccountActivitySync } from '@/features/order/api/use-order'
 import { won, parseDigits, BUY_COLOR, SELL_COLOR } from './_format'
 
 export interface OrderHistoryProps {
@@ -89,6 +89,9 @@ const emptySummary: Summary = {
  * 기간 필터는 백엔드에서 주문일자(startDate/endDate) 기준으로 적용한다.
  */
 export function OrderHistory({ accountNo, height = 400, todayOnly = false, onSymbolSelect }: OrderHistoryProps) {
+  // 서버에서 주문 접수/정정/취소/체결(지정가 자동체결 포함)이 발생하면 실시간으로 재조회
+  useAccountActivitySync(accountNo)
+
   const [startDate, setStartDate] = useState<Date | null>(monthAgo())
   const [endDate, setEndDate] = useState<Date | null>(new Date())
   const [side, setSide] = useState<SideFilter>('ALL')
@@ -304,7 +307,7 @@ function SummaryItem({ label, value }: { label: string; value: string }) {
     <div className="flex  justify-between gap-0.5 py-0.5 
       @[500px]:flex-col @[500px]:py-3 @[500px]:border border-gray-200 rounded-lg bg-white @[500px]:p-3">
       <span className="text-xs text-gray-500">{label}</span>
-      <span className="text-sm text-right font-semibold tabular-nums">{value}</span>
+      <span className="text-md text-right font-semibold tabular-nums">{value}</span>
     </div>
   )
 }

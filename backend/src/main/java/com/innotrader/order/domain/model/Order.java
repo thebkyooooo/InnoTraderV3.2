@@ -62,4 +62,13 @@ public record Order(
                 symbol, side, orderType, quantity, price,
                 OrderStatus.CANCELED, filledQuantity, filledPrice, orderedAt);
     }
+
+    /** 체결(전체/부분): 체결수량을 누적하고, 잔량이 남으면 부분체결·모두 소진되면 전체체결로 전환. */
+    public Order filled(long fillQuantity, long fillPrice) {
+        long newFilledQuantity = filledQuantity + fillQuantity;
+        OrderStatus newStatus = newFilledQuantity >= quantity ? OrderStatus.FILLED : OrderStatus.PARTIAL;
+        return new Order(id, userId, accountNo, orderNo, originalOrderNo,
+                symbol, side, orderType, quantity, price,
+                newStatus, newFilledQuantity, fillPrice, orderedAt);
+    }
 }

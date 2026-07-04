@@ -1,11 +1,11 @@
 'use client'
 import Link from 'next/link'
-import React, { useState } from 'react'
+import React, { useState, useMemo } from 'react'
 import { AccountSelect } from '@/components/account'
 import { Card, Button } from '@/components/ui/'
 import { SegmentedControl } from '@/components/ui/SegmentedControl'
 import { DragScroll } from '@/components/ui/DragScroll'
-import { ArrowForwardIosSharp, FormatIndentIncreaseOutlined } from '@mui/icons-material';
+import { ArrowForwardIosSharp, FormatIndentIncreaseOutlined, Cached } from '@mui/icons-material';
 import { useHoldings } from '@/features/holding/api/use-holding'
 import { useOrderHistory } from '@/features/order/api/use-order'
 import {
@@ -19,6 +19,7 @@ import {
   useOverheated,
   useTrending,
 } from '@/features/market/api/use-market'
+import { useStockPricesWS, useIndexWS, useExchangeWS } from '@/features/quote/api/use-quote-ws'
 import type { StockRanking, MarketType } from '@/features/market/api/market-api'
 
 // segment 값('all'|'kospi'|'kosdaq') → 백엔드 MarketType('ALL'|'KOSPI'|'KOSDAQ') 변환
@@ -75,7 +76,7 @@ function RankingSection({ title, value, onChange, rows }: RankingSectionProps) {
             return (
               <li key={`${s.symbol}-${i}`} className='flex flex-col @[220px]:flex-row justify-between text-sm font-semibold'>
                 <div>{s.name}</div>
-                <div className='flex flex-col items-end'>
+                <div className='flex flex-col items-end tabular-nums'>
                   <p>{s.price.toLocaleString()}</p>
                   <p className={`text-[12px] font-normal ${color} whitespace-nowrap`}>
                     <span className="mr-0.5">{sign}{Math.abs(s.prevDiff).toLocaleString()}</span>
@@ -97,19 +98,30 @@ export default function DashboardPage() {
 
   // ── MY 계좌 사이드 패널 데이터 ────────────────────────────────────────────────
   // Holdings/OrderHistory 컴포넌트와 같은 queryKey라 동시/중복 요청은 dedupe된다.
-  const { data: holdings = null } = useHoldings(accountNo)                          // 평가금액 + 보유주식
+  const { data: holdings = null, refetch: refetchHoldings } = useHoldings(accountNo)   // 평가금액 + 보유주식
   // 주문대기/체결완료는 당일만 백엔드에서 조회한다 (startDate=endDate=오늘).
   const today = todayStr()
-  const { data: pendingOrders = null } = useOrderHistory({ accountNo, fill: 'UNFILLED', startDate: today, endDate: today })  // 주문대기(미체결)
-  const { data: filledOrders = null } = useOrderHistory({ accountNo, fill: 'FILLED', startDate: today, endDate: today })      // 체결완료
+  const { data: pendingOrders = null, refetch: refetchPending } = useOrderHistory({ accountNo, fill: 'UNFILLED', startDate: today, endDate: today })  // 주문대기(미체결)
+  const { data: filledOrders = null, refetch: refetchFilled } = useOrderHistory({ accountNo, fill: 'FILLED', startDate: today, endDate: today })      // 체결완료
 
   const pendingToday = pendingOrders?.items ?? []
   const filledToday = filledOrders?.items ?? []
 
-  // ── 시장 정보(글로벌지수/환율) — 공개 API ────────────────────────────────────
-  const { data: indexes = [] } = useMarketIndex()
-  const { data: exchanges = [] } = useExchangeRates()
-  
+  // 리프레시 버튼 — 총평가금액/보유주식(홀딩스), 주문대기, 체결완료를 한 번에 재조회
+  const refreshMyAccount = () => {
+    refetchHoldings()
+    refetchPending()
+    refetchFilled()
+  }
+
+  // ── 시장 정보(글로벌지수/환율) — 공개 API + 실시간 WS(REST 스냅샷과 이어짐) ────────
+  const { data: indexSnapshot = [] } = useMarketIndex()
+  const { data: exchangeSnapshot = [] } = useExchangeRates()
+  const liveIndexes = useIndexWS()
+  const liveExchanges = useExchangeWS()
+  const indexes = liveIndexes ?? indexSnapshot
+  const exchanges = liveExchanges ?? exchangeSnapshot
+
   // ── 랭킹 영역 ↔ 훅 매핑 (시장 구분 segment 연동) ───────────────────────────────
   const [segment01, setSegment01] = useState('all')
   const [segment02, setSegment02] = useState('all')
@@ -124,6 +136,22 @@ export default function DashboardPage() {
   const { data: gapUpRows = [] } = useGapUp(toMarketType(segment05))
   const { data: overheatedRows = [] } = useOverheated(toMarketType(segment06))
   const { data: trendingRows = [] } = useTrending()
+
+  // 실시간 현재가 병합 — 랭킹 7개 영역의 심볼을 모아 WS 구독은 한 번만 유지하고,
+  // 섹션별로는 값만 실시간으로 갱신한다 (순위/시가총액 등 스냅샷 필드는 그대로 유지).
+  const rankingSymbols = useMemo(() => {
+    const set = new Set<string>()
+    for (const rows of [marketCapRows, volumeRows, advancingRows, decliningRows, gapUpRows, overheatedRows, trendingRows]) {
+      for (const r of rows) set.add(r.symbol)
+    }
+    return Array.from(set)
+  }, [marketCapRows, volumeRows, advancingRows, decliningRows, gapUpRows, overheatedRows, trendingRows])
+  const liveRankingQuotes = useStockPricesWS(rankingSymbols)
+  const withLive = (rows: StockRanking[]) => rows.map((r) => {
+    const live = liveRankingQuotes[r.symbol]
+    if (!live) return r
+    return { ...r, price: live.price, prevDiff: live.prevDiff, change: live.change, volume: live.volume, tradingAmount: live.tradingAmount }
+  })
 
   return (
 
@@ -145,11 +173,11 @@ export default function DashboardPage() {
           {/* <h1 className="text-2xl font-bold text-foreground">대시보드</h1> */}
           
           {/* 글로벌지수 */}
-          <DragScroll className='flex w-full rounded-lg border-l border-r border-gray-200 min-h-[129px]'>
+          <DragScroll className='flex w-full rounded-lg min-h-[129px]'>
             <div className='flex gap-2 w-full'>
               {indexes.map(idx => (
-                <Card key={idx.code} title={idx.name} subtitle={fmt2(idx.price)} sx={{width: '100%', minWidth: '200px', pr: 7}} titleSx={{fontSize: '14px'}} subtitleSx={{fontSize: '24px', fontWeight: 500}}>
-                  <ul className='flex flex-col text-sm'>
+                <Card key={idx.code} title={idx.name} subtitle={fmt2(idx.price)} sx={{background: '#eaecf0 !important', border: 'none', width: '100%', minWidth: '200px', pr: 7}} titleSx={{fontSize: '14px'}} subtitleSx={{fontSize: '24px', fontWeight: 500, fontVariantNumeric: 'tabular-nums'}}>
+                  <ul className='flex flex-col text-sm tabular-nums'>
                     <li className={`flex-1 flex gap-1 ${pnlClass(idx.prevDiff)}`}>
                       <span>{signed2(idx.prevDiff)}</span>
                       <span>({signed2(idx.change)}%)</span>
@@ -161,12 +189,12 @@ export default function DashboardPage() {
           </DragScroll>
 
           <div className='w-full grid grid-cols-1 @[580px]:grid-cols-2 @[1024px]:grid-cols-3 gap-4'>
-            <RankingSection title='시가총액' value={segment01} onChange={setSegment01} rows={marketCapRows} />
-            <RankingSection title='거래량' value={segment02} onChange={setSegment02} rows={volumeRows} />
-            <RankingSection title='상승' value={segment03} onChange={setSegment03} rows={advancingRows} />
-            <RankingSection title='하락' value={segment04} onChange={setSegment04} rows={decliningRows} />
-            <RankingSection title='갭상승' value={segment05} onChange={setSegment05} rows={gapUpRows} />
-            <RankingSection title='투자심리과열' value={segment06} onChange={setSegment06} rows={overheatedRows} />
+            <RankingSection title='시가총액' value={segment01} onChange={setSegment01} rows={withLive(marketCapRows)} />
+            <RankingSection title='거래량' value={segment02} onChange={setSegment02} rows={withLive(volumeRows)} />
+            <RankingSection title='상승' value={segment03} onChange={setSegment03} rows={withLive(advancingRows)} />
+            <RankingSection title='하락' value={segment04} onChange={setSegment04} rows={withLive(decliningRows)} />
+            <RankingSection title='갭상승' value={segment05} onChange={setSegment05} rows={withLive(gapUpRows)} />
+            <RankingSection title='투자심리과열' value={segment06} onChange={setSegment06} rows={withLive(overheatedRows)} />
           </div>
 
           {/* 인기검색종목 */}
@@ -175,17 +203,17 @@ export default function DashboardPage() {
               <h2 className='text-sm font-semibold'>인기검색종목</h2>
             </div>
 
-            <DragScroll className='flex w-full rounded-lg border-l border-r border-gray-200 min-h-[118px]'>
+            <DragScroll className='flex w-full rounded-lg min-h-[118px]'>
               <div className='flex gap-2 w-full'>
-                {trendingRows.map((s, i) => {
+                {withLive(trendingRows).map((s, i) => {
                   const up = s.change >= 0
                   const color = up ? 'text-red-500' : 'text-blue-500'
                   const sign = up ? '+' : '-'
                   return (
-                    <Card key={`${s.symbol}-${i}`} sx={{width: '100%', minWidth: '200px'}}>
+                    <Card key={`${s.symbol}-${i}`} sx={{width: '100%', minWidth: '200px', background: '#eaecf0 !important', border: 'none' }}>
                       <ul className='flex flex-col text-sm gap-4'>
                         <li><span className='font-semibold'>{s.name}</span></li>
-                        <li className='flex flex-col'>
+                        <li className='flex flex-col tabular-nums'>
                           <p className='font-semibold text-lg'>{s.price.toLocaleString()}</p>
                           <p className={color}>
                             <span>{sign}{Math.abs(s.prevDiff).toLocaleString()}</span>
@@ -211,7 +239,7 @@ export default function DashboardPage() {
                 {exchanges.map(ex => (
                   <div key={ex.pair} className='flex-1 flex gap-2 py-2 px-3 items-center rounded-md border border-gray-200 bg-slate-700'>
                     <span className='text-sm text-gray-300/80 font-semibold whitespace-nowrap'>{ex.pair}</span>
-                    <span className={`flex-1 inline-flex items-center gap-1 font-semibold text-xs whitespace-nowrap ${pnlClass(ex.prevDiff)}`}>
+                    <span className={`w-32 justify-end flex-1 inline-flex items-center gap-1 font-semibold text-xs whitespace-nowrap tabular-nums ${pnlClass(ex.prevDiff)}`}>
                       <span>{fmt2(ex.rate)}원</span>
                       <span>({signed2(ex.change)}%)</span>
                     </span>
@@ -231,15 +259,20 @@ export default function DashboardPage() {
             <div className="sm:w-[280px] h-2xl-2xl:w-[480px] shrink-0 flex-1 flex flex-col gap-4 p-4">
               <h2 className='text-lg font-semibold'>MY 계좌</h2>
               {/* 계좌 셀렉트 */}
-              <AccountSelect fullWidth value={accountNo} onChange={setAccountNo} label="계좌 선택" placeholder="계좌번호를 선택하세요" />
+              <div className='flex gap-1 items-center'>
+                <AccountSelect fullWidth value={accountNo} onChange={setAccountNo} label="계좌 선택" placeholder="계좌번호를 선택하세요" />
+                <button type='button' onClick={refreshMyAccount} title='새로고침' className='h-10 w-10 border border-gray-300 rounded-md text-gray-400 hover:text-blue-500/90'>
+                  <Cached sx={{ fontSize: '25px' }} />
+                </button>
+              </div>
 
               <Card
                 title="총 평가금액"
                 subtitle={holdings ? `${holdings.summary.totalEvalAmount.toLocaleString()}원` : '-'}
-                titleSx={{fontSize: '14px'}} subtitleSx={{fontSize: '20px'}}
+                titleSx={{fontSize: '14px'}} subtitleSx={{fontSize: '20px', fontVariantNumeric: 'tabular-nums'}}
               >
                 {(pendingOrders?.items?.length ?? 0) > 0 ? (
-                  <ul className='flex flex-col text-sm'>
+                  <ul className='flex flex-col text-sm tabular-nums'>
                     <li className={`flex-1 flex justify-between ${holdings ? pnlClass(holdings.summary.totalProfit) : ''}`}>
                       <span>{holdings ? `${signed(holdings.summary.totalProfit)}원` : '-'}</span>
                       <span>{holdings ? `(${signed(Number(holdings.summary.totalProfitRate.toFixed(2)))}%)` : ''}</span>
@@ -253,11 +286,11 @@ export default function DashboardPage() {
               </Card>
 
               <Card>
-                <div className='flex justify-between mb-4 text-sm font-semibold'>
+                <div className='flex justify-between mb-4 text-sm font-semibold tabular-nums'>
                   <span className='text-gray-400'>주문대기</span>
                   <span>{countLabel(pendingToday.length, '건')}</span>
                 </div>
-                <div className='flex flex-col text-sm'>
+                <div className='flex flex-col text-sm tabular-nums'>
                   {pendingToday.slice(0, 3).map(o => (
                     <div key={o.orderNo} className='flex-1 flex justify-between'>
                       <span>{o.name}</span>
@@ -288,11 +321,11 @@ export default function DashboardPage() {
               </Card>
 
               <Card>
-                <div className='flex justify-between mb-4 text-sm font-semibold'>
+                <div className='flex justify-between mb-4 text-sm font-semibold tabular-nums'>
                   <span className='text-gray-400'>체결완료</span>
                   <span>{countLabel(filledToday.length, '건')}</span>
                 </div>
-                <div className='flex flex-col text-sm'>
+                <div className='flex flex-col text-sm tabular-nums'>
                   {filledToday.slice(0, 3).map(o => (
                     <div key={o.orderNo} className='flex-1 flex justify-between'>
                       <span>{o.name}</span>
@@ -322,11 +355,11 @@ export default function DashboardPage() {
                 </div>
               </Card>
               <Card>
-                <div className='flex justify-between mb-4 text-sm font-semibold'>
+                <div className='flex justify-between mb-4 text-sm font-semibold tabular-nums'>
                   <span className='text-gray-400'>보유주식</span>
                   <span>{countLabel(holdings?.items?.length ?? 0, '종목')}</span>
                 </div>
-                <div className='flex flex-col text-sm'>
+                <div className='flex flex-col text-sm tabular-nums'>
                   {(holdings?.items ?? []).slice(0, 5).map(h => (
                     <div key={h.symbol} className='flex-1 flex justify-between'>
                       <span>{h.name}</span>

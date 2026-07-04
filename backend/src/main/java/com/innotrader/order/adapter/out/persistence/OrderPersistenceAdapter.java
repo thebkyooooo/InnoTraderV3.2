@@ -2,6 +2,8 @@ package com.innotrader.order.adapter.out.persistence;
 
 import com.innotrader.common.annotation.PersistenceAdapter;
 import com.innotrader.order.domain.model.Order;
+import com.innotrader.order.domain.model.OrderStatus;
+import com.innotrader.order.domain.model.OrderType;
 import com.innotrader.order.domain.port.out.OrderPort;
 
 import java.util.List;
@@ -51,5 +53,12 @@ public class OrderPersistenceAdapter implements OrderPort {
     @Override
     public String nextOrderNo() {
         return String.format("%010d", repository.count() + 1);
+    }
+
+    @Override
+    public List<Order> findActiveLimitOrders() {
+        return repository.findByOrderTypeAndStatusIn(OrderType.LIMIT, List.of(OrderStatus.RECEIVED, OrderStatus.PARTIAL)).stream()
+                .map(OrderJpaEntity::toDomain)
+                .toList();
     }
 }

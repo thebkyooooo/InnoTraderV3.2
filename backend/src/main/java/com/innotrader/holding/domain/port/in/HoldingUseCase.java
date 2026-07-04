@@ -32,4 +32,10 @@ public interface HoldingUseCase {
 
     /** 계좌별 보유종목 시드 (계좌 단위 멱등) */
     void seedDefaults(UUID userId);
+
+    /**
+     * 주문 체결 반영. 매수=수량 증가 + 평균단가 가중평균 재계산(신규 보유면 생성),
+     * 매도=수량 감소(0이 되면 보유종목 삭제).
+     */
+    void applyFill(UUID userId, String accountNo, String symbol, boolean isBuy, long fillQuantity, long fillPrice);
 }

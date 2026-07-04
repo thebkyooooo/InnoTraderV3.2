@@ -1,5 +1,7 @@
 package com.innotrader.order.adapter.out.persistence;
 
+import com.innotrader.order.domain.model.OrderStatus;
+import com.innotrader.order.domain.model.OrderType;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
@@ -18,4 +20,6 @@ public interface OrderJpaRepository extends JpaRepository<OrderJpaEntity, UUID> 
     boolean existsByUserIdAndAccountNo(UUID userId, String accountNo);
 
     void deleteByUserIdAndAccountNo(UUID userId, String accountNo);
+
+    List<OrderJpaEntity> findByOrderTypeAndStatusIn(OrderType orderType, List<OrderStatus> statuses);
 }

@@ -25,7 +25,7 @@ export default function OrderPage() {
 
   return (
     <div className="@container flex flex-col gap-4 w-full h-full">
-      <div className="h-2xl:flex-1 flex flex-col-reverse @[640px]:flex-row gap-4">
+      <div className="h-xl:flex-1 flex flex-col-reverse @[640px]:flex-row gap-4">
         {/* ─── 좌측 ─── */}
         <div className="flex-1 min-w-0 flex flex-col gap-4">
           {/* 현재가 (Quote Board) */}

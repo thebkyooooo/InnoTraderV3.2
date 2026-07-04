@@ -21,7 +21,7 @@ export function StockDetailCard({ symbol }: StockDetailCardProps) {
   const { data, isLoading } = useStockDetail(symbol)
 
   if (isLoading && !data) {
-    return <div className="text-xs text-gray-400 py-4 text-center">불러오는 중...</div>
+    return <Section className="text-xs text-gray-400 py-4 text-center min-h-[368px] flex justify-center items-center">불러오는 중...</Section>
   }
   if (!data) return null
 

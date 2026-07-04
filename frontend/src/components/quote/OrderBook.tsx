@@ -277,7 +277,7 @@ export function OrderBook({ symbol, variant = 'dom', onPriceClick }: OrderBookPr
   // WS 실시간 호가 우선, 최초 로딩 동안은 HTTP 스냅샷으로 대체
   const data = liveHoga ?? httpData
 
-  if (isLoading && !data) return <div className="text-xs text-gray-400 py-4 text-center">불러오는 중...</div>
+  if (isLoading && !data) return <div className="text-xs text-gray-400 py-4 text-center min-h-[549px] flex justify-center items-center">불러오는 중...</div>
   if (!data) return <div className="text-xs text-gray-400 py-4 text-center">호가 정보가 없습니다.</div>
 
   return variant === 'canvas'

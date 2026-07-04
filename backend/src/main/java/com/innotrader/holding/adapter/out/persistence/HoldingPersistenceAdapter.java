@@ -5,6 +5,7 @@ import com.innotrader.holding.domain.model.Holding;
 import com.innotrader.holding.domain.port.out.HoldingPort;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -27,7 +28,18 @@ public class HoldingPersistenceAdapter implements HoldingPort {
     }
 
     @Override
+    public Optional<Holding> findByAccountAndSymbol(UUID userId, String accountNo, String symbol) {
+        return repository.findByUserIdAndAccountNoAndSymbol(userId, accountNo, symbol)
+                .map(HoldingJpaEntity::toDomain);
+    }
+
+    @Override
     public Holding save(Holding holding) {
         return repository.save(HoldingJpaEntity.fromDomain(holding)).toDomain();
+    }
+
+    @Override
+    public void delete(Holding holding) {
+        repository.deleteById(holding.id());
     }
 }

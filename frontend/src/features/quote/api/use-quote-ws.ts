@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { Client, type StompSubscription, type IMessage } from '@stomp/stompjs'
 import SockJS from 'sockjs-client'
 import type { QuotePriceResponse, FilledQuoteItem, InvestmentTrendItem, HogaData } from './quote-api'
+import type { IndexInfo, ExchangeRate } from '@/features/market/api/market-api'
 
 // WS 는 백엔드 도메인을 직접 가리켜야 한다. HTTP(/api/*)는 next.config rewrites 로 프록시되지만
 // WebSocket 업그레이드는 rewrites 가 프록시하지 못하므로, 상대경로(빈 base)면 프론트로 잘못 연결된다.
@@ -143,6 +144,34 @@ export function useHogaWS(symbol: string, enabled = true): HogaData | null {
   return useChannel<HogaData>(enabled && symbol ? `/topic/quote/hoga/${symbol}` : null)
 }
 
+/** 실시간 글로벌 지수 전체 (/topic/market/index). 구독 종목 무관 고정 채널(지수 8개 배열). */
+export function useIndexWS(enabled = true): IndexInfo[] | null {
+  return useChannel<IndexInfo[]>(enabled ? '/topic/market/index' : null)
+}
+
+/** 실시간 환율 전체 (/topic/market/exchange). 구독 종목 무관 고정 채널(환율 5개 배열). */
+export function useExchangeWS(enabled = true): ExchangeRate[] | null {
+  return useChannel<ExchangeRate[]>(enabled ? '/topic/market/exchange' : null)
+}
+
+/** 계좌 활동 알림 (주문 접수/정정/취소/체결) — 페이로드에 최신 데이터를 싣지 않는 "갱신 신호". */
+export interface AccountActivityMessage {
+  accountNo: string
+  orderNo: string
+  symbol: string
+  reason: 'ORDER_RECEIVED' | 'ORDER_AMENDED' | 'ORDER_CANCELED' | 'ORDER_FILLED'
+  at: string
+}
+
+/**
+ * 계좌 활동 실시간 알림 (/topic/account/activity/{accountNo}).
+ * 주문내역/보유종목이 서버에서 변경될 때마다(접수·정정·취소·체결) 신호만 전달한다 —
+ * 수신 시 해당 react-query를 invalidate해 재조회하는 용도로 사용한다(최신 데이터는 REST가 단일 진실 소스).
+ */
+export function useAccountActivityWS(accountNo: string, enabled = true): AccountActivityMessage | null {
+  return useChannel<AccountActivityMessage>(enabled && accountNo ? `/topic/account/activity/${accountNo}` : null)
+}
+
 /**
  * 여러 종목의 실시간 현재가 (관심종목 등 목록 화면용).
  * symbols 각각의 /topic/quote/price/{symbol} 를 공유 연결로 구독하고
@@ -155,9 +184,27 @@ export function useStockPricesWS(symbols: string[]): Record<string, QuotePriceRe
 
   useEffect(() => {
     if (symbols.length === 0) { setQuotes({}); return }
+
+    // 심볼마다 개별 setQuotes를 호출하면 심볼 수가 많은 화면(랭킹 등)에서 한 브로드캐스트
+    // 주기에 수십~수백 번의 연쇄 리렌더가 발생해 React의 "Maximum update depth" 한도에
+    // 걸릴 수 있다. 같은 틱에 도착한 업데이트를 버퍼에 모았다가 마이크로태스크 1회로 flush한다.
+    const buffer: Record<string, QuotePriceResponse> = {}
+    let flushScheduled = false
+    const flush = () => {
+      flushScheduled = false
+      const updates = buffer as Record<string, QuotePriceResponse>
+      const snapshot = { ...updates }
+      for (const k of Object.keys(updates)) delete updates[k]
+      setQuotes((prev) => ({ ...prev, ...snapshot }))
+    }
+
     const unsubs = symbols.map((sym) =>
       subscribeShared(`/topic/quote/price/${sym}`, (data) => {
-        setQuotes((prev) => ({ ...prev, [sym]: data as QuotePriceResponse }))
+        buffer[sym] = data as QuotePriceResponse
+        if (!flushScheduled) {
+          flushScheduled = true
+          queueMicrotask(flush)
+        }
       }),
     )
     return () => unsubs.forEach((u) => u())

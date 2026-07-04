@@ -1,32 +1,37 @@
 'use client'
 import { useState } from 'react'
+import { Tabs, Section } from '@/components/ui'
 import { QuoteBoard, OrderBook, StockDetailCard } from '@/components/quote'
 
 export default function QuoteOrderbookPage() {
   const [symbol, setSymbol] = useState('005930')
+  const [hogaTabValue, setHogaTabValue] = useState('dom')
 
   return (
-    <div className="flex flex-col gap-4 w-full xl:h-full">
+    <div className="flex flex-col gap-4 w-full h-full @container">
 
       {/* 현재가 (Quote Board) 컴포넌트 — symbol만 넘기면 내부에서 조회 */}
-      <QuoteBoard symbol={symbol} onStockSelect={stock => setSymbol(stock.symbol)} />
+      <Section className="min-h-[140px] !border-none" noPadding>
+        <QuoteBoard symbol={symbol} onStockSelect={stock => setSymbol(stock.symbol)} />
+      </Section>
 
-      <div className="@container h-2xl:flex-1 grid grid-cols-1 xl:grid-cols-[1fr_280px] 2xl:grid-cols-[1fr_480px] gap-4">
-        
-        {/* 호가 컴포넌트 */}
-        <div className="grid grid-cols-1 @[640px]:grid-cols-2 gap-4 items-start">
-          <div className="flex flex-col gap-2 border border-gray-200 rounded-xl px-4 py-4 bg-white">
-            <span className="text-sm font-semibold text-gray-600">호가 DOM</span>
-            <OrderBook symbol={symbol} variant="dom" />
-          </div>
-          <div className="flex flex-col gap-2 border border-gray-200 rounded-xl px-4 py-4 bg-white">
-            <span className="text-sm font-semibold text-gray-600">호가 Canvas</span>
-              <OrderBook symbol={symbol} variant="canvas" />
-          </div>
+      <div className="flex-1 flex flex-col @[640px]:flex-row @[640px]:items-start gap-4 w-full">
+        {/* 호가 */}
+        <div className="shrink-0 flex-1 flex flex-col border border-gray-200 rounded-lg bg-white p-4">
+          <Tabs
+            value={hogaTabValue}
+            onChange={v => setHogaTabValue(String(v))}
+            tabs={[
+              { value: 'dom', label: '호가 Dom' },
+              { value: 'canvas', label: '호가 Canvas' },
+            ]}
+          />
+          {hogaTabValue === 'dom' && <OrderBook symbol={symbol} variant="dom" />}
+          {hogaTabValue === 'canvas' && <OrderBook symbol={symbol} variant="canvas" />}
         </div>
 
-        <div className="flex flex-col gap-4">
-          {/* 종목상세 컴포넌트 */}
+        {/* 종목상세 컴포넌트 */}
+        <div className="@[640px]:w-[280px] 2xl:w-[420px]">
           <StockDetailCard symbol={symbol} />
         </div>
       </div>

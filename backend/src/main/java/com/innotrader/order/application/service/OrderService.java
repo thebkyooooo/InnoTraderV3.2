@@ -3,6 +3,8 @@ package com.innotrader.order.application.service;
 import com.innotrader.common.annotation.UseCase;
 import com.innotrader.common.error.BusinessException;
 import com.innotrader.common.error.ErrorCode;
+import com.innotrader.holding.domain.port.in.HoldingUseCase;
+import com.innotrader.order.adapter.in.web.dto.AccountActivityMessage;
 import com.innotrader.order.domain.model.Order;
 import com.innotrader.order.domain.model.OrderSide;
 import com.innotrader.order.domain.model.OrderStatus;
@@ -11,6 +13,7 @@ import com.innotrader.order.domain.port.in.OrderUseCase;
 import com.innotrader.order.domain.port.out.OrderPort;
 import com.innotrader.stock.domain.model.StockMaster;
 import com.innotrader.stock.domain.port.in.GetStockMasterUseCase;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
@@ -56,12 +59,24 @@ public class OrderService implements OrderUseCase {
             OrderStatus.PARTIAL, OrderStatus.FILLED, OrderStatus.CANCELED
     };
 
+    private static final String TOPIC_ACTIVITY = "/topic/account/activity/";
+
     private final OrderPort orderPort;
     private final GetStockMasterUseCase getStockMasterUseCase;
+    private final HoldingUseCase holdingUseCase;
+    private final SimpMessagingTemplate messaging;
 
-    public OrderService(OrderPort orderPort, GetStockMasterUseCase getStockMasterUseCase) {
+    public OrderService(OrderPort orderPort, GetStockMasterUseCase getStockMasterUseCase,
+                        HoldingUseCase holdingUseCase, SimpMessagingTemplate messaging) {
         this.orderPort = orderPort;
         this.getStockMasterUseCase = getStockMasterUseCase;
+        this.holdingUseCase = holdingUseCase;
+        this.messaging = messaging;
+    }
+
+    private void notifyActivity(String accountNo, String orderNo, String symbol, String reason) {
+        messaging.convertAndSend(TOPIC_ACTIVITY + accountNo,
+                new AccountActivityMessage(accountNo, orderNo, symbol, reason, Instant.now()));
     }
 
     // ── 매수/매도 ──────────────────────────────────────────────────────────────
@@ -92,6 +107,14 @@ public class OrderService implements OrderUseCase {
                 cmd.symbol(), cmd.side(), cmd.orderType(),
                 cmd.quantity(), price, status, filledQty, filledPrice, Instant.now()));
 
+        if (status == OrderStatus.FILLED) {
+            // 시장가 즉시체결 — 보유종목 반영
+            holdingUseCase.applyFill(saved.userId(), saved.accountNo(), saved.symbol(),
+                    saved.side() == OrderSide.BUY, saved.filledQuantity(), saved.filledPrice());
+        }
+        notifyActivity(saved.accountNo(), saved.orderNo(), saved.symbol(),
+                status == OrderStatus.FILLED ? "ORDER_FILLED" : "ORDER_RECEIVED");
+
         return new OrderResult(
                 saved.accountNo(), saved.orderNo(), saved.symbol(),
                 saved.side(), saved.orderType(), saved.quantity(), saved.price(),
@@ -111,6 +134,8 @@ public class OrderService implements OrderUseCase {
                 cmd.userId(), cmd.accountNo(), orderPort.nextOrderNo(), original.orderNo(),
                 cmd.symbol(), original.side(), cmd.orderType(),
                 cmd.quantity(), cmd.price(), OrderStatus.AMENDED, Instant.now()));
+
+        notifyActivity(receipt.accountNo(), original.orderNo(), receipt.symbol(), "ORDER_AMENDED");
 
         return new AmendResult(
                 receipt.accountNo(), receipt.orderNo(), receipt.originalOrderNo(), receipt.symbol(),
@@ -132,6 +157,8 @@ public class OrderService implements OrderUseCase {
                 cmd.userId(), cmd.accountNo(), orderPort.nextOrderNo(), original.orderNo(),
                 cmd.symbol(), original.side(), original.orderType(),
                 cancelQty, original.price(), OrderStatus.CANCEL_DONE, Instant.now()));
+
+        notifyActivity(receipt.accountNo(), original.orderNo(), receipt.symbol(), "ORDER_CANCELED");
 
         return new CancelResult(
                 receipt.accountNo(), receipt.orderNo(), receipt.originalOrderNo(), receipt.symbol(),

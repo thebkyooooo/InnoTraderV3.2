@@ -13,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import java.util.Random;
 import java.util.UUID;
 
@@ -102,6 +103,32 @@ public class HoldingService implements HoldingUseCase {
             return accountUseCase.orderableAmount(userId, accountNo);
         } catch (BusinessException e) {
             return 0L;
+        }
+    }
+
+    @Override
+    public void applyFill(UUID userId, String accountNo, String symbol, boolean isBuy, long fillQuantity, long fillPrice) {
+        Optional<Holding> existing = holdingPort.findByAccountAndSymbol(userId, accountNo, symbol);
+        if (isBuy) {
+            if (existing.isPresent()) {
+                Holding h = existing.get();
+                long newQuantity = h.quantity() + fillQuantity;
+                long newAvgPrice = Math.round(
+                        (h.quantity() * (double) h.avgPrice() + fillQuantity * (double) fillPrice) / newQuantity);
+                holdingPort.save(new Holding(h.id(), userId, accountNo, symbol, newQuantity, newAvgPrice));
+            } else {
+                holdingPort.save(Holding.create(userId, accountNo, symbol, fillQuantity, fillPrice));
+            }
+        } else {
+            // 매도 체결 — 보유가 없으면(이론상 발생하지 않음) 무시
+            existing.ifPresent(h -> {
+                long newQuantity = h.quantity() - fillQuantity;
+                if (newQuantity <= 0) {
+                    holdingPort.delete(h);
+                } else {
+                    holdingPort.save(new Holding(h.id(), userId, accountNo, symbol, newQuantity, h.avgPrice()));
+                }
+            });
         }
     }
 }

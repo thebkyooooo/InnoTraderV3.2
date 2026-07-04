@@ -6,7 +6,7 @@ import { DragScroll } from '@/components/ui/DragScroll'
 import { useRanking, type RankingType } from '@/features/market/api/use-market'
 import type { StockRanking } from '@/features/market/api/market-api'
 import type { MarketType } from '@/features/market/api/market-api'
-import { number } from 'zod'
+import { useStockPricesWS } from '@/features/quote/api/use-quote-ws'
 
 // ─── 포매터 ────────────────────────────────────────────────────────────────────
 
@@ -138,6 +138,19 @@ export default function MarketRankingPage() {
 
   const { data = [], isFetching } = useRanking(rankType, marketType)
 
+  // 실시간 현재가/등락 병합 (2초마다 갱신) — HTTP 랭킹 스냅샷 순서는 유지한 채 값만 갱신
+  const symbols = useMemo(() => data.map((r) => r.symbol), [data])
+  const liveQuotes = useStockPricesWS(symbols)
+  const rows = useMemo(() => data.map((r) => {
+    const live = liveQuotes[r.symbol]
+    if (!live) return r
+    return {
+      ...r,
+      price: live.price, prevDiff: live.prevDiff, change: live.change,
+      volume: live.volume, tradingAmount: live.tradingAmount,
+    }
+  }), [data, liveQuotes])
+
   return (
     <div className="flex flex-col gap-4 w-full h-full">
       <div className="flex flex-row gap-4">
@@ -173,12 +186,13 @@ export default function MarketRankingPage() {
 
       <Section className="flex-1 min-h-96">
         <DataGrid<StockRanking>
-          rows={data}
+          rows={rows}
           columnDefs={COL_DEFS}
           height="100%"
           loading={isFetching}
           pagination
           pageSize={20}
+          getRowId={(r) => r.symbol}
         />
       </Section>
     </div>
