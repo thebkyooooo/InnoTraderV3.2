@@ -137,9 +137,6 @@ function MenuItemRow({ item, depth = 0, onNavigate }: MenuItemRowProps) {
 }
 
 function SidebarContent({ onNavigate, onClose }: { onNavigate?: () => void; onClose?: () => void }) {
-  const theme = useTheme()
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'))
-
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       {/* 로고 영역 */}
@@ -152,24 +149,23 @@ function SidebarContent({ onNavigate, onClose }: { onNavigate?: () => void; onCl
           InnoTrader
         </Typography>
 
-        {isMobile && (
-          <IconButton
-            onClick={onClose}
-            aria-label="사이드바 닫기"
-            size="small"
-            disableRipple
-            sx={{
-              position: 'absolute',
-              top: 15,
-              right: 14,
-              color: 'grey.700',
-              bgcolor: 'transparent',
-              '&:hover': { color: 'grey.500', bgcolor: 'transparent' },
-            }}
-          >
-            <Close fontSize="medium" sx={{ fontWeight: 700 }} />
-          </IconButton>
-        )}
+        <IconButton
+          onClick={onClose}
+          aria-label="사이드바 닫기"
+          size="small"
+          disableRipple
+          sx={{
+            display: { xs: 'inline-flex', md: 'none' },
+            position: 'absolute',
+            top: 15,
+            right: 14,
+            color: 'grey.700',
+            bgcolor: 'transparent',
+            '&:hover': { color: 'grey.500', bgcolor: 'transparent' },
+          }}
+        >
+          <Close fontSize="medium" sx={{ fontWeight: 700 }} />
+        </IconButton>
       </Box>
 
       {/* 메뉴 목록 */}
@@ -187,7 +183,6 @@ function SidebarContent({ onNavigate, onClose }: { onNavigate?: () => void; onCl
 export function Sidebar({ open, onClose }: SidebarProps) {
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down('md'))
-  const visible = !isMobile || open
 
   return (
     <>
@@ -219,7 +214,13 @@ export function Sidebar({ open, onClose }: SidebarProps) {
           display: 'flex',
           flexDirection: 'column',
           zIndex: 1200,
-          transform: visible ? 'translateX(0)' : `translateX(-${DRAWER_WIDTH}px)`,
+          // CSS 미디어쿼리로 표시 여부를 결정 — JS useMediaQuery는 SSR/하이드레이션 시점에
+          // 항상 "매치 안 됨"으로 시작해 모바일에서 새로고침 시 사이드바가 잠깐 보였다
+          // 사라지는 깜빡임이 있었다. md 이상은 항상 보이고, 그 아래는 open prop으로만 결정.
+          transform: {
+            xs: open ? 'translateX(0)' : `translateX(-${DRAWER_WIDTH}px)`,
+            md: 'translateX(0)',
+          },
           transition: 'transform 0.25s ease',
         }}
       >
