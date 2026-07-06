@@ -12,6 +12,7 @@
 
 import { registerAuthStore } from './axios-instance'
 import { registerStompAuth } from './stomp-client'
+import { registerQuoteWsAuth } from '@/features/quote/api/use-quote-ws'
 import { getAccessTokenFromStore, setAccessTokenInStore } from '@/store/auth-store'
 
 let initialized = false
@@ -23,8 +24,11 @@ export function initApiLayer() {
   // axios interceptor에 auth-store 연결
   registerAuthStore(getAccessTokenFromStore, setAccessTokenInStore)
 
-  // stomp-client에 auth-store 연결
+  // stomp-client(주문용)에 auth-store 연결
   registerStompAuth(getAccessTokenFromStore)
+
+  // use-quote-ws(시세/계좌활동용 공유 WS)에 auth-store 연결
+  registerQuoteWsAuth(getAccessTokenFromStore)
 }
 
 // ─── initAxiosAuth (하위 호환) ────────────────────────────────────────────────

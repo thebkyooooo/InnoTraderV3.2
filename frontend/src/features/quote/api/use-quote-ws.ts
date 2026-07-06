@@ -2,6 +2,13 @@
 import { useEffect, useState } from 'react'
 import { Client, type StompSubscription, type IMessage } from '@stomp/stompjs'
 import SockJS from 'sockjs-client'
+
+// auth-store에서 AT를 읽어오는 함수 (stomp-client.ts와 동일한 순환 import 방지 패턴)
+let getAccessToken: (() => string | null) | null = null
+
+export function registerQuoteWsAuth(getter: () => string | null) {
+  getAccessToken = getter
+}
 import type { QuotePriceResponse, FilledQuoteItem, InvestmentTrendItem, HogaData } from './quote-api'
 import type { IndexInfo, ExchangeRate } from '@/features/market/api/market-api'
 
@@ -50,6 +57,13 @@ function ensureClient() {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     webSocketFactory: () => new SockJS(WS_URL) as any,
     reconnectDelay: 5000,
+    // 최초 연결 + 매 재연결 시도 직전마다 호출 — AT가 재발급되어도 최신 토큰으로 CONNECT
+    beforeConnect: () => {
+      const token = getAccessToken?.()
+      if (client) {
+        client.connectHeaders = token ? { Authorization: `Bearer ${token}` } : {}
+      }
+    },
     onConnect: () => {
       connected = true
       // 최초/재연결 시 활성 채널을 (재)구독해 끊김 후에도 복구되게 한다. (실시간 OFF면 구독하지 않음)
