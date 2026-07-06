@@ -41,14 +41,18 @@ export function Header({ onMenuToggle }: HeaderProps) {
   const toggleRealtime = useRealtimeStore((s) => s.toggle)
   const { mutate: logout } = useLogout()
 
+  // 브로드캐스트 주기 변경은 서버 전역 설정이라 ROLE_ADMIN 전용 (백엔드도 동일하게 강제)
+  const isAdmin = user?.role === 'ROLE_ADMIN'
+
   const [broadcastMs, setBroadcastMs] = useState<number | null>(null)
   const [modalOpen, setModalOpen] = useState(false)
 
   useEffect(() => {
+    if (!isAdmin) return
     broadcastApi.getInterval()
       .then(r => setBroadcastMs(r.data.ms))
       .catch(() => setBroadcastMs(2000))
-  }, [])
+  }, [isAdmin])
 
   const handleSelect = (_: React.MouseEvent, v: number | null) => {
     if (v === null) return
@@ -123,8 +127,8 @@ export function Header({ onMenuToggle }: HeaderProps) {
                 </IconButton>
               </Tooltip>
               
-              {/* 시세 갱신 속도 */}
-              {currentLabel && (
+              {/* 시세 갱신 속도 (관리자 전용) */}
+              {isAdmin && currentLabel && (
                 <Tooltip title="시세 갱신 속도">
                   <Chip
                     label={currentLabel}
