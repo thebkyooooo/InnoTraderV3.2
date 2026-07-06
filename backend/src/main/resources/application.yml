@@ -6,8 +6,8 @@ spring:
       enabled: true
   datasource:
     url: ${DB_URL:jdbc:postgresql://localhost:5432/innotrader}
-    username: ${DB_USERNAME:innotrader}
-    password: ${DB_PASSWORD:innotrader}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
     hikari:
       maximum-pool-size: 20
       minimum-idle: 5
@@ -36,7 +36,7 @@ server:
   forward-headers-strategy: framework
 
 jwt:
-  secret: ${JWT_SECRET:change-this-secret-in-production-must-be-at-least-256-bits}
+  secret: ${JWT_SECRET}
   access-token-validity-seconds: 900
   refresh-token-validity-seconds: 1209600
 
@@ -53,10 +53,12 @@ app:
 springdoc:
   api-docs:
     path: /api-docs
+    enabled: false
   swagger-ui:
     path: /swagger-ui.html
+    enabled: false
 
 logging:
   level:
-    com.innotrader: DEBUG
+    com.innotrader: INFO
     org.springframework.security: INFO

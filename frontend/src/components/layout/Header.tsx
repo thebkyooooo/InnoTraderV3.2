@@ -82,7 +82,7 @@ export function Header({ onMenuToggle }: HeaderProps) {
             aria-label="메뉴 열기"
             onClick={onMenuToggle}
             size="medium"
-            sx={{ color: 'text.secondary', display: { xs: 'block', md: 'none' } }}
+            sx={{ color: 'text.secondary', m: 0, p: 0, display: { xs: 'block', md: 'none' }, '&:hover': { bgcolor: 'transparent', color: 'text.primary' } }}
           >
             <MenuIcon />
           </IconButton>

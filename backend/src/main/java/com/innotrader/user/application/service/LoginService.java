@@ -4,6 +4,7 @@ import com.innotrader.common.annotation.UseCase;
 import com.innotrader.common.error.BusinessException;
 import com.innotrader.common.error.ErrorCode;
 import com.innotrader.common.security.JwtTokenProvider;
+import com.innotrader.common.security.LoginAttemptService;
 import com.innotrader.common.security.RefreshTokenService;
 import com.innotrader.user.domain.model.Email;
 import com.innotrader.user.domain.model.User;
@@ -31,15 +32,18 @@ public class LoginService implements LoginUseCase {
     private final PasswordEncoder    passwordEncoder;
     private final JwtTokenProvider   jwtTokenProvider;
     private final RefreshTokenService refreshTokenService;
+    private final LoginAttemptService loginAttemptService;
 
     public LoginService(LoadUserPort loadUserPort,
                         PasswordEncoder passwordEncoder,
                         JwtTokenProvider jwtTokenProvider,
-                        RefreshTokenService refreshTokenService) {
+                        RefreshTokenService refreshTokenService,
+                        LoginAttemptService loginAttemptService) {
         this.loadUserPort        = loadUserPort;
         this.passwordEncoder     = passwordEncoder;
         this.jwtTokenProvider    = jwtTokenProvider;
         this.refreshTokenService = refreshTokenService;
+        this.loginAttemptService = loginAttemptService;
     }
 
     /**
@@ -50,21 +54,32 @@ public class LoginService implements LoginUseCase {
      * @return token pair and authenticated user
      * @throws BusinessException {@link ErrorCode#AUTH_INVALID_CREDENTIALS} — user not found or wrong password
      * @throws BusinessException {@link ErrorCode#AUTH_INACTIVE_USER} — account is suspended/deleted
+     * @throws BusinessException {@link ErrorCode#AUTH_TOO_MANY_ATTEMPTS} — too many recent failed attempts
      */
     @Override
     public LoginResult login(LoginCommand command) {
         Email email = Email.of(command.email());
 
+        if (loginAttemptService.isLockedOut(email.value())) {
+            throw new BusinessException(ErrorCode.AUTH_TOO_MANY_ATTEMPTS);
+        }
+
         User user = loadUserPort.loadByEmail(email)
-                .orElseThrow(() -> new BusinessException(ErrorCode.AUTH_INVALID_CREDENTIALS));
+                .orElseGet(() -> {
+                    loginAttemptService.recordFailure(email.value());
+                    throw new BusinessException(ErrorCode.AUTH_INVALID_CREDENTIALS);
+                });
 
         if (!user.isActive()) {
             throw new BusinessException(ErrorCode.AUTH_INACTIVE_USER);
         }
 
         if (!passwordEncoder.matches(command.rawPassword(), user.passwordHash())) {
+            loginAttemptService.recordFailure(email.value());
             throw new BusinessException(ErrorCode.AUTH_INVALID_CREDENTIALS);
         }
+
+        loginAttemptService.reset(email.value());
 
         String accessToken  = jwtTokenProvider.generateAccessToken(
                 user.id(), user.email().value(), user.role().name());

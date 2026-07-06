@@ -30,7 +30,7 @@ export function AppLayout({ children, mainSx }: AppLayoutProps) {
     const hasSession = document.cookie.includes('auth_session=1')
     if (hasSession) {
       refreshAccessToken().catch(() => {
-        document.cookie = 'auth_session=; path=/; max-age=0; SameSite=Lax'
+        document.cookie = 'auth_session=; path=/; max-age=0; SameSite=Lax; Secure'
       })
     }
   }, [])

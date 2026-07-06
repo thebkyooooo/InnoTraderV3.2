@@ -73,7 +73,7 @@ public class LocalDataInitializer implements CommandLineRunner {
     private void createUserIfAbsent(String email, String password) {
         try {
             registerUserUseCase.register(new RegisterUserCommand(email, password));
-            log.info("[LocalDataInitializer] 테스트 계정 생성: {} / {}", email, password);
+            log.info("[LocalDataInitializer] 테스트 계정 생성: {}", email);
         } catch (BusinessException e) {
             if (e.getErrorCode() == ErrorCode.AUTH_DUPLICATE_EMAIL) {
                 log.debug("[LocalDataInitializer] 테스트 계정 이미 존재: {}", email);

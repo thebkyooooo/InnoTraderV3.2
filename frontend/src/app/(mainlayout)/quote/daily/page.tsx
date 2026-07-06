@@ -19,8 +19,8 @@ export default function QuoteDailyPage() {
           <DailyQuoteGrid symbol={symbol} />
         </Section>
 
+        {/* 종목상세 컴포넌트 */}
         <div className="@[640px]:w-[280px] 2xl:w-[420px]">
-          {/* 종목상세 컴포넌트 */}
           <StockDetailCard symbol={symbol} />
         </div>
       </div>

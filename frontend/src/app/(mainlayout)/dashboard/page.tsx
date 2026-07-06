@@ -255,7 +255,7 @@ export default function DashboardPage() {
           aria-hidden={!panelOpen}
           className={`shrink-0 p-4 pt-0 sm:p-0 overflow-hidden transition-[width,opacity] duration-300 ease-in-out border-gray-200 sm:bg-white ${panelOpen ? 'sm:border-l sm:w-[280px] h-2xl-2xl:w-[480px] sm:opacity-100' : 'sm:w-0 sm:opacity-0'}`}
         >
-          <div className="shrink-0 flex flex-col gap-4 rounded-xl bg-white border border-gray-200 sm:sm:rounded-none sm:border-none">
+          <div className="shrink-0 flex flex-col gap-4 rounded-xl bg-white border border-gray-200 sm:sm:rounded-none sm:border-none pt-0 sm:pt-2">
             <div className="sm:w-[280px] h-2xl-2xl:w-[480px] shrink-0 flex-1 flex flex-col gap-4 p-4">
               <h2 className='text-lg font-semibold'>MY 계좌</h2>
               {/* 계좌 셀렉트 */}

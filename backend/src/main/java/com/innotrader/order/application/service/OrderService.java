@@ -1,5 +1,6 @@
 package com.innotrader.order.application.service;
 
+import com.innotrader.account.domain.port.in.AccountUseCase;
 import com.innotrader.common.annotation.UseCase;
 import com.innotrader.common.error.BusinessException;
 import com.innotrader.common.error.ErrorCode;
@@ -65,13 +66,16 @@ public class OrderService implements OrderUseCase {
     private final GetStockMasterUseCase getStockMasterUseCase;
     private final HoldingUseCase holdingUseCase;
     private final SimpMessagingTemplate messaging;
+    private final AccountUseCase accountUseCase;
 
     public OrderService(OrderPort orderPort, GetStockMasterUseCase getStockMasterUseCase,
-                        HoldingUseCase holdingUseCase, SimpMessagingTemplate messaging) {
+                        HoldingUseCase holdingUseCase, SimpMessagingTemplate messaging,
+                        AccountUseCase accountUseCase) {
         this.orderPort = orderPort;
         this.getStockMasterUseCase = getStockMasterUseCase;
         this.holdingUseCase = holdingUseCase;
         this.messaging = messaging;
+        this.accountUseCase = accountUseCase;
     }
 
     private void notifyActivity(String accountNo, String orderNo, String symbol, String reason) {
@@ -85,6 +89,12 @@ public class OrderService implements OrderUseCase {
         if (cmd.quantity() <= 0) {
             throw new BusinessException(ErrorCode.INVALID_INPUT, "주문수량은 1 이상이어야 합니다.");
         }
+        if (cmd.orderType() == OrderType.LIMIT && cmd.price() <= 0) {
+            throw new BusinessException(ErrorCode.INVALID_INPUT, "지정가 주문의 가격은 1 이상이어야 합니다.");
+        }
+        // 계좌 소유권 검증 겸 주문가능금액 조회 — 소유하지 않은 계좌면 ACCOUNT_NOT_FOUND
+        long orderableAmount = accountUseCase.orderableAmount(cmd.userId(), cmd.accountNo());
+
         long marketPrice = currentPrice(cmd.symbol(), cmd.price());
 
         OrderStatus status;
@@ -102,6 +112,11 @@ public class OrderService implements OrderUseCase {
         }
 
         long price = cmd.orderType() == OrderType.MARKET ? marketPrice : cmd.price();
+
+        if (cmd.side() == OrderSide.BUY && cmd.quantity() * price > orderableAmount) {
+            throw new BusinessException(ErrorCode.INSUFFICIENT_BALANCE);
+        }
+
         Order saved = orderPort.save(Order.place(
                 cmd.userId(), cmd.accountNo(), orderPort.nextOrderNo(),
                 cmd.symbol(), cmd.side(), cmd.orderType(),

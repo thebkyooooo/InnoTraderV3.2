@@ -36,13 +36,17 @@ export function AccountSelect({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [accounts])
 
+  // 로그아웃 시 queryClient.clear()로 accounts가 먼저 비워지는 순간(라우팅 언마운트 전)
+  // value가 목록에 없는 상태로 MUI Select에 전달되어 out-of-range 경고가 뜨는 것을 방지
+  const safeValue = value && !accounts.some(a => a.accountNo === value) ? '' : value
+
   return (
     <Select
       fullWidth={fullWidth}
       size={size}
       label={label}
       placeholder={placeholder}
-      value={value}
+      value={safeValue}
       onChange={onChange}
       options={accounts.map(a => ({
         label: `${a.accountNo} ${a.accountName} [${a.typeName}]`,

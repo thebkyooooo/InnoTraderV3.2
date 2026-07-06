@@ -32,6 +32,7 @@ public enum ErrorCode {
     AUTH_TOKEN_INVALID(HttpStatus.UNAUTHORIZED, "AUTH_014", "유효하지 않은 토큰입니다."),
     AUTH_TOKEN_EXPIRED(HttpStatus.UNAUTHORIZED, "AUTH_015", "만료된 토큰입니다."),
     AUTH_REFRESH_TOKEN_REUSED(HttpStatus.UNAUTHORIZED, "AUTH_016", "비정상적인 토큰 사용이 감지되었습니다. 재로그인해 주세요."),
+    AUTH_TOO_MANY_ATTEMPTS(HttpStatus.TOO_MANY_REQUESTS, "AUTH_017", "로그인 시도가 너무 많습니다. 잠시 후 다시 시도해 주세요."),
 
     // -------------------------------------------------------------------------
     // USER

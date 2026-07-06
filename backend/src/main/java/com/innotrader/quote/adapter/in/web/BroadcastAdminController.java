@@ -4,6 +4,7 @@ import com.innotrader.quote.application.task.StockPriceBroadcaster;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -13,7 +14,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.Map;
 
 /**
- * 실시간 브로드캐스트 주기 관리 API (인증 필요).
+ * 실시간 브로드캐스트 주기 관리 API (ROLE_ADMIN 전용).
  *
  * <ul>
  *   <li>GET  /api/admin/broadcast/interval — 현재 주기 조회</li>
@@ -23,6 +24,7 @@ import java.util.Map;
 @Tag(name = "관리자", description = "브로드캐스트 설정 관리 API")
 @RestController
 @RequestMapping("/api/admin/broadcast")
+@PreAuthorize("hasRole('ADMIN')")
 public class BroadcastAdminController {
 
     private final StockPriceBroadcaster broadcaster;

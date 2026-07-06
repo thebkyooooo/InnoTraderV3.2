@@ -87,17 +87,19 @@ export function LoginForm() {
         </button>
       </form>
 
-      {/* 로그인 테스트 계정 */}
-      <div className="flex flex-col gap-1 mt-4 text-xs text-muted-foreground border border-muted rounded-md p-3 bg-muted/90">
-        <ul className="flex flex-col text-center">
-          <li className="flex items-center justify-between">
-            <span>테스트 계정:</span><span>test@innotrader.com</span>
-          </li>
-          <li className="flex items-center justify-between">
-            <span>비밀번호:</span><span>Test1234!</span>
-          </li>
-        </ul>
-      </div>
+      {/* 로그인 테스트 계정 — 개발 환경 전용 (운영 빌드에서는 노출하지 않음) */}
+      {process.env.NODE_ENV === 'development' && (
+        <div className="flex flex-col gap-1 mt-4 text-xs text-muted-foreground border border-muted rounded-md p-3 bg-muted/90">
+          <ul className="flex flex-col text-center">
+            <li className="flex items-center justify-between">
+              <span>테스트 계정:</span><span>test@innotrader.com</span>
+            </li>
+            <li className="flex items-center justify-between">
+              <span>비밀번호:</span><span>Test1234!</span>
+            </li>
+          </ul>
+        </div>
+      )}
 
       {/* 회원가입 링크 */}
       <div className="flex justify-between mt-4 -mb-2 text-center text-xs text-muted-foreground">

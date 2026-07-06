@@ -11,7 +11,7 @@ export default function OrderPage() {
   const [symbol, setSymbol] = useState('005930')
   const [accountNo, setAccountNo] = useState('')
   const [hogaTabValue, setHogaTabValue] = useState('dom')
-  const [orderTabValue, setOrderTabValue] = useState('order-history')
+  const [orderTabValue, setOrderTabValue] = useState('holdings')
   const [refreshKey, setRefreshKey] = useState(0)
   // QuoteBoard 현재가 / OrderBook 호가 클릭 → OrderForm 가격 인풋에 반영 (nonce로 동일값 재클릭도 감지)
   const [priceSignal, setPriceSignal] = useState<{ price: number; nonce: number } | null>(null)
@@ -57,14 +57,14 @@ export default function OrderPage() {
                 value={orderTabValue}
                 onChange={(v) => setOrderTabValue(String(v))}
                 tabs={[
-                  { value: 'order-history', label: '주문내역' },
                   { value: 'holdings', label: '보유주식' },
+                  { value: 'order-history', label: '주문내역' },
                 ]}
               />
             </div>
             <div className="flex-1 min-h-[320px]">
-              {orderTabValue === 'order-history' && <OrderHistory key={`hist-${refreshKey}`} accountNo={accountNo} height="100%" todayOnly onSymbolSelect={setSymbol} />}
               {orderTabValue === 'holdings'  && <Holdings key={`hold-${refreshKey}`} accountNo={accountNo} height="100%" showSummary={false} onSymbolSelect={setSymbol} />}
+              {orderTabValue === 'order-history' && <OrderHistory key={`hist-${refreshKey}`} accountNo={accountNo} height="100%" todayOnly onSymbolSelect={setSymbol} />}
             </div>
           </div>
         </div>

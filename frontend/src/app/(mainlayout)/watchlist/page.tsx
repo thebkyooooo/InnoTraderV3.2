@@ -221,7 +221,7 @@ export default function WatchlistPage() {
         aria-hidden={!panelOpen}
         className={`flex p-4 pt-0 sm:p-0 shrink-0 overflow-hidden transition-[width,opacity] duration-300 ease-in-out border-gray-200 sm:bg-white ${panelOpen ? 'sm:border-l sm:w-[320px] 2xl:w-[520px] sm:opacity-100' : 'sm:w-0 sm:opacity-0'}`}
       >
-        <div className="shrink-0 w-full flex flex-col gap-3 rounded-xl bg-white border border-gray-200 sm:rounded-none sm:border-none">
+        <div className="shrink-0 w-full flex flex-col gap-3 rounded-xl bg-white border border-gray-200 sm:rounded-none sm:border-none pt-0 sm:pt-2">
           {displayStock ? (
             <>
               <div className="w-full sm:w-[320px] 2xl:w-[520px] flex flex-col gap-3.5 p-4">

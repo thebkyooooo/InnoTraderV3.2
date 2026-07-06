@@ -13,6 +13,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.Date;
 import java.util.UUID;
+import org.springframework.util.StringUtils;
 
 /**
  * Generates and validates JWT access tokens and refresh tokens using jjwt 0.12.x.
@@ -33,9 +34,17 @@ public class JwtTokenProvider {
     private final SecretKey signingKey;
     private final long accessTokenValiditySeconds;
 
+    /** HS256 서명에 필요한 최소 키 길이 (256비트 = 32바이트). */
+    private static final int MIN_SECRET_BYTES = 32;
+
     public JwtTokenProvider(
             @Value("${jwt.secret}") String secret,
             @Value("${jwt.access-token-validity-seconds:900}") long accessTokenValiditySeconds) {
+        if (!StringUtils.hasText(secret) || secret.getBytes(StandardCharsets.UTF_8).length < MIN_SECRET_BYTES) {
+            throw new IllegalStateException(
+                    "jwt.secret 이 설정되지 않았거나 " + MIN_SECRET_BYTES + "바이트(256비트) 미만입니다. "
+                            + "환경변수 JWT_SECRET 을 충분히 긴 랜덤 값으로 설정하세요.");
+        }
         this.signingKey = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
         this.accessTokenValiditySeconds = accessTokenValiditySeconds;
     }
