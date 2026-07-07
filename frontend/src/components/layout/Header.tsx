@@ -12,13 +12,14 @@ import {
   ToggleButtonGroup,
   ToggleButton,
 } from '@mui/material'
-import { Menu as MenuIcon, LogoutOutlined, SensorsOutlined, SensorsOffOutlined } from '@mui/icons-material'
+import { Menu as MenuIcon, LogoutOutlined, SensorsOutlined, SensorsOffOutlined, FirstPage } from '@mui/icons-material'
 import { Modal } from '@/components/global/Modal'
 import { useAuthStore } from '@/store/auth-store'
 import { useRealtimeStore } from '@/store/realtime-store'
 import { useLogout } from '@/features/auth/api/use-auth'
 import { broadcastApi } from '@/features/admin/api/broadcast-api'
 import { getPageTitle } from '@/config/menu.config'
+import Link from 'next/link'
 
 const SPEED_OPTIONS = [
   { value: 100,  label: '0.1초' },
@@ -98,6 +99,18 @@ export function Header({ onMenuToggle }: HeaderProps) {
           >
             InnoTrader
           </Typography> */}
+
+          <Link href="/dashboard" className='flex items-center gap-1'>
+            <IconButton
+              edge="start"
+              aria-label="대시보드 화면으로"
+              onClick={onMenuToggle}
+              size="medium"
+              sx={{ color: 'text.secondary', m: 0, p: 0, '&:hover': { bgcolor: 'transparent', color: 'text.primary' } }}
+            >
+              <FirstPage sx={{ fontSize: '28px', marginLeft: '-5px', marginRight: '-3px' }} />
+            </IconButton>
+          </Link>
 
           {pageTitle && (
             <>

@@ -5,7 +5,7 @@ import { AccountSelect } from '@/components/account'
 import { Card, Button } from '@/components/ui/'
 import { SegmentedControl } from '@/components/ui/SegmentedControl'
 import { DragScroll } from '@/components/ui/DragScroll'
-import { ArrowForwardIosSharp, FormatIndentIncreaseOutlined, Cached } from '@mui/icons-material';
+import { ArrowForwardIosSharp, FormatIndentIncreaseOutlined, Cached, ChevronRight } from '@mui/icons-material';
 import { useHoldings } from '@/features/holding/api/use-holding'
 import { useOrderHistory } from '@/features/order/api/use-order'
 import {
@@ -19,6 +19,7 @@ import {
   useOverheated,
   useTrending,
 } from '@/features/market/api/use-market'
+import type { RankingType } from '@/features/market/api/use-market'
 import { useStockPricesWS, useIndexWS, useExchangeWS } from '@/features/quote/api/use-quote-ws'
 import type { StockRanking, MarketType } from '@/features/market/api/market-api'
 
@@ -43,12 +44,13 @@ const todayStr = () => {
 // ── 랭킹 영역 공통 컴포넌트 (시가총액/거래량/상승/하락/갭상승/과열 동일 UI) ──────
 interface RankingSectionProps {
   title: string
+  rankType: RankingType
   value: string
   onChange: (v: string) => void
   rows: StockRanking[]
 }
 
-function RankingSection({ title, value, onChange, rows }: RankingSectionProps) {
+function RankingSection({ title, rankType, value, onChange, rows }: RankingSectionProps) {
   return (
     <div className='@container w-full flex flex-col gap-2'>
       
@@ -87,6 +89,11 @@ function RankingSection({ title, value, onChange, rows }: RankingSectionProps) {
             )
           })}
         </ul>
+        <Link href={`/market/ranking?type=${rankType}&market=${value}`} className='ml-auto'>
+          <button className='ml-auto flex items-center mt-2 text-sm text-gray-500 hover:text-blue-700'>
+            더보기 <ChevronRight sx={{ fontSize: 18, marginRight: '-5px' }} />
+          </button>
+        </Link>
       </Card>
     </div>
   )
@@ -189,12 +196,12 @@ export default function DashboardPage() {
           </DragScroll>
 
           <div className='w-full grid grid-cols-1 @[580px]:grid-cols-2 @[1024px]:grid-cols-3 gap-4'>
-            <RankingSection title='시가총액' value={segment01} onChange={setSegment01} rows={withLive(marketCapRows)} />
-            <RankingSection title='거래량' value={segment02} onChange={setSegment02} rows={withLive(volumeRows)} />
-            <RankingSection title='상승' value={segment03} onChange={setSegment03} rows={withLive(advancingRows)} />
-            <RankingSection title='하락' value={segment04} onChange={setSegment04} rows={withLive(decliningRows)} />
-            <RankingSection title='갭상승' value={segment05} onChange={setSegment05} rows={withLive(gapUpRows)} />
-            <RankingSection title='투자심리과열' value={segment06} onChange={setSegment06} rows={withLive(overheatedRows)} />
+            <RankingSection title='시가총액' rankType='market-cap' value={segment01} onChange={setSegment01} rows={withLive(marketCapRows)} />
+            <RankingSection title='거래량' rankType='volume' value={segment02} onChange={setSegment02} rows={withLive(volumeRows)} />
+            <RankingSection title='상승' rankType='advancing' value={segment03} onChange={setSegment03} rows={withLive(advancingRows)} />
+            <RankingSection title='하락' rankType='declining' value={segment04} onChange={setSegment04} rows={withLive(decliningRows)} />
+            <RankingSection title='갭상승' rankType='gap-up' value={segment05} onChange={setSegment05} rows={withLive(gapUpRows)} />
+            <RankingSection title='투자심리과열' rankType='overheated' value={segment06} onChange={setSegment06} rows={withLive(overheatedRows)} />
           </div>
 
           {/* 인기검색종목 */}

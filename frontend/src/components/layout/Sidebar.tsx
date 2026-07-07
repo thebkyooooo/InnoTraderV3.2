@@ -1,5 +1,5 @@
 'use client'
-import React, { useState, type ElementType } from 'react'
+import React, { useState, useEffect, type ElementType } from 'react'
 import { usePathname } from 'next/navigation'
 import Link from 'next/link'
 import {
@@ -58,14 +58,20 @@ interface MenuItemRowProps {
 
 function MenuItemRow({ item, depth = 0, onNavigate }: MenuItemRowProps) {
   const pathname = usePathname()
-  const [expanded, setExpanded] = useState(false)
-
   const hasChildren = Boolean(item.children?.length)
   const IconComponent = item.icon ? ICON_MAP[item.icon] : undefined
 
   const isActive = hasChildren
     ? pathname.startsWith(item.path)
     : pathname === item.path
+
+  const [expanded, setExpanded] = useState(isActive)
+
+  // 경로 이동 시 현재 메뉴가 아닌 서브메뉴는 접고, 현재 메뉴는 펼친다
+  useEffect(() => {
+    setExpanded(isActive)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname])
 
   const handleClick = () => {
     if (hasChildren) setExpanded((prev) => !prev)

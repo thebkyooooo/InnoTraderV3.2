@@ -1,5 +1,6 @@
 'use client'
 import React, { useState, useMemo } from 'react'
+import { useSearchParams } from 'next/navigation'
 import type { ColDef, ValueFormatterParams } from 'ag-grid-community'
 import { SegmentedControl, Button, DataGrid, Section } from '@/components/ui'
 import { DragScroll } from '@/components/ui/DragScroll'
@@ -51,6 +52,16 @@ const RANK_TYPES: { label: string; value: RankingType }[] = [
   { label: '갭상승',   value: 'gap-up' },
   { label: '투자심리과열', value: 'overheated' },
 ]
+const RANK_TYPE_VALUES = new Set(RANK_TYPES.map((t) => t.value))
+const MARKET_SEGMENTS = new Set(['all', 'kospi', 'kosdaq'])
+
+/** ?type=&market= 쿼리 파라미터로 진입 시 해당 탭/시장구분으로 초기화 (대시보드 "더보기" 연동). */
+function readRankType(v: string | null): RankingType {
+  return v && RANK_TYPE_VALUES.has(v as RankingType) ? (v as RankingType) : 'market-cap'
+}
+function readMarketSeg(v: string | null): 'all' | 'kospi' | 'kosdaq' {
+  return v && MARKET_SEGMENTS.has(v) ? (v as 'all' | 'kospi' | 'kosdaq') : 'all'
+}
 
 // ─── 컬럼 정의 ─────────────────────────────────────────────────────────────────
 
@@ -127,8 +138,9 @@ const COL_DEFS: ColDef<StockRanking>[] = [
 // ─── 페이지 ────────────────────────────────────────────────────────────────────
 
 export default function MarketRankingPage() {
-  const [marketSeg, setMarketSeg] = useState<'all' | 'kospi' | 'kosdaq'>('all')
-  const [rankType, setRankType] = useState<RankingType>('market-cap')
+  const searchParams = useSearchParams()
+  const [marketSeg, setMarketSeg] = useState<'all' | 'kospi' | 'kosdaq'>(() => readMarketSeg(searchParams.get('market')))
+  const [rankType, setRankType] = useState<RankingType>(() => readRankType(searchParams.get('type')))
 
   const marketType = useMemo<MarketType>(() => {
     if (marketSeg === 'kospi')  return 'KOSPI'
