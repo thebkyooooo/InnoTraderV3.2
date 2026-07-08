@@ -16,6 +16,13 @@ export const MENU_ITEMS: MenuItem[] = [
     requiredAuth: true,
   },
   {
+    key: 'dashboard-widgets',
+    label: '위젯형 대시보드',
+    path: '/dashboard/widgets',
+    icon: 'Widgets',
+    requiredAuth: true,
+  },
+  {
     key: 'watchlist',
     label: '관심종목',
     path: '/watchlist',

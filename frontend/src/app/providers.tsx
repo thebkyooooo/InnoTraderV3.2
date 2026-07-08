@@ -24,15 +24,6 @@ function ThemeProvider({ children }: { children: React.ReactNode }) {
 // ─── MSW 초기화 ───────────────────────────────────────────────────────────────
 
 async function isBackendAlive(): Promise<boolean> {
-  // 이전 세션의 MSW 서비스워커가 이 페이지를 제어 중이면, 아래 헬스체크 fetch가 워커에
-  // 가로채여 죽은 백엔드로 passthrough되고 SW 레벨에서 무해한 'Failed to fetch'
-  // unhandledrejection이 발생한다(앱 try/catch로는 잡히지 않음). 프로브 동안만 억제한다.
-  const suppress = (e: PromiseRejectionEvent) => {
-    if (e.reason instanceof TypeError && e.reason.message === 'Failed to fetch') {
-      e.preventDefault()
-    }
-  }
-  window.addEventListener('unhandledrejection', suppress)
   try {
     const res = await fetch(
       `${process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:8080'}/actuator/health`,
@@ -41,9 +32,6 @@ async function isBackendAlive(): Promise<boolean> {
     return res.ok
   } catch {
     return false
-  } finally {
-    // SW의 rejection은 fetch 직후 비동기로 표면화되므로 잠시 뒤 리스너 제거
-    setTimeout(() => window.removeEventListener('unhandledrejection', suppress), 2000)
   }
 }
 
@@ -56,12 +44,32 @@ async function initMsw() {
     // 이전 세션(백엔드 미가동 시)에 등록된 스테일 서비스워커 제거.
     // 남아있으면 요청을 가로채 passthrough "Failed to fetch" 오류를 유발한다.
     if ('serviceWorker' in navigator) {
+      const wasControlled = !!navigator.serviceWorker.controller
       const regs = await navigator.serviceWorker.getRegistrations()
-      await Promise.all(
-        regs
-          .filter(r => r.active?.scriptURL.includes('mockServiceWorker.js'))
-          .map(r => r.unregister())
-      )
+      await Promise.all(regs.map(r => r.unregister()))
+
+      // unregister()가 resolve돼도 그 워커가 즉시 "redundant"로 완전히 전환된다는 보장은
+      // 없다 — 바로 이어서 reload()하면 그 워커가 아직 완전히 정리되기 전이라 이번
+      // 새로고침도 같은 워커에 걸릴 수 있다. 그래서 실제로 정리됐는지(getRegistrations
+      // 결과가 빌 때까지) 잠깐 폴링한 뒤 새로고침한다. 그래도 안 되면 최대 2회까지만
+      // 재시도해 무한 루프를 피한다(세션당 시도 횟수 카운트).
+      if (wasControlled) {
+        for (let i = 0; i < 10; i++) {
+          const remaining = await navigator.serviceWorker.getRegistrations()
+          if (remaining.length === 0) break
+          await new Promise((r) => setTimeout(r, 100))
+        }
+
+        const RELOAD_KEY = 'msw-stale-cleared-attempts'
+        const attempts = Number(sessionStorage.getItem(RELOAD_KEY) ?? '0')
+        if (attempts < 2) {
+          sessionStorage.setItem(RELOAD_KEY, String(attempts + 1))
+          window.location.reload()
+          return
+        }
+      } else {
+        sessionStorage.removeItem('msw-stale-cleared-attempts')
+      }
     }
     return
   }

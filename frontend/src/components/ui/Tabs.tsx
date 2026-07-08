@@ -37,7 +37,7 @@ export function Tabs({ value, onChange, tabs, variant = 'standard' }: TabsProps)
             icon={tab.icon ? <>{tab.icon}</> : undefined}
             iconPosition="start"
             disabled={tab.disabled}
-            sx={{ fontWeight: '600', color: 'gray', p: 0, pb: 1.5, minHeight: '24px', minWidth: 0, px: '2px',  mx: 0.5, textTransform: 'none' }}
+            sx={{ fontWeight: '600', color: 'gray', p: 0, pb: 1.5, minHeight: '24px', minWidth: 0, px: '0px', mr: 1, textTransform: 'none' }}
           />
         ))}
       </MuiTabs>

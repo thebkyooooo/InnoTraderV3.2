@@ -3,9 +3,9 @@ import Link from 'next/link'
 import React, { useState, useMemo } from 'react'
 import { AccountSelect } from '@/components/account'
 import { Card, Button } from '@/components/ui/'
-import { SegmentedControl } from '@/components/ui/SegmentedControl'
 import { DragScroll } from '@/components/ui/DragScroll'
-import { ArrowForwardIosSharp, FormatIndentIncreaseOutlined, Cached, ChevronRight } from '@mui/icons-material';
+import { RankingSection } from '@/components/dashboard/RankingSection'
+import { ArrowForwardIosSharp, FormatIndentIncreaseOutlined, Cached } from '@mui/icons-material';
 import { useHoldings } from '@/features/holding/api/use-holding'
 import { useOrderHistory } from '@/features/order/api/use-order'
 import {
@@ -19,7 +19,6 @@ import {
   useOverheated,
   useTrending,
 } from '@/features/market/api/use-market'
-import type { RankingType } from '@/features/market/api/use-market'
 import { useStockPricesWS, useIndexWS, useExchangeWS } from '@/features/quote/api/use-quote-ws'
 import type { StockRanking, MarketType } from '@/features/market/api/market-api'
 
@@ -39,64 +38,6 @@ const countLabel = (n: number | undefined, unit: string) => (n ? `${n}${unit}` :
 const todayStr = () => {
   const d = new Date()
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-}
-
-// ── 랭킹 영역 공통 컴포넌트 (시가총액/거래량/상승/하락/갭상승/과열 동일 UI) ──────
-interface RankingSectionProps {
-  title: string
-  rankType: RankingType
-  value: string
-  onChange: (v: string) => void
-  rows: StockRanking[]
-}
-
-function RankingSection({ title, rankType, value, onChange, rows }: RankingSectionProps) {
-  return (
-    <div className='@container w-full flex flex-col gap-2'>
-      
-
-      <Card>
-        <div className='w-full flex flex-col @[280px]:flex-row gap-2 @[300px]:justify-between mt-1 mb-4'>
-          <div className='text-sm text-gray-500 font-semibold border-b-2 border-gray-400 pb-3 mr-auto'>{title}</div>
-          <SegmentedControl
-            value={value}
-            onChange={onChange}
-            options={[
-              { label: '전체', value: 'all' },
-              { label: '코스피', value: 'kospi' },
-              { label: '코스닥', value: 'kosdaq' },
-            ]}
-            size="small"
-            sx={{height: 32, minWidth: '152px', marginLeft: 'auto'}}
-          />
-        </div>
-        <ul className='flex flex-col gap-2 min-h-[327px]'>
-          {rows.slice(0, 7).map((s, i) => {
-            const up = s.change >= 0
-            const color = up ? 'text-red-500' : 'text-blue-500'
-            const sign = up ? '+' : '-'
-            return (
-              <li key={`${s.symbol}-${i}`} className='flex flex-col @[220px]:flex-row justify-between text-sm font-semibold'>
-                <div>{s.name}</div>
-                <div className='flex flex-col items-end tabular-nums'>
-                  <p>{s.price.toLocaleString()}</p>
-                  <p className={`text-[12px] font-normal ${color} whitespace-nowrap`}>
-                    <span className="mr-0.5">{sign}{Math.abs(s.prevDiff).toLocaleString()}</span>
-                    <span>({sign}{Math.abs(s.change)}%)</span>
-                  </p>
-                </div>
-              </li>
-            )
-          })}
-        </ul>
-        <Link href={`/market/ranking?type=${rankType}&market=${value}`} className='ml-auto'>
-          <button className='ml-auto flex items-center mt-2 text-sm text-gray-500 hover:text-blue-700'>
-            더보기 <ChevronRight sx={{ fontSize: 18, marginRight: '-5px' }} />
-          </button>
-        </Link>
-      </Card>
-    </div>
-  )
 }
 
 export default function DashboardPage() {

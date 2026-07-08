@@ -1,6 +1,6 @@
 'use client'
 import { useState } from 'react'
-import { Tabs } from '@/components/ui/Tabs'
+import { Tabs, Section } from '@/components/ui'
 import { StockDetailCard, QuoteBoard, AnalysisChart, OrderBook, DailyQuoteGrid, FilledQuoteGrid, InvestmentTrendGrid } from '@/components/quote'
 
 export default function QuotePricePage() {
@@ -14,13 +14,16 @@ export default function QuotePricePage() {
       {/* <h1 className="text-lg font-bold text-foreground">현재가</h1> */}
 
       {/* 현재가 (Quote Board) 컴포넌트 — symbol만 넘기면 내부에서 조회 */}
-      <QuoteBoard symbol={symbol} onStockSelect={stock => setSymbol(stock.symbol)} />
+      <Section>
+        <QuoteBoard symbol={symbol} onStockSelect={stock => setSymbol(stock.symbol)} />
+      </Section>
 
 
-      <div className="h-2xl:flex-1 flex flex-col sm:flex-row gap-4">
+      <div className="h-2xl:flex-1 flex flex-col @[640px]:flex-row gap-4">
+
         <div className="flex-1 min-w-0 flex flex-col gap-4">
           {/* 분석차트 컴포넌트 */}
-          <div className="h-[560px] h-2xl-sm:flex-1 shrink-0 border border-gray-200 rounded-lg overflow-hidden">
+          <div className="h-[560px] h-2xl-sm:flex-1 shrink-0 border border-gray-200 rounded-lg overflow-hidden p-4 bg-white">
             <AnalysisChart symbol={symbol} />
           </div>
 
@@ -63,9 +66,11 @@ export default function QuotePricePage() {
           </div>
         </div>
 
-        <div className="sm:w-[280px] 2xl:w-[420px] flex flex-col gap-4">
+        <div className="@[640px]:w-[280px] 2xl:w-[420px]">
           {/* 종목상세 컴포넌트 */}
-          <StockDetailCard symbol={symbol} />
+          <Section>
+            <StockDetailCard symbol={symbol} />
+          </Section>
         </div>
       </div>
 

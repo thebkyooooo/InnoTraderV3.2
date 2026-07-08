@@ -81,13 +81,13 @@ export function Header({ onMenuToggle }: HeaderProps) {
           borderRadius: { md: '10px 0 0 0' },
         }}
       >
-        <Toolbar sx={{ gap: 1, minHeight: '54px !important' }}>
+        <Toolbar sx={{ gap: 0.5, minHeight: '54px !important' }}>
           <IconButton
             edge="start"
             aria-label="메뉴 열기"
             onClick={onMenuToggle}
             size="medium"
-            sx={{ color: 'text.secondary', m: 0, p: 0, display: { xs: 'block', md: 'none' }, '&:hover': { bgcolor: 'transparent', color: 'text.primary' } }}
+            sx={{ color: 'text.secondary', m: 0, p: 0, pb: 1, display: { xs: 'block', md: 'none' }, '&:hover': { bgcolor: 'transparent', color: 'text.primary' } }}
           >
             <MenuIcon />
           </IconButton>
@@ -100,17 +100,19 @@ export function Header({ onMenuToggle }: HeaderProps) {
             InnoTrader
           </Typography> */}
 
-          <Link href="/dashboard" className='flex items-center gap-1'>
-            <IconButton
-              edge="start"
-              aria-label="대시보드 화면으로"
-              onClick={onMenuToggle}
-              size="medium"
-              sx={{ color: 'text.secondary', m: 0, p: 0, '&:hover': { bgcolor: 'transparent', color: 'text.primary' } }}
-            >
-              <FirstPage sx={{ fontSize: '28px', marginLeft: '-5px', marginRight: '-3px' }} />
-            </IconButton>
-          </Link>
+          {pathname !== '/dashboard' && (
+            <Link href="/dashboard" className='flex items-center gap-1'>
+              <IconButton
+                edge="start"
+                aria-label="대시보드 화면으로"
+                onClick={onMenuToggle}
+                size="medium"
+                sx={{ color: 'text.secondary', m: 0, p: 0, '&:hover': { bgcolor: 'transparent', color: 'text.primary' }, display: { xs: 'none', md: 'inline-flex' } }}
+              >
+                <FirstPage sx={{ fontSize: '28px', marginLeft: '-5px', marginRight: '0' }} />
+              </IconButton>
+            </Link>
+          )}
 
           {pageTitle && (
             <>

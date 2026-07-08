@@ -47,31 +47,31 @@ export function StockDetailCard({ symbol }: StockDetailCardProps) {
   ]
 
   return (
-    <Section>
-      <div className="grid grid-cols-1 gap-px overflow-hidden border-t border-gray-100 py-1.5">
+    <div>
+      <div className="grid grid-cols-1 gap-1 py-1.5 overflow-hidden border-t border-gray-100">
         {rowsGrp01.map(({ label, value, color }) => (
-          <div key={label} className="flex justify-between items-center px-0 py-0.5">
+          <div key={label} className="flex justify-between items-center px-0">
             <span className="text-xs text-gray-500 shrink-0">{label}</span>
             <span className="text-sm font-medium ml-2 text-right" style={{ color }}>{value}</span>
           </div>
         ))}
       </div>
-      <div className="grid grid-cols-1 gap-px overflow-hidden border-t border-gray-100 py-1.5">
+      <div className="grid grid-cols-1 gap-1 py-1.5 overflow-hidden border-t border-gray-100">
         {rowsGrp02.map(({ label, value, color }) => (
-          <div key={label} className="flex justify-between items-center px-0 py-0.5">
+          <div key={label} className="flex justify-between items-center px-0">
             <span className="text-xs text-gray-500 shrink-0">{label}</span>
             <span className="text-sm font-medium ml-2 text-right" style={{ color }}>{value}</span>
           </div>
         ))}
       </div>
-      <div className="grid grid-cols-1 gap-px overflow-hidden border-t last:border-b border-gray-100 py-1.5">
+      <div className="grid grid-cols-1 gap-1 py-1.5 overflow-hidden border-t last:border-b border-gray-100">
         {rowsGrp03.map(({ label, value, color }) => (
-          <div key={label} className="flex justify-between items-center px-0 py-0.5">
+          <div key={label} className="flex justify-between items-center px-0">
             <span className="text-xs text-gray-500 shrink-0">{label}</span>
             <span className="text-sm font-medium ml-2 text-right" style={{ color }}>{value}</span>
           </div>
         ))}
       </div>
-    </Section>
+    </div>
   )
 }

@@ -10,10 +10,12 @@ import com.innotrader.order.domain.model.Order;
 import com.innotrader.order.domain.model.OrderSide;
 import com.innotrader.order.domain.model.OrderStatus;
 import com.innotrader.order.domain.model.OrderType;
+import com.innotrader.order.application.task.OrderActivatedEvent;
 import com.innotrader.order.domain.port.in.OrderUseCase;
 import com.innotrader.order.domain.port.out.OrderPort;
 import com.innotrader.stock.domain.model.StockMaster;
 import com.innotrader.stock.domain.port.in.GetStockMasterUseCase;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -67,15 +69,17 @@ public class OrderService implements OrderUseCase {
     private final HoldingUseCase holdingUseCase;
     private final SimpMessagingTemplate messaging;
     private final AccountUseCase accountUseCase;
+    private final ApplicationEventPublisher eventPublisher;
 
     public OrderService(OrderPort orderPort, GetStockMasterUseCase getStockMasterUseCase,
                         HoldingUseCase holdingUseCase, SimpMessagingTemplate messaging,
-                        AccountUseCase accountUseCase) {
+                        AccountUseCase accountUseCase, ApplicationEventPublisher eventPublisher) {
         this.orderPort = orderPort;
         this.getStockMasterUseCase = getStockMasterUseCase;
         this.holdingUseCase = holdingUseCase;
         this.messaging = messaging;
         this.accountUseCase = accountUseCase;
+        this.eventPublisher = eventPublisher;
     }
 
     private void notifyActivity(String accountNo, String orderNo, String symbol, String reason) {
@@ -122,6 +126,10 @@ public class OrderService implements OrderUseCase {
                 cmd.symbol(), cmd.side(), cmd.orderType(),
                 cmd.quantity(), price, status, filledQty, filledPrice, Instant.now()));
 
+        if (status == OrderStatus.RECEIVED) {
+            // 지정가 접수 — 체결 매칭 엔진의 폴링을 깨운다.
+            eventPublisher.publishEvent(new OrderActivatedEvent());
+        }
         if (status == OrderStatus.FILLED) {
             // 시장가 즉시체결 — 보유종목 반영
             holdingUseCase.applyFill(saved.userId(), saved.accountNo(), saved.symbol(),
@@ -143,6 +151,8 @@ public class OrderService implements OrderUseCase {
 
         // 원주문 갱신 (수량/가격/유형, 상태=접수)
         orderPort.save(original.amended(cmd.orderType(), cmd.quantity(), cmd.price()));
+        // 정정 후 항상 RECEIVED로 되돌아가므로 체결 매칭 엔진의 폴링을 깨운다.
+        eventPublisher.publishEvent(new OrderActivatedEvent());
 
         // 정정완료 접수증 발행
         Order receipt = orderPort.save(Order.receipt(
@@ -229,6 +239,8 @@ public class OrderService implements OrderUseCase {
             if (orderPort.existsByAccount(userId, seed.accountNo())) continue;
             seedAccount(userId, seed, universe);
         }
+        // 시드된 주문 중 RECEIVED/PARTIAL 지정가가 있을 수 있으므로 체결 매칭 엔진을 깨운다.
+        eventPublisher.publishEvent(new OrderActivatedEvent());
     }
 
     @Override
@@ -242,6 +254,7 @@ public class OrderService implements OrderUseCase {
             if (seed.todayCount() == 0) continue;
             seedAccount(userId, seed, universe);
         }
+        eventPublisher.publishEvent(new OrderActivatedEvent());
     }
 
     /** 계좌별: 당일 {@code todayCount}건 + 이전 최근 1개월 랜덤(1~10건). */

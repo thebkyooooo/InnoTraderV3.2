@@ -6,6 +6,7 @@ import { AccountSelect, Holdings } from '@/components/account'
 import { OrderForm, OrderHistory } from '@/components/order'
 import { useStockPrice } from '@/features/quote/api/use-quote'
 import { useStockPriceWS } from '@/features/quote/api/use-quote-ws'
+import { Section } from '@/components/ui/Section'
 
 export default function OrderPage() {
   const [symbol, setSymbol] = useState('005930')
@@ -29,10 +30,12 @@ export default function OrderPage() {
         {/* ─── 좌측 ─── */}
         <div className="flex-1 min-w-0 flex flex-col gap-4">
           {/* 현재가 (Quote Board) */}
-          <div className='hidden sm:block'>
-            {quote && (
-              <QuoteBoard symbol={quote.symbol} quote={quote} onStockSelect={stock => setSymbol(stock.symbol)} onPriceClick={handlePriceClick} />
-            )}
+          <div className='hidden @[640px]:block'>
+            <Section>
+              {quote && (
+                <QuoteBoard symbol={quote.symbol} quote={quote} onStockSelect={stock => setSymbol(stock.symbol)} onPriceClick={handlePriceClick} />
+              )}
+            </Section>
           </div>
 
           {/* 호가 */}
@@ -75,10 +78,12 @@ export default function OrderPage() {
             <AccountSelect value={accountNo} onChange={setAccountNo} label="계좌 선택" placeholder="계좌번호를 선택하세요" />
           </div>
           {/* 현재가 (Quote Board) */}
-          <div className='sm:hidden'>
-            {quote && (
-              <QuoteBoard symbol={quote.symbol} quote={quote} onStockSelect={stock => setSymbol(stock.symbol)} onPriceClick={handlePriceClick} />
-            )}
+          <div className='@[640px]:hidden'>
+            <Section>
+              {quote && (
+                <QuoteBoard symbol={quote.symbol} quote={quote} onStockSelect={stock => setSymbol(stock.symbol)} onPriceClick={handlePriceClick} />
+              )}
+            </Section>
           </div>
           <div className="rounded-lg border border-gray-200 bg-white p-4">
             <OrderForm

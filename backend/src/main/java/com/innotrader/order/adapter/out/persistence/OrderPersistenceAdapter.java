@@ -6,6 +6,7 @@ import com.innotrader.order.domain.model.OrderStatus;
 import com.innotrader.order.domain.model.OrderType;
 import com.innotrader.order.domain.port.out.OrderPort;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -56,8 +57,9 @@ public class OrderPersistenceAdapter implements OrderPort {
     }
 
     @Override
-    public List<Order> findActiveLimitOrders() {
-        return repository.findByOrderTypeAndStatusIn(OrderType.LIMIT, List.of(OrderStatus.RECEIVED, OrderStatus.PARTIAL)).stream()
+    public List<Order> findActiveLimitOrders(Instant orderedAtFromInclusive) {
+        return repository.findByOrderTypeAndStatusInAndOrderedAtGreaterThanEqual(
+                        OrderType.LIMIT, List.of(OrderStatus.RECEIVED, OrderStatus.PARTIAL), orderedAtFromInclusive).stream()
                 .map(OrderJpaEntity::toDomain)
                 .toList();
     }

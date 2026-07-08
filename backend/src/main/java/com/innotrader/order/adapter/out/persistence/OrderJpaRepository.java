@@ -4,6 +4,7 @@ import com.innotrader.order.domain.model.OrderStatus;
 import com.innotrader.order.domain.model.OrderType;
 import org.springframework.data.jpa.repository.JpaRepository;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -22,4 +23,7 @@ public interface OrderJpaRepository extends JpaRepository<OrderJpaEntity, UUID> 
     void deleteByUserIdAndAccountNo(UUID userId, String accountNo);
 
     List<OrderJpaEntity> findByOrderTypeAndStatusIn(OrderType orderType, List<OrderStatus> statuses);
+
+    List<OrderJpaEntity> findByOrderTypeAndStatusInAndOrderedAtGreaterThanEqual(
+            OrderType orderType, List<OrderStatus> statuses, Instant orderedAtFrom);
 }

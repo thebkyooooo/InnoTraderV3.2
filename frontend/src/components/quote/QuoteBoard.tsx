@@ -69,8 +69,8 @@ export function QuoteBoard({ symbol, quote, onStockSelect, onPriceClick }: Quote
 
   return (
     <>
-      <Section>
-        <div className="flex gap-1 py-1 items-start">
+      <div>
+        <div className="flex gap-1 py-0 items-start">
           <span className='font-semibold'>{name}</span>
           <span className='text-xs py-0.5'>{q.symbol}</span>
           {market && <span className='text-xs py-0.5'>{market}</span>}
@@ -101,7 +101,7 @@ export function QuoteBoard({ symbol, quote, onStockSelect, onPriceClick }: Quote
             </div>
           ))}
         </div>
-      </Section>
+      </div>
 
       <StockSearchModal
         open={modalOpen}

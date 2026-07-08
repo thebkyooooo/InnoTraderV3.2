@@ -11,6 +11,7 @@ import com.innotrader.quote.domain.port.out.FindStockBasePort.StockBase;
 import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.event.EventListener;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.scheduling.TaskScheduler;
 import org.springframework.stereotype.Component;
@@ -18,10 +19,13 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
 /**
@@ -41,6 +45,7 @@ import java.util.stream.Collectors;
 public class OrderFillEngine {
 
     private static final String TOPIC_ACTIVITY = "/topic/account/activity/";
+    private static final ZoneId KST = ZoneId.of("Asia/Seoul");
 
     @Value("${app.broadcast-ms:1000}")
     private volatile long broadcastMs;
@@ -54,6 +59,13 @@ public class OrderFillEngine {
 
     /** symbol → 이 엔진 전용 연속 워크 상태(현재가 시뮬레이션). StockPriceBroadcaster와는 독립적인 상태. */
     private final Map<String, Long> lastWalk = new ConcurrentHashMap<>();
+
+    /**
+     * 미체결 지정가 주문이 존재할 가능성. false면 tick()이 DB 조회 자체를 건너뛴다.
+     * 조회 결과가 비어있으면 false로 내려가고, {@link OrderActivatedEvent}(신규 접수/정정)를
+     * 받으면 다시 true로 올라가 다음 tick부터 재개한다. 기동 직후에는 실제 상태를 모르므로 true로 시작.
+     */
+    private final AtomicBoolean mayHaveActiveOrders = new AtomicBoolean(true);
 
     public OrderFillEngine(OrderPort orderPort,
                             HoldingUseCase holdingUseCase,
@@ -72,10 +84,23 @@ public class OrderFillEngine {
         taskScheduler.scheduleAtFixedRate(this::tick, Duration.ofMillis(broadcastMs));
     }
 
+    /** 신규 접수/정정으로 미체결 지정가 주문이 다시 생겼을 때 폴링을 재개시킨다. */
+    @EventListener
+    public void onOrderActivated(OrderActivatedEvent event) {
+        mayHaveActiveOrders.set(true);
+    }
+
     @Transactional
     public void tick() {
-        List<Order> openOrders = orderPort.findActiveLimitOrders();
-        if (openOrders.isEmpty()) return;
+        if (!mayHaveActiveOrders.get()) return;
+
+        // 지난 거래일의 미체결 잔재(시드 더미 데이터 등)는 체결 대상에서 제외 — 당일 접수분만 스캔.
+        Instant todayStart = LocalDate.now(KST).atStartOfDay(KST).toInstant();
+        List<Order> openOrders = orderPort.findActiveLimitOrders(todayStart);
+        if (openOrders.isEmpty()) {
+            mayHaveActiveOrders.set(false);
+            return;
+        }
 
         long nowTick = System.currentTimeMillis() / broadcastMs;
         Map<String, List<Order>> bySymbol = openOrders.stream()

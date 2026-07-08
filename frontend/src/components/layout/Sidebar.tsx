@@ -27,6 +27,7 @@ import {
   PieChart,
   Settings,
   Close,
+  Widgets,
 } from '@mui/icons-material'
 import { MENU_ITEMS, type MenuItem } from '@/config/menu.config'
 import { isAbsolute } from 'path'
@@ -40,6 +41,7 @@ interface SidebarProps {
 
 const ICON_MAP: Record<string, ElementType> = {
   LayoutDashboard: Dashboard,
+  Widgets: Widgets,
   Star: Star,
   Briefcase: WorkspacePremium,
   TrendingUp: TrendingUp,

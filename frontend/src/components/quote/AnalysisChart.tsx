@@ -620,7 +620,7 @@ export function AnalysisChart({ symbol }: AnalysisChartProps) {
   const valColor = (v: number) => (v > prevClose ? UP : v < prevClose ? DOWN : '#6b7280')
 
   return (
-    <div className="flex flex-col gap-2 h-full overflow-hidden p-4 pb-2 bg-white">
+    <div className="flex flex-col gap-2 h-full overflow-hidden -mb-2 bg-white">
       {/* 툴바 (가로 스크롤 + 마우스 드래그/터치 이동) */}
       <div
         ref={scrollRef}
@@ -730,7 +730,7 @@ export function AnalysisChart({ symbol }: AnalysisChartProps) {
       </div>
 
       {/* 차트 영역 */}
-      <div className="relative flex-1 min-h-0 border-t border-gray-200">
+      <div className="relative flex-1 min-h-0 border-t border-gray-200 -mb-2">
         {disp && (
           <div className="absolute top-1.5 left-0.5 z-10 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs pointer-events-none select-none w-[calc(100%-100px)]">
             {([['시', liveDisp?.open], ['고', liveDisp?.high], ['저', liveDisp?.low], ['종', liveDisp?.close]] as [string, number][]).map(([l, v]) => (

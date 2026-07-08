@@ -11,7 +11,7 @@ export default function QuoteOrderbookPage() {
     <div className="flex flex-col gap-4 w-full h-full @container">
 
       {/* 현재가 (Quote Board) 컴포넌트 — symbol만 넘기면 내부에서 조회 */}
-      <Section className="min-h-[140px] !border-none" noPadding>
+      <Section className="min-h-[140px]">
         <QuoteBoard symbol={symbol} onStockSelect={stock => setSymbol(stock.symbol)} />
       </Section>
 
@@ -32,7 +32,9 @@ export default function QuoteOrderbookPage() {
 
         {/* 종목상세 컴포넌트 */}
         <div className="@[640px]:w-[280px] 2xl:w-[420px]">
-          <StockDetailCard symbol={symbol} />
+          <Section>
+            <StockDetailCard symbol={symbol} />
+          </Section>
         </div>
       </div>
     </div>
