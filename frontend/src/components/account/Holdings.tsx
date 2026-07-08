@@ -84,7 +84,7 @@ export function Holdings({ accountNo, height = 400, showSummary = true, onSymbol
       )}
 
       {/* 보유종목 그리드 */}
-      <Section className='flex-1 min-h-[260px] shrink-0'>
+      <div className={`flex-1 min-h-[260px] shrink-0 overflow-hidden ${!showSummary ? '' : 'p-4 border border-gray-200 rounded-lg bg-white'}`}>
         <DataGrid<HoldingItem>
           rows={items}
           columnDefs={columns}
@@ -94,7 +94,7 @@ export function Holdings({ accountNo, height = 400, showSummary = true, onSymbol
           showSelectionColumn={false}
           getRowId={h => h.symbol}
         />
-      </Section>
+      </div>
     </div>
   )
 }

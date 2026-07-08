@@ -5,7 +5,7 @@ import 'react-grid-layout/css/styles.css'
 import 'react-resizable/css/styles.css'
 import { RestartAlt } from '@mui/icons-material'
 import { StockDetailCard, QuoteBoard, AnalysisChart, OrderBook, DailyQuoteGrid, FilledQuoteGrid, InvestmentTrendGrid } from '@/components/quote'
-import { AccountSelect } from '@/components/account'
+import { AccountSelect, Holdings } from '@/components/account'
 import { OrderForm, OrderHistory } from '@/components/order'
 import { Tabs } from '@/components/ui'
 import { useStockPrice } from '@/features/quote/api/use-quote'
@@ -22,6 +22,7 @@ const WIDGET_TITLES: Record<string, string> = {
   'stock-detail': '종목상세',
   'order-form': '주문',
   'order-history': '주문내역',
+  'holdings': '보유주식',
 }
 
 /** 타이틀 자리에 고정 텍스트 대신 탭을 보여줄 위젯. 값은 renderWidgetBody의 case와 대응. */
@@ -39,12 +40,13 @@ const WIDGET_TABS: Record<string, { value: string; label: string }[]> = {
 
 const DEFAULT_LAYOUT: Layout[] = [
   { i: 'quote-board',        x: 0, y: 0,  w: 8, h: 5,  minW: 2, minH: 4 },
-  { i: 'orderbook',          x: 0, y: 6, w: 8,  h: 14, minW: 2, minH: 4 },
-  { i: 'analysis-chart',     x: 0, y: 15,  w: 8,  h: 18, minW: 2, minH: 4 },
+  { i: 'orderbook',          x: 0, y: 5, w: 8,  h: 14, minW: 2, minH: 4 },
+  { i: 'analysis-chart',     x: 0, y: 19,  w: 8,  h: 12, minW: 2, minH: 4 },
+  { i: 'filled-daily-trend', x: 0, y: 31,  w: 8,  h: 6, minW: 2, minH: 4 },
   { i: 'order-form',         x: 9, y: 0, w: 4,  h: 12, minW: 2, minH: 4 },
-  { i: 'order-history',      x: 9, y: 4, w: 4,  h: 8, minW: 2, minH: 4 },
-  { i: 'stock-detail',       x: 9, y: 8,  w: 4,  h: 9, minW: 2, minH: 4 },
-  { i: 'filled-daily-trend', x: 9, y: 12, w: 4,  h: 8, minW: 2, minH: 4 },
+  { i: 'order-history',      x: 9, y: 12, w: 4,  h: 6, minW: 2, minH: 4 },
+  { i: 'holdings',           x: 9, y: 18, w: 4,  h: 10, minW: 2, minH: 4 },
+  { i: 'stock-detail',       x: 9, y: 28,  w: 4,  h: 9, minW: 2, minH: 4 },  
 ]
 
 export default function DashboardWidgetsPage() {
@@ -144,6 +146,8 @@ export default function DashboardWidgetsPage() {
         )
       case 'order-history':
         return <OrderHistory key={`hist-${refreshKey}`} accountNo={accountNo} height="100%" todayOnly onSymbolSelect={setSymbol} />
+      case 'holdings':
+        return <Holdings key={`hold-${refreshKey}`} accountNo={accountNo} height="100%" showSummary={false} onSymbolSelect={setSymbol} />
       default:
         return null
     }
@@ -177,7 +181,7 @@ export default function DashboardWidgetsPage() {
             <div className='widget-drag-handle flex items-center -mb-1 border-b-0 border-gray-200 text-sm font-semibold text-gray-500 cursor-move select-none'>
               {WIDGET_TABS[item.i] ? (
                 // 탭 클릭이 드래그 시작으로 오인되지 않도록 이 영역에서 mousedown 전파를 막는다.
-                <div onMouseDown={(e) => e.stopPropagation()} className='cursor-auto -mb-2'>
+                <div onMouseDown={(e) => e.stopPropagation()} className='cursor-auto mb-1'>
                   <Tabs
                     value={tabState[item.i].value}
                     onChange={(v) => tabState[item.i].onChange(String(v))}
@@ -185,12 +189,12 @@ export default function DashboardWidgetsPage() {
                   />
                 </div>
               ) : (
-                <div className='border-b border-gray-200 w-full pb-2'>
+                <div className='pb-3.5'>
                   {WIDGET_TITLES[item.i] ?? item.i}
                 </div>
               )}
             </div>
-            <div className='flex-1 min-h-0 pt-3 overflow-auto'>
+            <div className='flex-1 min-h-0 overflow-auto'>
               {renderWidgetBody(item.i)}
             </div>
           </div>

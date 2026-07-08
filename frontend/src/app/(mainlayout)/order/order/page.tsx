@@ -54,17 +54,16 @@ export default function OrderPage() {
           </div>
 
           {/* 주문내역 / 보유주식 — 탭 전환 */}
-          <div className="flex-1 shrink-0 flex flex-col">
-            <div className="shrink-0 flex flex-col border border-b-0 border-gray-200 rounded-t-lg bg-white p-4 pb-0 -mb-4 z-50">
-              <Tabs
-                value={orderTabValue}
-                onChange={(v) => setOrderTabValue(String(v))}
-                tabs={[
-                  { value: 'holdings', label: '보유주식' },
-                  { value: 'order-history', label: '주문내역' },
-                ]}
-              />
-            </div>
+          <div className="shrink-0 flex-1 flex flex-col border border-gray-200 rounded-lg bg-white p-4">
+            
+            <Tabs
+              value={orderTabValue}
+              onChange={(v) => setOrderTabValue(String(v))}
+              tabs={[
+                { value: 'holdings', label: '보유주식' },
+                { value: 'order-history', label: '주문내역' },
+              ]}
+            />
             <div className="flex-1 min-h-[320px]">
               {orderTabValue === 'holdings'  && <Holdings key={`hold-${refreshKey}`} accountNo={accountNo} height="100%" showSummary={false} onSymbolSelect={setSymbol} />}
               {orderTabValue === 'order-history' && <OrderHistory key={`hist-${refreshKey}`} accountNo={accountNo} height="100%" todayOnly onSymbolSelect={setSymbol} />}
@@ -96,7 +95,7 @@ export default function OrderPage() {
             />
           </div>
 
-          <div>
+          <div className="rounded-lg border border-gray-200 bg-white p-4">
             <OrderHistory key={`hist-${refreshKey}`} accountNo={accountNo} height="100%" todayOnly onSymbolSelect={setSymbol} />
           </div>
           

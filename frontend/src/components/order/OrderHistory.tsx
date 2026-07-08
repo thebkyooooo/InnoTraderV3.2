@@ -221,8 +221,9 @@ export function OrderHistory({ accountNo, height = 400, todayOnly = false, onSym
       </div>
       )}
 
-      {/* 주문내역 그리드 */}
-      <Section className='flex-1 min-h-[260px] shrink-0'>
+      {/* 주문내역 그리드 — 박스 스타일(테두리·배경·패딩)은 todayOnly가 아닐 때만 적용
+          (todayOnly로 위젯에 embed될 땐 위젯 자체 박스와 이중으로 겹치는 것을 방지) */}
+      <div className={`flex-1 min-h-[260px] shrink-0 overflow-hidden ${todayOnly ? '' : 'p-4 border border-gray-200 rounded-lg bg-white'}`}>
         <DataGrid<OrderHistoryItem>
           rows={items}
           columnDefs={columnDefs}
@@ -231,7 +232,7 @@ export function OrderHistory({ accountNo, height = 400, todayOnly = false, onSym
           onRowClick={onSymbolSelect ? row => onSymbolSelect(row.symbol) : undefined}
           showSelectionColumn={false}
         />
-      </Section>
+      </div>
 
       {/* 취소 확인 모달 */}
       <Modal open={!!cancelTarget} onClose={() => setCancelTarget(null)} maxWidth={300}>
