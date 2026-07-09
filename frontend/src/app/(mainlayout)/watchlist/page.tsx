@@ -168,7 +168,8 @@ export default function WatchlistPage() {
         onClick={() => setPanelOpen(v => !v)}
         aria-pressed={panelOpen}
         title={panelOpen ? '패널 숨기기' : '패널 보기'}
-        className={`absolute hidden sm:block border border-gray-50 bg-slate-200 h-[40px] w-[24px] top-0.5 right-0.5 transition-transform duration-300 ease-in-out ${panelOpen ? 'rounded-l-2xl' : 'rounded-r-2xl rotate-180'}`}
+        className={`absolute hidden sm:block border border-gray-50 bg-slate-300 h-[40px] w-[20px] top-0.5 right-0.5 transition-transform duration-300 ease-in-out 
+                    ${panelOpen ? 'rounded-l-md' : 'rounded-r-md rotate-180'}`}
       >
         <ArrowForwardIosSharp sx={{ fontSize: 20, color: 'text.disabled' }} />
       </button>
