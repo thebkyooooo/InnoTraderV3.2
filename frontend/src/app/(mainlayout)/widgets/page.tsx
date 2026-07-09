@@ -20,8 +20,8 @@ const STORAGE_KEY = 'dashboard-widgets-layout-v5'
 // react-grid-layout의 breakpoints는 뷰포트가 아니라 (WidthProvider가 측정하는) 그리드
 // 컨테이너 실제 폭 기준이다. 이 화면은 사이드바+여백으로 뷰포트 대비 컨테이너가 항상
 // 약 295px 좁게 측정되므로(예: 1440px 뷰포트 → 컨테이너 1145px), 그 오프셋을 감안해 잡았다.
-const BREAKPOINTS = { lg: 1000, md: 700, sm: 500, xs: 0 }
-const COLS = { lg: 12, md: 8, sm: 4, xs: 2 }
+const BREAKPOINTS = { lg: 1400, md: 1000, sm: 500, xs: 0 }
+const COLS = { lg: 12, md: 9, sm: 4, xs: 2 }
 
 const WIDGET_TITLES: Record<string, string> = {
   'quote-board': '현재가',
@@ -52,27 +52,27 @@ const WIDGET_IDS = [
 ] as const
 
 const DEFAULT_LAYOUTS: Layouts = {
-  // lg (데스크톱, cols 12) — 기존 데스크톱 배치 그대로.
+  // lg (데스크톱, cols 12) — 4단 비율
   lg: [
-    { i: 'quote-board',        x: 0, y: 0,  w: 8, h: 5,  minW: 2, minH: 4 },
-    { i: 'orderbook',          x: 0, y: 5,  w: 8, h: 14, minW: 2, minH: 4 },
-    { i: 'analysis-chart',     x: 0, y: 19, w: 8, h: 12, minW: 2, minH: 4 },
-    { i: 'filled-daily-trend', x: 0, y: 31, w: 8, h: 8,  minW: 2, minH: 4 },
-    { i: 'order-form',         x: 9, y: 0,  w: 4, h: 12, minW: 2, minH: 4 },
-    { i: 'order-history',      x: 9, y: 12, w: 4, h: 8,  minW: 2, minH: 4 },
-    { i: 'holdings',           x: 9, y: 20, w: 4, h: 10, minW: 2, minH: 4 },
-    { i: 'stock-detail',       x: 9, y: 30, w: 4, h: 9,  minW: 2, minH: 4 },
+    { i: 'quote-board',        x: 0, y: 0,  w: 3, h: 5,  minW: 2, minH: 4 },
+    { i: 'analysis-chart',     x: 0, y: 5, w: 3, h: 12, minW: 2, minH: 4 },
+    { i: 'filled-daily-trend', x: 0, y: 17, w: 3, h: 8,  minW: 2, minH: 4 },
+    { i: 'orderbook',          x: 3, y: 5,  w: 3, h: 14, minW: 2, minH: 4 },
+    { i: 'stock-detail',       x: 3, y: 19, w: 3, h: 9,  minW: 2, minH: 4 },
+    { i: 'order-form',         x: 6, y: 0,  w: 3, h: 12, minW: 2, minH: 4 },
+    { i: 'order-history',      x: 6, y: 12, w: 3, h: 8,  minW: 2, minH: 4 },
+    { i: 'holdings',           x: 9, y: 20, w: 3, h: 20, minW: 2, minH: 4 },
   ],
-  // md (태블릿, cols 8) — 좌/우 2단 비율은 lg와 동일하게 유지, 폭만 축소.
+  // md (태블릿, cols 8) — 3단 비율은 lg와 동일하게 유지, 폭만 축소.
   md: [
-    { i: 'quote-board',        x: 0, y: 0,  w: 5, h: 5,  minW: 2, minH: 4 },
-    { i: 'orderbook',          x: 0, y: 5,  w: 5, h: 14, minW: 2, minH: 4 },
-    { i: 'analysis-chart',     x: 0, y: 19, w: 5, h: 12, minW: 2, minH: 4 },
-    { i: 'filled-daily-trend', x: 0, y: 31, w: 5, h: 8,  minW: 2, minH: 4 },
-    { i: 'order-form',         x: 5, y: 0,  w: 3, h: 12, minW: 2, minH: 4 },
-    { i: 'order-history',      x: 5, y: 12, w: 3, h: 8,  minW: 2, minH: 4 },
-    { i: 'holdings',           x: 5, y: 20, w: 3, h: 10, minW: 2, minH: 4 },
-    { i: 'stock-detail',       x: 5, y: 30, w: 3, h: 9,  minW: 2, minH: 4 },
+    { i: 'quote-board',        x: 0, y: 0,  w: 3, h: 5,  minW: 2, minH: 4 },
+    { i: 'analysis-chart',     x: 0, y: 5, w: 3, h: 12, minW: 2, minH: 4 },
+    { i: 'filled-daily-trend', x: 0, y: 17, w: 3, h: 8,  minW: 2, minH: 4 },
+    { i: 'orderbook',          x: 3, y: 5,  w: 3, h: 14, minW: 2, minH: 4 },
+    { i: 'stock-detail',       x: 3, y: 19, w: 3, h: 9,  minW: 2, minH: 4 },
+    { i: 'order-form',         x: 6, y: 0,  w: 3, h: 12, minW: 2, minH: 4 },
+    { i: 'order-history',      x: 6, y: 12, w: 3, h: 8,  minW: 2, minH: 4 },
+    { i: 'holdings',           x: 6, y: 20, w: 3, h: 8, minW: 2, minH: 4 },
   ],
   // sm (모바일 포함, cols 4) —  좌/우 2단 비율은 lg와 동일하게 유지, 폭만 축소.
   sm: [
@@ -80,10 +80,10 @@ const DEFAULT_LAYOUTS: Layouts = {
     { i: 'orderbook',          x: 0, y: 5,  w: 2, h: 14, minW: 2, minH: 4 },
     { i: 'analysis-chart',     x: 0, y: 19, w: 2, h: 12, minW: 2, minH: 4 },
     { i: 'filled-daily-trend', x: 0, y: 31, w: 2, h: 8,  minW: 2, minH: 4 },
-    { i: 'order-form',         x: 3, y: 0,  w: 2, h: 12, minW: 2, minH: 4 },
-    { i: 'order-history',      x: 3, y: 12, w: 2, h: 8,  minW: 2, minH: 4 },
-    { i: 'holdings',           x: 3, y: 20, w: 2, h: 10, minW: 2, minH: 4 },
-    { i: 'stock-detail',       x: 3, y: 30, w: 2, h: 9,  minW: 2, minH: 4 },
+    { i: 'order-form',         x: 2, y: 0,  w: 2, h: 12, minW: 2, minH: 4 },
+    { i: 'order-history',      x: 2, y: 12, w: 2, h: 8,  minW: 2, minH: 4 },
+    { i: 'holdings',           x: 2, y: 20, w: 2, h: 10, minW: 2, minH: 4 },
+    { i: 'stock-detail',       x: 2, y: 30, w: 2, h: 9,  minW: 2, minH: 4 },
   ],
   // xs (모바일 포함, cols 2) — 전부 단일 컬럼 전체폭으로 세로 스택, 우선순위 순.
   xs: [
