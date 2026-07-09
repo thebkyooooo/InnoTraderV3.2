@@ -172,7 +172,7 @@ export function Header({ onMenuToggle }: HeaderProps) {
               onClick={() => logout()}
               sx={{ color: 'text.secondary', p: 0 }}
             >
-              <ExitToApp fontSize="medium" />
+              <ExitToApp sx={{ color: 'gray', fontSize: 28 }} />
             </IconButton>
           </Box>
         </Toolbar>

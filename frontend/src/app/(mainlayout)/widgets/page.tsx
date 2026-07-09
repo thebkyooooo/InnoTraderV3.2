@@ -209,10 +209,11 @@ export default function DashboardWidgetsPage() {
       <button
         type='button'
         onClick={resetLayout}
-        className='fixed top-[66px] right-[12px] z-30 flex flex-col items-center gap-1 px-1 py-1 text-xs text-gray-500 bg-white border border-gray-200 rounded-full shadow-md hover:text-blue-700 hover:border-blue-200'
+        className='h-[42px]  w-[42px] fixed top-[66px] right-[12px] z-30 flex flex-col items-center gap-1 px-0 py-[1px] text-gray-500 bg-white border border-gray-200 rounded-full shadow-md hover:text-blue-700 hover:border-blue-200'
         title='위젯 레이아웃 초기화'
       >
-        <RestartAlt sx={{ fontSize: 28 }} />
+        <RestartAlt sx={{ fontSize: 38 }} />
+        <span className='text-[8px] -mt-[25px]'>리셋</span>
       </button>
 
       <ResponsiveGridLayout
