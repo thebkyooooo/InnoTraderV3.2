@@ -26,7 +26,7 @@ import {
   DataExploration,
   PieChart,
   Settings,
-  Close,
+  DevicesFold,
   Widgets,
 } from '@mui/icons-material'
 import { MENU_ITEMS, type MenuItem } from '@/config/menu.config'
@@ -172,7 +172,7 @@ function SidebarContent({ onNavigate, onClose }: { onNavigate?: () => void; onCl
             '&:hover': { color: 'grey.500', bgcolor: 'transparent' },
           }}
         >
-          <Close fontSize="medium" sx={{ fontWeight: 700 }} />
+          <DevicesFold fontSize="medium" sx={{ fontWeight: 700, transform: 'rotate(180deg)' }} />
         </IconButton>
       </Box>
 

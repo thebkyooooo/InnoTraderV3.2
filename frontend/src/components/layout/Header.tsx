@@ -12,7 +12,7 @@ import {
   ToggleButtonGroup,
   ToggleButton,
 } from '@mui/material'
-import { Menu as MenuIcon, LogoutOutlined, SensorsOutlined, SensorsOffOutlined, FirstPage } from '@mui/icons-material'
+import { Menu as Menu, ExitToApp, SensorsOutlined, SensorsOffOutlined, ArrowBackIos } from '@mui/icons-material'
 import { Modal } from '@/components/global/Modal'
 import { useAuthStore } from '@/store/auth-store'
 import { useRealtimeStore } from '@/store/realtime-store'
@@ -87,9 +87,9 @@ export function Header({ onMenuToggle }: HeaderProps) {
             aria-label="메뉴 열기"
             onClick={onMenuToggle}
             size="medium"
-            sx={{ color: 'text.secondary', m: 0, p: 0, pb: 1, display: { xs: 'block', md: 'none' }, '&:hover': { bgcolor: 'transparent', color: 'text.primary' } }}
+            sx={{ color: 'text.secondary', m: 0, p: 0, pb: 0.5, display: { xs: 'block', md: 'none' }, '&:hover': { bgcolor: 'transparent', color: 'text.primary' } }}
           >
-            <MenuIcon />
+            <Menu />
           </IconButton>
 
           {/* <Typography
@@ -100,7 +100,7 @@ export function Header({ onMenuToggle }: HeaderProps) {
             InnoTrader
           </Typography> */}
 
-          {pathname !== '/dashboard' && (
+          {/* {pathname !== '/dashboard' && (
             <Link href="/dashboard" className='flex items-center gap-1'>
               <IconButton
                 edge="start"
@@ -109,10 +109,10 @@ export function Header({ onMenuToggle }: HeaderProps) {
                 size="medium"
                 sx={{ color: 'text.secondary', m: 0, p: 0, '&:hover': { bgcolor: 'transparent', color: 'text.primary' }, display: { xs: 'none', md: 'inline-flex' } }}
               >
-                <FirstPage sx={{ fontSize: '28px', marginLeft: '-5px', marginRight: '0' }} />
+                <ArrowBackIos sx={{ fontSize: '20px', marginLeft: '0px', marginRight: '-4px' }} />
               </IconButton>
             </Link>
-          )}
+          )} */}
 
           {pageTitle && (
             <>
@@ -166,12 +166,13 @@ export function Header({ onMenuToggle }: HeaderProps) {
               </Typography>
             )}
 
+            {/* 로그아웃 */}
             <IconButton
               size="small"
               onClick={() => logout()}
               sx={{ color: 'text.secondary', p: 0 }}
             >
-              <LogoutOutlined fontSize="small" />
+              <ExitToApp fontSize="medium" />
             </IconButton>
           </Box>
         </Toolbar>

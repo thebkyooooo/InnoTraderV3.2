@@ -1,9 +1,9 @@
 'use client'
 import React, { useState, useEffect, useCallback } from 'react'
-import GridLayout, { WidthProvider, type Layout } from 'react-grid-layout'
+import { Responsive, WidthProvider, type Layout, type Layouts } from 'react-grid-layout'
 import 'react-grid-layout/css/styles.css'
 import 'react-resizable/css/styles.css'
-import { RestartAlt } from '@mui/icons-material'
+import { RestartAlt, DragIndicator } from '@mui/icons-material'
 import { StockDetailCard, QuoteBoard, AnalysisChart, OrderBook, DailyQuoteGrid, FilledQuoteGrid, InvestmentTrendGrid } from '@/components/quote'
 import { AccountSelect, Holdings } from '@/components/account'
 import { OrderForm, OrderHistory } from '@/components/order'
@@ -11,10 +11,17 @@ import { Tabs } from '@/components/ui'
 import { useStockPrice } from '@/features/quote/api/use-quote'
 import { useStockPriceWS } from '@/features/quote/api/use-quote-ws'
 
-const ReactGridLayout = WidthProvider(GridLayout)
+const ResponsiveGridLayout = WidthProvider(Responsive)
 
 const ROW_HEIGHT = 30
-const STORAGE_KEY = 'dashboard-widgets-layout-v3'
+const STORAGE_KEY = 'dashboard-widgets-layout-v5'
+
+// 해상도별 브레이크포인트(px)·컬럼 수 — lg: 데스크톱, md: 태블릿, sm: 그 이하(모바일 포함).
+// react-grid-layout의 breakpoints는 뷰포트가 아니라 (WidthProvider가 측정하는) 그리드
+// 컨테이너 실제 폭 기준이다. 이 화면은 사이드바+여백으로 뷰포트 대비 컨테이너가 항상
+// 약 295px 좁게 측정되므로(예: 1440px 뷰포트 → 컨테이너 1145px), 그 오프셋을 감안해 잡았다.
+const BREAKPOINTS = { lg: 1000, md: 700, sm: 500, xs: 0 }
+const COLS = { lg: 12, md: 8, sm: 4, xs: 2 }
 
 const WIDGET_TITLES: Record<string, string> = {
   'quote-board': '현재가',
@@ -38,20 +45,62 @@ const WIDGET_TABS: Record<string, { value: string; label: string }[]> = {
   ],
 }
 
-const DEFAULT_LAYOUT: Layout[] = [
-  { i: 'quote-board',        x: 0, y: 0,  w: 8, h: 5,  minW: 2, minH: 4 },
-  { i: 'orderbook',          x: 0, y: 5, w: 8,  h: 14, minW: 2, minH: 4 },
-  { i: 'analysis-chart',     x: 0, y: 19,  w: 8,  h: 12, minW: 2, minH: 4 },
-  { i: 'filled-daily-trend', x: 0, y: 31,  w: 8,  h: 6, minW: 2, minH: 4 },
-  { i: 'order-form',         x: 9, y: 0, w: 4,  h: 12, minW: 2, minH: 4 },
-  { i: 'order-history',      x: 9, y: 12, w: 4,  h: 6, minW: 2, minH: 4 },
-  { i: 'holdings',           x: 9, y: 18, w: 4,  h: 10, minW: 2, minH: 4 },
-  { i: 'stock-detail',       x: 9, y: 28,  w: 4,  h: 9, minW: 2, minH: 4 },  
-]
+/** 모든 브레이크포인트에 공통으로 존재하는 위젯 id 목록(렌더링용) — 배치는 브레이크포인트별로 다르다. */
+const WIDGET_IDS = [
+  'quote-board', 'orderbook', 'analysis-chart', 'filled-daily-trend',
+  'order-form', 'order-history', 'holdings', 'stock-detail',
+] as const
+
+const DEFAULT_LAYOUTS: Layouts = {
+  // lg (데스크톱, cols 12) — 기존 데스크톱 배치 그대로.
+  lg: [
+    { i: 'quote-board',        x: 0, y: 0,  w: 8, h: 5,  minW: 2, minH: 4 },
+    { i: 'orderbook',          x: 0, y: 5,  w: 8, h: 14, minW: 2, minH: 4 },
+    { i: 'analysis-chart',     x: 0, y: 19, w: 8, h: 12, minW: 2, minH: 4 },
+    { i: 'filled-daily-trend', x: 0, y: 31, w: 8, h: 8,  minW: 2, minH: 4 },
+    { i: 'order-form',         x: 9, y: 0,  w: 4, h: 12, minW: 2, minH: 4 },
+    { i: 'order-history',      x: 9, y: 12, w: 4, h: 8,  minW: 2, minH: 4 },
+    { i: 'holdings',           x: 9, y: 20, w: 4, h: 10, minW: 2, minH: 4 },
+    { i: 'stock-detail',       x: 9, y: 30, w: 4, h: 9,  minW: 2, minH: 4 },
+  ],
+  // md (태블릿, cols 8) — 좌/우 2단 비율은 lg와 동일하게 유지, 폭만 축소.
+  md: [
+    { i: 'quote-board',        x: 0, y: 0,  w: 5, h: 5,  minW: 2, minH: 4 },
+    { i: 'orderbook',          x: 0, y: 5,  w: 5, h: 14, minW: 2, minH: 4 },
+    { i: 'analysis-chart',     x: 0, y: 19, w: 5, h: 12, minW: 2, minH: 4 },
+    { i: 'filled-daily-trend', x: 0, y: 31, w: 5, h: 8,  minW: 2, minH: 4 },
+    { i: 'order-form',         x: 5, y: 0,  w: 3, h: 12, minW: 2, minH: 4 },
+    { i: 'order-history',      x: 5, y: 12, w: 3, h: 8,  minW: 2, minH: 4 },
+    { i: 'holdings',           x: 5, y: 20, w: 3, h: 10, minW: 2, minH: 4 },
+    { i: 'stock-detail',       x: 5, y: 30, w: 3, h: 9,  minW: 2, minH: 4 },
+  ],
+  // sm (모바일 포함, cols 4) —  좌/우 2단 비율은 lg와 동일하게 유지, 폭만 축소.
+  sm: [
+    { i: 'quote-board',        x: 0, y: 0,  w: 2, h: 5,  minW: 2, minH: 4 },
+    { i: 'orderbook',          x: 0, y: 5,  w: 2, h: 14, minW: 2, minH: 4 },
+    { i: 'analysis-chart',     x: 0, y: 19, w: 2, h: 12, minW: 2, minH: 4 },
+    { i: 'filled-daily-trend', x: 0, y: 31, w: 2, h: 8,  minW: 2, minH: 4 },
+    { i: 'order-form',         x: 3, y: 0,  w: 2, h: 12, minW: 2, minH: 4 },
+    { i: 'order-history',      x: 3, y: 12, w: 2, h: 8,  minW: 2, minH: 4 },
+    { i: 'holdings',           x: 3, y: 20, w: 2, h: 10, minW: 2, minH: 4 },
+    { i: 'stock-detail',       x: 3, y: 30, w: 2, h: 9,  minW: 2, minH: 4 },
+  ],
+  // xs (모바일 포함, cols 2) — 전부 단일 컬럼 전체폭으로 세로 스택, 우선순위 순.
+  xs: [
+    { i: 'quote-board',        x: 0, y: 0,  w: 2, h: 5,  minW: 2, minH: 4 },
+    { i: 'order-form',         x: 0, y: 5,  w: 2, h: 12, minW: 2, minH: 4 },
+    { i: 'orderbook',          x: 0, y: 17, w: 2, h: 14, minW: 2, minH: 4 },
+    { i: 'analysis-chart',     x: 0, y: 31, w: 2, h: 12, minW: 2, minH: 4 },
+    { i: 'order-history',      x: 0, y: 43, w: 2, h: 8,  minW: 2, minH: 4 },
+    { i: 'holdings',           x: 0, y: 51, w: 2, h: 10, minW: 2, minH: 4 },
+    { i: 'filled-daily-trend', x: 0, y: 61, w: 2, h: 6,  minW: 2, minH: 4 },
+    { i: 'stock-detail',       x: 0, y: 67, w: 2, h: 9,  minW: 2, minH: 4 },
+  ],
+}
 
 export default function DashboardWidgetsPage() {
   const [symbol, setSymbol] = useState('005930')
-  const [layout, setLayout] = useState<Layout[]>(DEFAULT_LAYOUT)
+  const [layouts, setLayouts] = useState<Layouts>(DEFAULT_LAYOUTS)
   const [tabValue, setTabValue] = useState('filled')
   const [hogaTabValue, setHogaTabValue] = useState('dom')
   // 위젯 id → 그 위젯의 탭 state/setter. WIDGET_TABS에 항목을 추가할 때 여기도 함께 등록해야 한다.
@@ -76,23 +125,24 @@ export default function DashboardWidgetsPage() {
   useEffect(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY)
-      if (saved) setLayout(JSON.parse(saved))
+      if (saved) setLayouts(JSON.parse(saved))
     } catch {
       // 손상된 값이면 기본 레이아웃 유지
     }
   }, [])
 
-  const handleLayoutChange = useCallback((next: Layout[]) => {
-    setLayout(next)
+  // Responsive 그리드는 (현재 브레이크포인트의 layout, 전체 브레이크포인트 layouts)를 함께 넘겨준다.
+  const handleLayoutChange = useCallback((_current: Layout[], allLayouts: Layouts) => {
+    setLayouts(allLayouts)
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(next))
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(allLayouts))
     } catch {
       // storage 사용 불가 환경이면 조용히 무시 (레이아웃은 메모리상으로만 유지)
     }
   }, [])
 
   const resetLayout = () => {
-    setLayout(DEFAULT_LAYOUT)
+    setLayouts(DEFAULT_LAYOUTS)
     try {
       localStorage.removeItem(STORAGE_KEY)
     } catch {
@@ -165,10 +215,11 @@ export default function DashboardWidgetsPage() {
         <RestartAlt sx={{ fontSize: 28 }} />
       </button>
 
-      <ReactGridLayout
+      <ResponsiveGridLayout
         className='layout'
-        layout={layout}
-        cols={12}
+        layouts={layouts}
+        breakpoints={BREAKPOINTS}
+        cols={COLS}
         rowHeight={ROW_HEIGHT}
         onLayoutChange={handleLayoutChange}
         draggableHandle='.widget-drag-handle'
@@ -176,30 +227,31 @@ export default function DashboardWidgetsPage() {
         margin={[16, 16]}
         containerPadding={[0, 0]}
       >
-        {layout.map((item) => (
-          <div key={item.i} className='bg-white border border-gray-200 rounded-lg flex flex-col overflow-hidden p-4'>
-            <div className='widget-drag-handle flex items-center -mb-1 border-b-0 border-gray-200 text-sm font-semibold text-gray-500 cursor-move select-none'>
-              {WIDGET_TABS[item.i] ? (
+        {WIDGET_IDS.map((id) => (
+          <div key={id} className='bg-white border border-gray-200 rounded-lg flex flex-col overflow-hidden p-4'>
+            <div className='widget-drag-handle flex items-start -mb-1 border-b-0 border-gray-200 text-sm font-semibold text-gray-500 cursor-move select-none'>
+              {WIDGET_TABS[id] ? (
                 // 탭 클릭이 드래그 시작으로 오인되지 않도록 이 영역에서 mousedown 전파를 막는다.
                 <div onMouseDown={(e) => e.stopPropagation()} className='cursor-auto mb-1'>
                   <Tabs
-                    value={tabState[item.i].value}
-                    onChange={(v) => tabState[item.i].onChange(String(v))}
-                    tabs={WIDGET_TABS[item.i]}
+                    value={tabState[id].value}
+                    onChange={(v) => tabState[id].onChange(String(v))}
+                    tabs={WIDGET_TABS[id]}
                   />
                 </div>
               ) : (
                 <div className='pb-3.5'>
-                  {WIDGET_TITLES[item.i] ?? item.i}
+                  {WIDGET_TITLES[id] ?? id}
                 </div>
               )}
+              <DragIndicator sx={{ fontSize: 22, ml: 'auto', mr: '-2px', mt: '-2px', color: 'text.disabled' }} />
             </div>
             <div className='flex-1 min-h-0 overflow-auto'>
-              {renderWidgetBody(item.i)}
+              {renderWidgetBody(id)}
             </div>
           </div>
         ))}
-      </ReactGridLayout>
+      </ResponsiveGridLayout>
     </div>
   )
 }

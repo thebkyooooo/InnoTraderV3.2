@@ -17,8 +17,8 @@ export const MENU_ITEMS: MenuItem[] = [
   },
   {
     key: 'dashboard-widgets',
-    label: '위젯형 대시보드',
-    path: '/dashboard/widgets',
+    label: '트레이딩보드(위젯)',
+    path: '/widgets',
     icon: 'Widgets',
     requiredAuth: true,
   },
