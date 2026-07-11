@@ -8,6 +8,7 @@ import {
 } from './order-api'
 import { useAuthStore } from '@/store/auth-store'
 import { useAccountActivityWS } from '@/features/quote/api/use-quote-ws'
+import { useWidgetVisible } from '@/shared/lib/widget-visibility'
 
 // 주문내역 조회 + 주문 변경(매수/매도/정정/취소) React Query 훅.
 // 같은 queryKey(조건)로 조회하면 여러 컴포넌트의 동시 요청과 StrictMode
@@ -17,6 +18,7 @@ import { useAccountActivityWS } from '@/features/quote/api/use-quote-ws'
 /** 주문내역 조회. */
 export function useOrderHistory(params: OrderHistoryParams, options?: { enabled?: boolean }) {
   const accessToken = useAuthStore((s) => s.accessToken)
+  const widgetVisible = useWidgetVisible()
   return useQuery<OrderHistoryResponse>({
     queryKey: [
       'order',
@@ -29,7 +31,7 @@ export function useOrderHistory(params: OrderHistoryParams, options?: { enabled?
       params.endDate ?? '',
     ],
     queryFn: async () => (await orderApi.getHistory(params)).data,
-    enabled: (options?.enabled ?? true) && !!accessToken && !!params.accountNo,
+    enabled: (options?.enabled ?? true) && !!accessToken && !!params.accountNo && widgetVisible,
   })
 }
 

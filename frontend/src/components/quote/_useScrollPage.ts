@@ -1,6 +1,7 @@
 'use client'
 import { useRef } from 'react'
 import { useInfiniteQuery } from '@tanstack/react-query'
+import { useWidgetVisible } from '@/shared/lib/widget-visibility'
 
 interface Page<T> {
   items: T[]
@@ -28,12 +29,15 @@ export function useScrollPage<T>(
   queryKey: readonly unknown[],
 ): ScrollPageResult<T> {
   const sentinelRef = useRef<HTMLDivElement>(null)
+  // 위젯이 숨겨져 있으면 조회하지 않는다. 다시 보이면 staleTime:0라 자동 재조회된다.
+  const widgetVisible = useWidgetVisible()
 
   const query = useInfiniteQuery({
     queryKey,
     queryFn: ({ pageParam }) => fetchFn(pageParam),
     initialPageParam: undefined as string | undefined,
     getNextPageParam: (last) => (last.data.hasNext ? last.data.nextCursor ?? undefined : undefined),
+    enabled: widgetVisible,
   })
 
   const items = query.data?.pages.flatMap((p) => p.data.items) ?? []

@@ -7,7 +7,7 @@ import type { NextRequest } from 'next/server'
  * - /trade/**     : 트레이딩 뷰
  * - /portfolio/** : 포트폴리오 (라우트 그룹 외부에서 접근하는 경우)
  */
-const PROTECTED_PATHS = ['/dashboard', '/widgets', '/trade', '/watchlist', '/market', '/order', '/settings', '/portfolio']
+const PROTECTED_PATHS = ['/dashboard', '/widgets', '/widgets-dockview', '/widgets-flexlayout', '/trade', '/watchlist', '/market', '/order', '/settings', '/portfolio']
 
 /**
  * 인증 없이 접근 가능한 공개 경로

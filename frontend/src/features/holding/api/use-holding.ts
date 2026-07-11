@@ -2,6 +2,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { holdingApi, type HoldingsResponse } from './holding-api'
 import { useAuthStore } from '@/store/auth-store'
+import { useWidgetVisible } from '@/shared/lib/widget-visibility'
 
 // 주식잔고 조회 React Query 훅.
 // 같은 queryKey(accountNo)로 호출하면 여러 컴포넌트의 동시 요청과
@@ -10,9 +11,10 @@ import { useAuthStore } from '@/store/auth-store'
 /** 주식잔고(요약 + 보유종목) 조회. */
 export function useHoldings(accountNo: string, options?: { enabled?: boolean }) {
   const accessToken = useAuthStore((s) => s.accessToken)
+  const widgetVisible = useWidgetVisible()
   return useQuery<HoldingsResponse>({
     queryKey: ['holding', accountNo],
     queryFn: async () => (await holdingApi.getHoldings(accountNo)).data,
-    enabled: (options?.enabled ?? true) && !!accessToken && !!accountNo,
+    enabled: (options?.enabled ?? true) && !!accessToken && !!accountNo && widgetVisible,
   })
 }

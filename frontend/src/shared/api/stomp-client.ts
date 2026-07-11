@@ -45,18 +45,19 @@ class StompClientManager {
     return new Promise((resolve, reject) => {
       this.setConnectionState('connecting')
 
-      const connectHeaders: StompHeaders = {}
-      const token = getAccessToken?.()
-      if (token) {
-        connectHeaders.Authorization = `Bearer ${token}`
-      }
-
       this.client = new Client({
         // SockJS 팩토리 함수 사용
         webSocketFactory: () =>
           new SockJS(this.getWsUrl()) as unknown as WebSocket,
 
-        connectHeaders,
+        // 최초 연결 + 매 재연결 시도 직전마다 호출 — 토큰을 connect() 시점에 한 번만 캡처하면
+        // 자동 재연결이 만료/부재 상태의 낡은 헤더로 CONNECT를 반복해 서버에서 계속 거부된다.
+        beforeConnect: () => {
+          const token = getAccessToken?.()
+          if (this.client) {
+            this.client.connectHeaders = token ? { Authorization: `Bearer ${token}` } : {}
+          }
+        },
 
         // 재연결 딜레이
         reconnectDelay: this.reconnectDelay,

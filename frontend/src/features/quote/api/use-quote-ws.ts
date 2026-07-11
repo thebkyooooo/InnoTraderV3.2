@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react'
 import { Client, type StompSubscription, type IMessage } from '@stomp/stompjs'
 import SockJS from 'sockjs-client'
+import { useWidgetVisible } from '@/shared/lib/widget-visibility'
 
 // auth-store에서 AT를 읽어오는 함수 (stomp-client.ts와 동일한 순환 import 방지 패턴)
 let getAccessToken: (() => string | null) | null = null
@@ -57,9 +58,16 @@ function ensureClient() {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     webSocketFactory: () => new SockJS(WS_URL) as any,
     reconnectDelay: 5000,
-    // 최초 연결 + 매 재연결 시도 직전마다 호출 — AT가 재발급되어도 최신 토큰으로 CONNECT
-    beforeConnect: () => {
-      const token = getAccessToken?.()
+    // 최초 연결 + 매 재연결 시도 직전마다 호출 — AT가 재발급되어도 최신 토큰으로 CONNECT.
+    // 페이지 첫 마운트 시 auth-store 하이드레이션/토큰 재발급이 끝나기 전이면 토큰이 잠깐
+    // null인데, 그대로 CONNECT하면 서버가 거부하고 5초 재연결 루프를 돌며 서버 로그를
+    // 오염시킨다. 토큰이 준비될 때까지(최대 10초) 기다렸다 연결한다.
+    beforeConnect: async () => {
+      let token = getAccessToken?.()
+      for (let i = 0; !token && i < 20; i++) {
+        await new Promise((r) => setTimeout(r, 500))
+        token = getAccessToken?.()
+      }
       if (client) {
         client.connectHeaders = token ? { Authorization: `Bearer ${token}` } : {}
       }
@@ -107,11 +115,14 @@ function subscribeShared(destination: string, listener: Listener): () => void {
 
 function useChannel<T>(destination: string | null): T | null {
   const [data, setData] = useState<T | null>(null)
+  // 위젯이 숨겨져 있으면 구독하지 않는다(위젯 밖에서는 항상 보이므로 true).
+  const widgetVisible = useWidgetVisible()
+  const dest = widgetVisible ? destination : null
   useEffect(() => {
-    if (!destination) return
+    if (!dest) return
     setData(null)
-    return subscribeShared(destination, (d) => setData(d as T))
-  }, [destination])
+    return subscribeShared(dest, (d) => setData(d as T))
+  }, [dest])
   return data
 }
 
@@ -193,11 +204,13 @@ export function useAccountActivityWS(accountNo: string, enabled = true): Account
  */
 export function useStockPricesWS(symbols: string[]): Record<string, QuotePriceResponse> {
   const [quotes, setQuotes] = useState<Record<string, QuotePriceResponse>>({})
+  // 위젯이 숨겨져 있으면 구독하지 않는다(위젯 밖에서는 항상 보이므로 true).
+  const widgetVisible = useWidgetVisible()
   // symbols 배열 참조는 매 렌더 바뀌므로 정렬된 문자열을 deps 로 써 내용이 같으면 재구독하지 않는다.
-  const key = [...symbols].sort().join(',')
+  const key = (widgetVisible ? symbols : []).slice().sort().join(',')
 
   useEffect(() => {
-    if (symbols.length === 0) { setQuotes({}); return }
+    if (!widgetVisible || symbols.length === 0) { setQuotes({}); return }
 
     // 심볼마다 개별 setQuotes를 호출하면 심볼 수가 많은 화면(랭킹 등)에서 한 브로드캐스트
     // 주기에 수십~수백 번의 연쇄 리렌더가 발생해 React의 "Maximum update depth" 한도에

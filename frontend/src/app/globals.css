@@ -162,3 +162,38 @@
   border-bottom-left-radius: 0 !important;
   border-bottom-right-radius: 0 !important;
 }
+
+/* FlexLayout 스타일 설정 */
+/* 탭 버튼 폰트 크기 조정  */
+.flexlayout__tab_button {
+    padding: 6px .5em !important;
+}
+.flexlayout__tab_button_content {
+  font-size: 13px !important;
+  height: 1rem !important;
+}
+/* 선택된 탭셋도 배경을 흰색으로 통일 (구분 표시 제거) */
+.flexlayout__tabset-selected {
+  background-color: white !important;
+}
+/* 드래그로 이동 가능한 영역(탭 버튼·탭바 빈 공간)에 이동 커서 표시.
+   실제 드래그 중에는 네이티브 HTML5 드래그라 브라우저가 자체 드래그 커서를 표시한다. */
+.flexlayout__tab_button,
+.flexlayout__tabset_tabbar_outer {
+  cursor: grab;
+}
+.flexlayout__tabset_tabbar_outer:hover {
+  background-color: #f0f0f050 !important;
+}
+.flexlayout__tab_button:active {
+  cursor: grabbing;
+}
+
+/* Dockview 스타일 설정 */
+/* 숨기기 탭셋의 탭 버튼 색상 조정 (Dockview v3.2.0 이후) */ 
+.dv-groupview.dv-active-group > .dv-tabs-and-actions-container .dv-tabs-container > .dv-tab.dv-inactive-tab {
+    background-color: #f0f0f050 !important;
+}
+.dv-groupview.dv-inactive-group > .dv-tabs-and-actions-container .dv-tabs-container > .dv-tab.dv-inactive-tab {
+    background-color: #f0f0f050 !important;
+}

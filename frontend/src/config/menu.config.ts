@@ -17,10 +17,24 @@ export const MENU_ITEMS: MenuItem[] = [
   },
   {
     key: 'dashboard-widgets',
-    label: '트레이딩보드(위젯)',
+    label: '트레이딩보드',
     path: '/widgets',
     icon: 'Widgets',
     requiredAuth: true,
+    children: [
+      { key: 'dashboard-widgets',
+        label: 'React-grid-layout',
+        path: '/widgets' 
+      },
+      { key: 'widgets-dockview',
+        label: 'Dockview',
+        path: '/widgets-dockview' 
+      },
+      { key: 'widgets-flexlayout',
+        label: 'FlexLayout',
+        path: '/widgets-flexlayout' 
+      },
+    ],
   },
   {
     key: 'watchlist',
