@@ -117,7 +117,7 @@ function resolveBreakpoint(width: number): Breakpoint {
   return 'mobile'
 }
 
-const STORAGE_KEY_PREFIX = 'widgets-dockview-layout-v10'
+const STORAGE_KEY_PREFIX = 'widgets-dockview-layout-v11'
 const storageKey = (bp: Breakpoint) => `${STORAGE_KEY_PREFIX}-${bp}`
 
 type AddWidget = (
@@ -166,7 +166,7 @@ function buildTablet(api: DockviewApi) {
   add('order-form', { position: { referencePanel: 'quote-board', direction: 'right' }, initialWidth: 320 })
 
   add('stock-detail', { position: { referencePanel: 'quote-board', direction: 'within' }, inactive: true })
-  add('analysis-chart', { position: { referencePanel: 'quote-board', direction: 'below' }, initialHeight: 700 })
+  add('analysis-chart', { position: { referencePanel: 'quote-board', direction: 'below' }, initialHeight: 600 })
   add('filled', { position: { referencePanel: 'analysis-chart', direction: 'below' }, initialHeight: 280 })
   add('daily', { position: { referencePanel: 'filled', direction: 'within' }, inactive: true })
   add('trend', { position: { referencePanel: 'filled', direction: 'within' }, inactive: true })
