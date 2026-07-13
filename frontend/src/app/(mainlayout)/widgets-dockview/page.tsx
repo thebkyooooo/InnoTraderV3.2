@@ -117,7 +117,7 @@ function resolveBreakpoint(width: number): Breakpoint {
   return 'mobile'
 }
 
-const STORAGE_KEY_PREFIX = 'widgets-dockview-layout-v11'
+const STORAGE_KEY_PREFIX = 'widgets-dockview-layout-v15'
 const storageKey = (bp: Breakpoint) => `${STORAGE_KEY_PREFIX}-${bp}`
 
 type AddWidget = (
@@ -133,24 +133,24 @@ function makeAddWidget(api: DockviewApi): AddWidget {
 }
 
 /**
- * desktop (≥1100px) — 2열.
+ * desktop (≥1100px) — 3열.
  * 좌: 현재가 → 분석차트 → [체결/일별/투자동향/주문내역/보유주식] 탭
  * 우: 주문 → [호가 Dom/Canvas/종목상세] 탭
  */
 function buildDesktop(api: DockviewApi) {
   const add = makeAddWidget(api)
-  add('quote-board', {})
+  add('quote-board', { minimumHeight: 120 })
   add('orderbook-dom', { position: { referencePanel: 'quote-board', direction: 'right' }, initialWidth: 680 })
   add('order-form', { position: { referencePanel: 'orderbook-dom', direction: 'right' }, initialWidth: 340 })
-  
-  add('analysis-chart', { position: { referencePanel: 'quote-board', direction: 'below' }, initialHeight: 600 })
-  add('filled', { position: { referencePanel: 'analysis-chart', direction: 'below' }, initialHeight: 300 })
+
+  add('analysis-chart', { position: { referencePanel: 'quote-board', direction: 'below' }, minimumHeight: 320, initialHeight: 500 })
+  add('filled', { position: { referencePanel: 'analysis-chart', direction: 'below' }, minimumHeight: 300, initialHeight: 300 })
   add('daily', { position: { referencePanel: 'filled', direction: 'within' }, inactive: true })
   add('trend', { position: { referencePanel: 'filled', direction: 'within' }, inactive: true })
-  
+
   add('orderbook-canvas', { position: { referencePanel: 'orderbook-dom', direction: 'within' }, inactive: true })
-  add('stock-detail', { position: { referencePanel: 'orderbook-dom', direction: 'below' }, initialHeight: 300 })  
-  
+  add('stock-detail', { position: { referencePanel: 'orderbook-dom', direction: 'below' }, initialHeight: 300 })
+
   add('order-history', { position: { referencePanel: 'order-form', direction: 'below' }, initialHeight: 300 })
   add('holdings', { position: { referencePanel: 'order-history', direction: 'within' }, inactive: true })
 }
@@ -162,11 +162,11 @@ function buildDesktop(api: DockviewApi) {
  */
 function buildTablet(api: DockviewApi) {
   const add = makeAddWidget(api)
-  add('quote-board', {})
+  add('quote-board', { minimumHeight: 120 })
   add('order-form', { position: { referencePanel: 'quote-board', direction: 'right' }, initialWidth: 320 })
 
   add('stock-detail', { position: { referencePanel: 'quote-board', direction: 'within' }, inactive: true })
-  add('analysis-chart', { position: { referencePanel: 'quote-board', direction: 'below' }, initialHeight: 600 })
+  add('analysis-chart', { position: { referencePanel: 'quote-board', direction: 'below' }, initialHeight: 700 })
   add('filled', { position: { referencePanel: 'analysis-chart', direction: 'below' }, initialHeight: 280 })
   add('daily', { position: { referencePanel: 'filled', direction: 'within' }, inactive: true })
   add('trend', { position: { referencePanel: 'filled', direction: 'within' }, inactive: true })
