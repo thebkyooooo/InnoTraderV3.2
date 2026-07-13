@@ -166,14 +166,14 @@ function buildTablet(api: DockviewApi) {
   add('order-form', { position: { referencePanel: 'quote-board', direction: 'right' }, initialWidth: 320 })
 
   add('stock-detail', { position: { referencePanel: 'quote-board', direction: 'within' }, inactive: true })
-  add('analysis-chart', { position: { referencePanel: 'quote-board', direction: 'below' }, initialHeight: 700 })
-  add('filled', { position: { referencePanel: 'analysis-chart', direction: 'below' }, initialHeight: 280 })
+  add('analysis-chart', { position: { referencePanel: 'quote-board', direction: 'below' }, minimumHeight: 320, initialHeight: 700 })
+  add('filled', { position: { referencePanel: 'analysis-chart', direction: 'below' }, minimumHeight: 280, initialHeight: 280 })
   add('daily', { position: { referencePanel: 'filled', direction: 'within' }, inactive: true })
   add('trend', { position: { referencePanel: 'filled', direction: 'within' }, inactive: true })
 
-  add('orderbook-dom', { position: { referencePanel: 'order-form', direction: 'below' }, initialHeight: 530 })
+  add('orderbook-dom', { position: { referencePanel: 'order-form', direction: 'below' },minimumHeight: 200, initialHeight: 530 })
   add('orderbook-canvas', { position: { referencePanel: 'orderbook-dom', direction: 'within' }, inactive: true })
-  add('holdings', { position: { referencePanel: 'orderbook-dom', direction: 'below' }, initialHeight: 280 })
+  add('holdings', { position: { referencePanel: 'orderbook-dom', direction: 'below' }, minimumHeight: 280, initialHeight: 280 })
   add('order-history', { position: { referencePanel: 'holdings', direction: 'within' }, inactive: true })
 }
 
