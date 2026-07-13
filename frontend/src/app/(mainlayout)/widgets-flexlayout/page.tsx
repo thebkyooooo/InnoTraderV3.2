@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react'
 import { Layout, Model, type IJsonModel, type TabNode } from 'flexlayout-react'
 import 'flexlayout-react/style/light.css'
-import { RestartAlt } from '@mui/icons-material'
+import { RestartAlt, Launch, CloseFullscreen, FitScreen } from '@mui/icons-material'
 import { useWidgetDashboardState, type WidgetDashboardState } from '@/features/dashboard/useWidgetDashboardState'
 import { renderWidgetContent, WIDGET_TITLES, type WidgetId } from '@/features/dashboard/widgetContent'
 import { WidgetVisibilityContext } from '@/shared/lib/widget-visibility'
@@ -44,7 +44,28 @@ function WidgetTab({ node, state }: { node: TabNode; state: WidgetDashboardState
   )
 }
 
-const GLOBAL = { tabEnableRename: false, tabSetEnableMaximize: true } as const
+// tabEnablePopoutFloatIcon: 탭셋 헤더에 "현재 탭 플로팅" 아이콘을 띄운다(내장 div 기반 float 창).
+// tabEnablePopout(브라우저 새 창 팝아웃)은 기본 false 유지 — float 아이콘만 노출된다.
+// tabEnableRenderOnDemand: false — 기본값(true)이면 비활성 탭이 "첫 선택 시점"에야 마운트되는데,
+// 이때 AG Grid가 분리된(0크기) 컨테이너에서 초기화된다. 데이터가 있으면 rowData 갱신이 재그리기를
+// 유발해 복구되지만, 조회 내역이 없으면 그 뒤 아무 변화가 없어 빈 그리드가 표시되지 않는 버그가 있다
+// (레이아웃 초기화 후 재현). 이 페이지의 정책은 원래 "항상 마운트 + 가시성으로 WS/REST 게이팅"
+// (WidgetTab 주석, dockview 페이지와 동일)이므로 on-demand를 끄고 정책을 일치시킨다.
+const GLOBAL = {
+  tabEnableRename: false,
+  tabSetEnableMaximize: true,
+  tabEnablePopoutFloatIcon: true,
+  tabEnableRenderOnDemand: false,
+} as const
+
+// 내장 아이콘 교체 — dockview 페이지와 동일한 플로팅 아이콘으로 통일.
+// 모듈 레벨 고정 객체: 이 페이지는 실시간 시세로 1초마다 리렌더되므로 매 렌더 새 객체를
+// 넘기면 Layout이 불필요한 갱신을 반복한다.
+const ICONS = {
+  popoutFloat: <Launch sx={{ fontSize: 18 }} />,
+  maximize: <FitScreen sx={{ fontSize: 18 }} />,
+  restore: <CloseFullscreen sx={{ fontSize: 18 }} />,
+}
 
 // ─── 반응형 브레이크포인트 ────────────────────────────────────────────────────
 // FlexLayout도 컨테이너 폭에 따른 내장 브레이크포인트가 없다. ResizeObserver로 래퍼 폭을
@@ -68,19 +89,34 @@ const DESKTOP_JSON: IJsonModel = {
     type: 'row', weight: 100,
     children: [
       {
-        type: 'row', weight: 65,
+        type: 'row', weight: 70,
         children: [
-          { type: 'tabset', weight: 25, children: [tab('quote-board'), tab('stock-detail')] },
-          { type: 'tabset', weight: 45, children: [tab('analysis-chart')] },
-          { type: 'tabset', weight: 30, children: [tab('filled'), tab('daily'), tab('trend')] },
+          {
+            type: 'row', weight: 50,
+            children: [
+              {
+                type: 'row', weight: 60,
+                children: [
+                  { type: 'tabset', weight: 35, children: [tab('quote-board'), tab('stock-detail')] },
+                  { type: 'tabset', weight: 75, children: [tab('filled'), tab('daily'), tab('trend')] },
+                ],
+              },
+              {
+                type: 'row', weight: 40,
+                children: [
+                  { type: 'tabset', weight: 30, children: [tab('orderbook-dom'), tab('orderbook-canvas')] },
+                ],
+              },
+            ],
+          },
+          { type: 'tabset', weight: 50, children: [tab('analysis-chart')] },
         ],
       },
       {
-        type: 'row', weight: 35,
+        type: 'row', weight: 30,
         children: [
-          { type: 'tabset', weight: 35, children: [tab('order-form')]},
-          { type: 'tabset', weight: 30, children: [tab('orderbook-dom'), tab('orderbook-canvas')] },
-          { type: 'tabset', weight: 35, children: [tab('holdings'), tab('order-history')] },
+          { type: 'tabset', weight: 50, children: [tab('order-form')]},
+          { type: 'tabset', weight: 50, children: [tab('holdings'), tab('order-history')] },
         ],
       },
     ],
@@ -107,7 +143,7 @@ const TABLET_JSON: IJsonModel = {
         children: [
           { type: 'tabset', weight: 35, children: [tab('order-form')]},
           { type: 'tabset', weight: 30, children: [tab('orderbook-dom'), tab('orderbook-canvas')] },
-          { type: 'tabset', weight: 35, children: [tab('holdings'), tab('order-history')] },
+          { type: 'tabset', weight: 35, children: [tab('order-history'), tab('holdings')] },
         ],
       },
     ],
@@ -139,7 +175,14 @@ const DEFAULT_JSONS: Record<Breakpoint, IJsonModel> = {
 function loadModel(bp: Breakpoint): Model {
   try {
     const saved = localStorage.getItem(storageKey(bp))
-    if (saved) return Model.fromJson(JSON.parse(saved))
+    if (saved) {
+      const json = JSON.parse(saved) as IJsonModel
+      // 저장된 레이아웃엔 저장 당시의 global 설정이 통째로 들어 있어, 이후 코드에서
+      // 추가한 플래그(예: tabEnablePopoutFloatIcon)가 반영되지 않는다. 코드 쪽 GLOBAL을
+      // 병합해 강제한다. (rootOrientationVertical 등 저장본 고유 값은 유지)
+      json.global = { ...json.global, ...GLOBAL }
+      return Model.fromJson(json)
+    }
   } catch {
     // 손상된 값이면 기본 배치로 진행
   }
@@ -214,10 +257,11 @@ export default function WidgetsFlexLayoutPage() {
       <button
         type='button'
         onClick={resetLayout}
-        className='fixed top-[66px] right-[12px] z-30 flex flex-col items-center gap-1 px-1 py-1 text-xs text-gray-500 bg-white border border-gray-200 rounded-full shadow-md hover:text-blue-700 hover:border-blue-200'
-        title='레이아웃 초기화'
+        className='h-[42px]  w-[42px] fixed top-[126px] right-[14px] z-30 flex flex-col items-center gap-1 px-0 py-[1px] text-gray-500 bg-gray-200 border border-gray-200 rounded-full shadow-md hover:text-blue-700 hover:border-blue-200'
+        title='위젯 레이아웃 초기화'
       >
-        <RestartAlt sx={{ fontSize: 28 }} />
+        <RestartAlt sx={{ fontSize: 38 }} />
+        <span className='text-[7px] -mt-[24px]'>리셋</span>
       </button>
 
       <div ref={wrapperRef} className='flex-1 min-h-[1800px] @[700px]:min-h-[600px] relative'>
@@ -226,6 +270,8 @@ export default function WidgetsFlexLayoutPage() {
             model={model}
             factory={factory}
             onModelChange={persist}
+            constrainFloatPanels
+            icons={ICONS}
           />
         )}
       </div>

@@ -1,8 +1,14 @@
 'use client'
 import React, { createContext, useContext, useEffect, useState } from 'react'
-import { DockviewReact, type DockviewReadyEvent, type DockviewApi, type IDockviewPanelProps } from 'dockview'
+import {
+  DockviewReact,
+  type DockviewReadyEvent,
+  type DockviewApi,
+  type IDockviewPanelProps,
+  type IDockviewHeaderActionsProps,
+} from 'dockview'
 import 'dockview/dist/styles/dockview.css'
-import { RestartAlt } from '@mui/icons-material'
+import { RestartAlt, Launch, CloseFullscreen, FitScreen, GridView } from '@mui/icons-material'
 import { useWidgetDashboardState, type WidgetDashboardState } from '@/features/dashboard/useWidgetDashboardState'
 import { renderWidgetContent, WIDGET_TITLES, type WidgetId } from '@/features/dashboard/widgetContent'
 import { WidgetVisibilityContext } from '@/shared/lib/widget-visibility'
@@ -33,6 +39,64 @@ function WidgetPanel(props: IDockviewPanelProps<{ widgetId: WidgetId }>) {
 }
 
 const COMPONENTS = { widget: WidgetPanel }
+
+// ─── 그룹 헤더 액션(최대화 / 플로팅) ─────────────────────────────────────────
+// 각 그룹 탭바 오른쪽에 렌더된다. 최대화 상태는 dockview 전역에서 하나뿐이라
+// containerApi 이벤트로, 플로팅 여부는 그룹별 location 이벤트로 동기화한다.
+function GroupHeaderActions(props: IDockviewHeaderActionsProps) {
+  const { api, containerApi, activePanel } = props
+  const [maximized, setMaximized] = useState(() => api.isMaximized())
+  const [locationType, setLocationType] = useState(() => api.location.type)
+
+  useEffect(() => {
+    setMaximized(api.isMaximized())
+    setLocationType(api.location.type)
+    const maxDisposable = containerApi.onDidMaximizedGroupChange(() => setMaximized(api.isMaximized()))
+    const locDisposable = api.onDidLocationChange((e) => setLocationType(e.location.type))
+    return () => {
+      maxDisposable.dispose()
+      locDisposable.dispose()
+    }
+  }, [api, containerApi])
+
+  const btnClass = 'flex items-center justify-center w-6 h-full text-gray-400 hover:text-blue-600'
+
+  return (
+    <div className='flex items-center h-full px-1.5'>
+      {locationType === 'grid' && !maximized && activePanel && (
+        <button 
+          type='button'
+          className={btnClass}
+          title='플로팅'
+          onClick={() => containerApi.addFloatingGroup(activePanel, { x: 80, y: 80, width: 520, height: 400 })}
+        >
+          <Launch sx={{ fontSize: 18 }} />
+        </button>
+      )}
+      {locationType === 'floating' && (
+        <button
+          type='button'
+          className={btnClass}
+          title='레이아웃에 도킹'
+          onClick={() => api.moveTo({ position: 'right' })}
+        >
+          <GridView sx={{ fontSize: 16 }} />
+        </button>
+      )}
+      {/* 최대화는 grid 그룹만 지원(플로팅/팝아웃 그룹엔 미적용) */}
+      {locationType === 'grid' && (
+        <button
+          type='button'
+          className={btnClass}
+          title={maximized ? '원래 크기로' : '최대화'}
+          onClick={() => (maximized ? api.exitMaximized() : api.maximize())}
+        >
+          {maximized ? <CloseFullscreen sx={{ fontSize: 18 }} /> : <FitScreen sx={{ fontSize: 18 }} />}
+        </button>
+      )}
+    </div>
+  )
+}
 
 // 모듈 레벨 고정 컴포넌트 — inline 화살표 함수로 넘기면 매 렌더마다 새 함수가 되어
 // DockviewReact가 매번 updateOptions()를 호출하고, 그 끝에서 전체 재배치가 실행된다.
@@ -79,7 +143,7 @@ function buildDesktop(api: DockviewApi) {
   add('orderbook-dom', { position: { referencePanel: 'quote-board', direction: 'right' }, initialWidth: 680 })
   add('order-form', { position: { referencePanel: 'orderbook-dom', direction: 'right' }, initialWidth: 340 })
   
-  add('analysis-chart', { position: { referencePanel: 'quote-board', direction: 'below' }, initialHeight: 630 })
+  add('analysis-chart', { position: { referencePanel: 'quote-board', direction: 'below' }, initialHeight: 710 })
   add('filled', { position: { referencePanel: 'analysis-chart', direction: 'below' }, initialHeight: 300 })
   add('daily', { position: { referencePanel: 'filled', direction: 'within' }, inactive: true })
   add('trend', { position: { referencePanel: 'filled', direction: 'within' }, inactive: true })
@@ -102,15 +166,15 @@ function buildTablet(api: DockviewApi) {
   add('order-form', { position: { referencePanel: 'quote-board', direction: 'right' }, initialWidth: 320 })
 
   add('stock-detail', { position: { referencePanel: 'quote-board', direction: 'within' }, inactive: true })
-  add('analysis-chart', { position: { referencePanel: 'quote-board', direction: 'below' }, initialHeight: 630 })
-  add('filled', { position: { referencePanel: 'analysis-chart', direction: 'below' }, initialHeight: 310 })
+  add('analysis-chart', { position: { referencePanel: 'quote-board', direction: 'below' }, initialHeight: 710 })
+  add('filled', { position: { referencePanel: 'analysis-chart', direction: 'below' }, initialHeight: 280 })
   add('daily', { position: { referencePanel: 'filled', direction: 'within' }, inactive: true })
   add('trend', { position: { referencePanel: 'filled', direction: 'within' }, inactive: true })
 
-  add('order-history', { position: { referencePanel: 'order-form', direction: 'within' }, inactive: true })
-  add('holdings', { position: { referencePanel: 'order-form', direction: 'within' }, inactive: true })
-  add('orderbook-dom', { position: { referencePanel: 'order-form', direction: 'below' } })
+  add('orderbook-dom', { position: { referencePanel: 'order-form', direction: 'below' }, initialHeight: 530 })
   add('orderbook-canvas', { position: { referencePanel: 'orderbook-dom', direction: 'within' }, inactive: true })
+  add('holdings', { position: { referencePanel: 'orderbook-dom', direction: 'below' }, initialHeight: 280 })
+  add('order-history', { position: { referencePanel: 'holdings', direction: 'within' }, inactive: true })
 }
 
 /**
@@ -228,10 +292,11 @@ export default function WidgetsDockviewPage() {
         <button
           type='button'
           onClick={resetLayout}
-          className='fixed top-[66px] right-[12px] z-30 flex flex-col items-center gap-1 px-1 py-1 text-xs text-gray-500 bg-white border border-gray-200 rounded-full shadow-md hover:text-blue-700 hover:border-blue-200'
-          title='레이아웃 초기화 (현재 화면 크기)'
+          className='h-[42px]  w-[42px] fixed top-[126px] right-[14px] z-30 flex flex-col items-center gap-1 px-0 py-[1px] text-gray-500 bg-gray-200 border border-gray-200 rounded-full shadow-md hover:text-blue-700 hover:border-blue-200'
+          title='위젯 레이아웃 초기화'
         >
-          <RestartAlt sx={{ fontSize: 28 }} />
+          <RestartAlt sx={{ fontSize: 38 }} />
+          <span className='text-[7px] -mt-[24px]'>리셋</span>
         </button>
 
         <div ref={wrapperRef} className='flex-1 min-h-[1800px] @[700px]:min-h-[600px]'>
@@ -240,6 +305,7 @@ export default function WidgetsDockviewPage() {
             components={COMPONENTS}
             onReady={onReady}
             watermarkComponent={EmptyWatermark}
+            rightHeaderActionsComponent={GroupHeaderActions}
           />
         </div>
       </div>

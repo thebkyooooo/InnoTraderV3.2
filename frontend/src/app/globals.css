@@ -164,12 +164,25 @@
 }
 
 /* FlexLayout 스타일 설정 */
+.flexlayout__tabset_tabbar_outer {
+  height: 36px; /* 원하는 높이 */
+}
+/* 탭 버튼이 커진 바 높이를 꽉 채우게 stretch.
+   기본값(center)이면 버튼이 원래 크기로 중앙에 떠서, 선택 탭의 흰 배경과
+   콘텐츠 영역 사이에 배경색 띠가 생겨 잘려 보인다. */
+.flexlayout__tabset_tabbar_inner_tab_container {
+  align-items: stretch;
+}
 /* 탭 버튼 폰트 크기 조정  */
 .flexlayout__tab_button {
-    padding: 6px .5em !important;
+    margin-top: 2px !important;
+    padding: 8px 0.5em !important;
+    border-top-left-radius: 6px;
+    border-top-right-radius: 6px;
+    font-weight: 500 !important;
 }
 .flexlayout__tab_button_content {
-  font-size: 13px !important;
+  font-size: 14px !important;
   height: 1rem !important;
 }
 /* 선택된 탭셋도 배경을 흰색으로 통일 (구분 표시 제거) */
@@ -188,6 +201,17 @@
 .flexlayout__tab_button:active {
   cursor: grabbing;
 }
+.flexlayout__tab_button_content {
+    color: #333333B3 !important;
+}
+.flexlayout__tab_button--selected {
+    background-color: #eef0f0 !important;
+}
+.flexlayout__float_window_header {
+    background-color: #eaecf0 !important;
+    border-bottom: 0px !important;
+    padding: 2px 8px;
+}
 
 /* Dockview 스타일 설정 */
 /* 숨기기 탭셋의 탭 버튼 색상 조정 (Dockview v3.2.0 이후) */ 
@@ -196,4 +220,38 @@
 }
 .dv-groupview.dv-inactive-group > .dv-tabs-and-actions-container .dv-tabs-container > .dv-tab.dv-inactive-tab {
     background-color: #f0f0f050 !important;
+}
+.dv-tab {
+    padding: 0 !important; 
+}
+.dv-tab .dv-default-tab {
+    padding: 0 10px !important; 
+}
+/* 탭셋(그룹) 경계선 색상 */
+.dockview-theme-light {
+  --dv-separator-border: #f0f0f0 !important; /* 원하는 색 */
+}
+.dv-tab {
+    font-weight: 600 !important;
+    font-size: 14px !important;
+}
+.dv-tabs-and-actions-container {
+    padding-left: 5px !important;
+    padding-top: 4px !important;
+}
+.dv-tabs-container {
+    border-top-left-radius: 6px;
+    border-top-right-radius: 6px;
+}
+.dv-floating-overlay-host {
+  .dv-tabs-and-actions-container {
+    background-color: #f0f0f0 !important;
+  }
+  .dv-groupview.dv-active-group > .dv-tabs-and-actions-container .dv-tabs-container > .dv-tab.dv-active-tab {
+    background-color: #ffffff !important;
+    color: #333333B3 !important;
+  }
+}
+.dv-tabs-and-actions-container:hover {
+  background-color: #f0f0f050 !important;    
 }
