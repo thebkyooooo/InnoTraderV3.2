@@ -212,6 +212,9 @@
     border-bottom: 0px !important;
     padding: 2px 8px;
 }
+.flexlayout__tab_button_content {
+    margin-top: -3px !important;
+}
 
 /* Dockview 스타일 설정 */
 /* 숨기기 탭셋의 탭 버튼 색상 조정 (Dockview v3.2.0 이후) */ 

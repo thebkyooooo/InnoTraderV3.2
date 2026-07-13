@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react'
 import { Layout, Model, type IJsonModel, type TabNode } from 'flexlayout-react'
 import 'flexlayout-react/style/light.css'
-import { RestartAlt, Launch, CloseFullscreen, FitScreen } from '@mui/icons-material'
+import { RestartAlt, OpenInNew, CloseFullscreen, OpenInFull } from '@mui/icons-material'
 import { useWidgetDashboardState, type WidgetDashboardState } from '@/features/dashboard/useWidgetDashboardState'
 import { renderWidgetContent, WIDGET_TITLES, type WidgetId } from '@/features/dashboard/widgetContent'
 import { WidgetVisibilityContext } from '@/shared/lib/widget-visibility'
@@ -62,9 +62,9 @@ const GLOBAL = {
 // 모듈 레벨 고정 객체: 이 페이지는 실시간 시세로 1초마다 리렌더되므로 매 렌더 새 객체를
 // 넘기면 Layout이 불필요한 갱신을 반복한다.
 const ICONS = {
-  popoutFloat: <Launch sx={{ fontSize: 18 }} />,
-  maximize: <FitScreen sx={{ fontSize: 18 }} />,
-  restore: <CloseFullscreen sx={{ fontSize: 18 }} />,
+  popoutFloat: <OpenInNew sx={{ fontSize: 18, color: '#333333B3  !important' }} />,
+  maximize: <OpenInFull sx={{ fontSize: 18, color: '#333333B3  !important' }} />,
+  restore: <CloseFullscreen sx={{ fontSize: 18, color: '#333333B3  !important' }} />,
 }
 
 // ─── 반응형 브레이크포인트 ────────────────────────────────────────────────────

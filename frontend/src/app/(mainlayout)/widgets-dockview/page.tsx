@@ -8,7 +8,7 @@ import {
   type IDockviewHeaderActionsProps,
 } from 'dockview'
 import 'dockview/dist/styles/dockview.css'
-import { RestartAlt, Launch, CloseFullscreen, FitScreen, GridView } from '@mui/icons-material'
+import { RestartAlt, OpenInNew, CloseFullscreen, OpenInFull, GridView } from '@mui/icons-material'
 import { useWidgetDashboardState, type WidgetDashboardState } from '@/features/dashboard/useWidgetDashboardState'
 import { renderWidgetContent, WIDGET_TITLES, type WidgetId } from '@/features/dashboard/widgetContent'
 import { WidgetVisibilityContext } from '@/shared/lib/widget-visibility'
@@ -70,7 +70,7 @@ function GroupHeaderActions(props: IDockviewHeaderActionsProps) {
           title='플로팅'
           onClick={() => containerApi.addFloatingGroup(activePanel, { x: 80, y: 80, width: 520, height: 400 })}
         >
-          <Launch sx={{ fontSize: 18 }} />
+          <OpenInNew sx={{ fontSize: 18 }} />
         </button>
       )}
       {locationType === 'floating' && (
@@ -91,7 +91,7 @@ function GroupHeaderActions(props: IDockviewHeaderActionsProps) {
           title={maximized ? '원래 크기로' : '최대화'}
           onClick={() => (maximized ? api.exitMaximized() : api.maximize())}
         >
-          {maximized ? <CloseFullscreen sx={{ fontSize: 18 }} /> : <FitScreen sx={{ fontSize: 18 }} />}
+          {maximized ? <CloseFullscreen sx={{ fontSize: 18 }} /> : <OpenInFull sx={{ fontSize: 18 }} />}
         </button>
       )}
     </div>
