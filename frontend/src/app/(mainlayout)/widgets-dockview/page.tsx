@@ -117,7 +117,7 @@ function resolveBreakpoint(width: number): Breakpoint {
   return 'mobile'
 }
 
-const STORAGE_KEY_PREFIX = 'widgets-dockview-layout-v9'
+const STORAGE_KEY_PREFIX = 'widgets-dockview-layout-v10'
 const storageKey = (bp: Breakpoint) => `${STORAGE_KEY_PREFIX}-${bp}`
 
 type AddWidget = (
@@ -143,7 +143,7 @@ function buildDesktop(api: DockviewApi) {
   add('orderbook-dom', { position: { referencePanel: 'quote-board', direction: 'right' }, initialWidth: 680 })
   add('order-form', { position: { referencePanel: 'orderbook-dom', direction: 'right' }, initialWidth: 340 })
   
-  add('analysis-chart', { position: { referencePanel: 'quote-board', direction: 'below' }, initialHeight: 710 })
+  add('analysis-chart', { position: { referencePanel: 'quote-board', direction: 'below' }, initialHeight: 700 })
   add('filled', { position: { referencePanel: 'analysis-chart', direction: 'below' }, initialHeight: 300 })
   add('daily', { position: { referencePanel: 'filled', direction: 'within' }, inactive: true })
   add('trend', { position: { referencePanel: 'filled', direction: 'within' }, inactive: true })
@@ -166,7 +166,7 @@ function buildTablet(api: DockviewApi) {
   add('order-form', { position: { referencePanel: 'quote-board', direction: 'right' }, initialWidth: 320 })
 
   add('stock-detail', { position: { referencePanel: 'quote-board', direction: 'within' }, inactive: true })
-  add('analysis-chart', { position: { referencePanel: 'quote-board', direction: 'below' }, initialHeight: 710 })
+  add('analysis-chart', { position: { referencePanel: 'quote-board', direction: 'below' }, initialHeight: 700 })
   add('filled', { position: { referencePanel: 'analysis-chart', direction: 'below' }, initialHeight: 280 })
   add('daily', { position: { referencePanel: 'filled', direction: 'within' }, inactive: true })
   add('trend', { position: { referencePanel: 'filled', direction: 'within' }, inactive: true })
