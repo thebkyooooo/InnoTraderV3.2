@@ -141,16 +141,16 @@ function makeAddWidget(api: DockviewApi): AddWidget {
 function buildDesktop(api: DockviewApi) {
   const add = makeAddWidget(api)
   add('quote-board', { minimumHeight: 120, maximumHeight: 120 })
-  add('orderbook-dom', { position: { referencePanel: 'quote-board', direction: 'right' }, initialWidth: 680, minimumHeight: 400, minimumWidth: 300 })
-  add('order-form', { position: { referencePanel: 'orderbook-dom', direction: 'right' }, initialWidth: 340, minimumHeight: 300, minimumWidth: 300 })
+  add('orderbook-dom', { position: { referencePanel: 'quote-board', direction: 'right' }, minimumWidth: 300, maximumWidth: 400, minimumHeight: 300 })
+  add('order-form', { position: { referencePanel: 'orderbook-dom', direction: 'right' }, minimumWidth: 300, maximumWidth: 400, minimumHeight: 300 })
 
-  add('analysis-chart', { position: { referencePanel: 'quote-board', direction: 'below' },minimumHeight: 280 })
+  add('analysis-chart', { position: { referencePanel: 'quote-board', direction: 'below' }, minimumHeight: 280 })
   add('filled', { position: { referencePanel: 'analysis-chart', direction: 'below' }, minimumHeight: 200, maximumHeight: 400 })
   add('daily', { position: { referencePanel: 'filled', direction: 'within' }, inactive: true })
   add('trend', { position: { referencePanel: 'filled', direction: 'within' }, inactive: true })
 
   add('orderbook-canvas', { position: { referencePanel: 'orderbook-dom', direction: 'within' }, inactive: true })
-  add('stock-detail', { position: { referencePanel: 'orderbook-dom', direction: 'below' }, minimumHeight: 200 })
+  add('stock-detail', { position: { referencePanel: 'orderbook-dom', direction: 'below' }, minimumHeight: 300 })
 
   add('order-history', { position: { referencePanel: 'order-form', direction: 'below' }, minimumHeight: 300 })
   add('holdings', { position: { referencePanel: 'order-history', direction: 'within' }, inactive: true })
@@ -164,7 +164,7 @@ function buildDesktop(api: DockviewApi) {
 function buildTablet(api: DockviewApi) {
   const add = makeAddWidget(api)
   add('quote-board', { minimumHeight: 120, maximumHeight: 120 })
-  add('order-form', { position: { referencePanel: 'quote-board', direction: 'right' }, initialWidth: 300, minimumWidth: 300 })
+  add('order-form', { position: { referencePanel: 'quote-board', direction: 'right' }, minimumWidth: 300, maximumWidth: 400 })
 
   add('stock-detail', { position: { referencePanel: 'quote-board', direction: 'within' }, inactive: true })
   add('analysis-chart', { position: { referencePanel: 'quote-board', direction: 'below' }, minimumHeight: 220 })
@@ -183,9 +183,9 @@ function buildTablet(api: DockviewApi) {
  */
 function buildMobile(api: DockviewApi) {
   const add = makeAddWidget(api)
-  add('quote-board', {})
+  add('quote-board', { minimumHeight: 180, maximumHeight: 220 })
   add('stock-detail', { position: { referencePanel: 'quote-board', direction: 'within' }, inactive: true })
-  add('analysis-chart', { position: { referencePanel: 'quote-board', direction: 'below' }, initialHeight: 1600 })
+  add('analysis-chart', { position: { referencePanel: 'quote-board', direction: 'below' }, initialHeight: 1620 })
   add('orderbook-dom', { position: { referencePanel: 'analysis-chart', direction: 'below' }, initialHeight: 1200 })
   add('orderbook-canvas', { position: { referencePanel: 'orderbook-dom', direction: 'within' }, inactive: true })
   add('order-form', { position: { referencePanel: 'orderbook-dom', direction: 'below' }, initialHeight: 800 })

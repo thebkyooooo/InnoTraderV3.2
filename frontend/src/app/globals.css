@@ -202,59 +202,80 @@
   cursor: grabbing;
 }
 .flexlayout__tab_button_content {
-    color: #333333B3 !important;
+  color: #333333B3 !important;
 }
 .flexlayout__tab_button--selected {
-    background-color: #eef0f0 !important;
+  background-color: #eef0f0 !important;
 }
 .flexlayout__float_window_header {
-    background-color: #eaecf0 !important;
-    border-bottom: 0px !important;
-    padding: 2px 8px;
+  background-color: #eaecf0 !important;
+  border-bottom: 0px !important;
+  padding: 2px 8px;
 }
 .flexlayout__tab_button_content {
-    margin-top: -3px !important;
+  margin-top: -3px !important;
 }
 
 /* Dockview 스타일 설정 */
 /* 숨기기 탭셋의 탭 버튼 색상 조정 (Dockview v3.2.0 이후) */ 
 .dv-groupview.dv-active-group > .dv-tabs-and-actions-container .dv-tabs-container > .dv-tab.dv-inactive-tab {
-    background-color: #f0f0f050 !important;
+  background-color: #f0f0f090 !important;
+  margin-right: 2px;
 }
 .dv-groupview.dv-inactive-group > .dv-tabs-and-actions-container .dv-tabs-container > .dv-tab.dv-inactive-tab {
-    background-color: #f0f0f050 !important;
+  background-color: #f0f0f090 !important;
+  margin-right: 2px;
+}
+.dv-groupview.dv-inactive-group > .dv-tabs-and-actions-container .dv-tabs-container > .dv-tab.dv-active-tab {
+  background-color: #0000001f !important;
+  margin-right: 2px;
+}
+.dv-groupview.dv-active-group > .dv-tabs-and-actions-container .dv-tabs-container > .dv-tab.dv-active-tab {
+  background-color: #0000001f !important;
+  margin-right: 2px;
 }
 .dv-tab {
-    padding: 0 !important; 
+  padding: 0 !important; 
 }
 .dv-tab .dv-default-tab {
-    padding: 0 10px !important; 
+  padding: 0 10px !important; 
 }
 /* 탭셋(그룹) 경계선 색상 */
 .dockview-theme-light {
   --dv-separator-border: #f0f0f0 !important;
 }
+.dv-default-tab .dv-inactive-tab, ::before, ::after {
+  border-top-left-radius: 6px;
+  border-top-right-radius: 6px;
+}
 .dv-tab {
-    font-weight: 600 !important;
-    font-size: 14px !important;
+  border-top-left-radius: 6px;
+  border-top-right-radius: 6px;
+  font-weight: 600 !important;
+  font-size: 14px !important;
 }
 .dv-tabs-and-actions-container {
-    padding-left: 5px !important;
-    padding-top: 4px !important;
+  padding-left: 5px !important;
+  padding-top: 4px !important;
+  border-bottom: 1px solid #e5e7eb !important;
+  background-color: #fff !important;
 }
 .dv-tabs-container {
-    border-top-left-radius: 6px;
-    border-top-right-radius: 6px;
-}
-.dv-floating-overlay-host {
-  .dv-tabs-and-actions-container {
-    background-color: #f0f0f0 !important;
-  }
-  .dv-groupview.dv-active-group > .dv-tabs-and-actions-container .dv-tabs-container > .dv-tab.dv-active-tab {
-    background-color: #ffffff !important;
-    color: #333333B3 !important;
-  }
+  border-top-left-radius: 6px;
+  border-top-right-radius: 6px;
 }
 .dv-tabs-and-actions-container:hover {
   background-color: #f0f0f050 !important;    
+}
+.dv-floating-overlay-host {
+  .dv-tabs-and-actions-container {
+    background-color: #fff !important;
+  }
+  .dv-groupview.dv-active-group > .dv-tabs-and-actions-container .dv-tabs-container > .dv-tab.dv-active-tab {
+    background-color: #e5e7eb !important;
+    color: #333333B3 !important;
+  }
+  .dv-tabs-and-actions-container:hover {
+    background-color: #f0f0f0 !important;    
+  }
 }
