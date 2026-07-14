@@ -232,7 +232,7 @@
 }
 /* 탭셋(그룹) 경계선 색상 */
 .dockview-theme-light {
-  --dv-separator-border: #f0f0f0 !important; /* 원하는 색 */
+  --dv-separator-border: #f0f0f0 !important;
 }
 .dv-tab {
     font-weight: 600 !important;

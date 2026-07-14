@@ -30,7 +30,7 @@ function WidgetPanel(props: IDockviewPanelProps<{ widgetId: WidgetId }>) {
 
   if (!state) return null
   return (
-    <div className='p-4 h-full overflow-auto bg-white'>
+    <div className='p-3 h-full overflow-auto bg-white'>
       <WidgetVisibilityContext.Provider value={visible}>
         {renderWidgetContent(props.params.widgetId, state)}
       </WidgetVisibilityContext.Provider>
@@ -117,7 +117,7 @@ function resolveBreakpoint(width: number): Breakpoint {
   return 'mobile'
 }
 
-const STORAGE_KEY_PREFIX = 'widgets-dockview-layout-v15'
+const STORAGE_KEY_PREFIX = 'widgets-dockview-layout-v18'
 const storageKey = (bp: Breakpoint) => `${STORAGE_KEY_PREFIX}-${bp}`
 
 type AddWidget = (
@@ -134,31 +134,32 @@ function makeAddWidget(api: DockviewApi): AddWidget {
 
 /**
  * desktop (≥1100px) — 3열.
- * 좌: 현재가 → 분석차트 → [체결/일별/투자동향/주문내역/보유주식] 탭
- * 우: 주문 → [호가 Dom/Canvas/종목상세] 탭
+ * 좌: 현재가 → 분석차트 → [체결/일별/투자동향] 탭
+ * 중: [호가 Dom/Canvas] 탭 → 종목상세
+ * 우: 주문 → [주문내역/보유주식] 탭
  */
 function buildDesktop(api: DockviewApi) {
   const add = makeAddWidget(api)
   add('quote-board', { minimumHeight: 120 })
-  add('orderbook-dom', { position: { referencePanel: 'quote-board', direction: 'right' }, initialWidth: 680 })
-  add('order-form', { position: { referencePanel: 'orderbook-dom', direction: 'right' }, initialWidth: 340 })
+  add('orderbook-dom', { position: { referencePanel: 'quote-board', direction: 'right' }, initialWidth: 680. , minimumHeight: 400 })
+  add('order-form', { position: { referencePanel: 'orderbook-dom', direction: 'right' }, initialWidth: 340, minimumHeight: 300 })
 
-  add('analysis-chart', { position: { referencePanel: 'quote-board', direction: 'below' }, minimumHeight: 320, initialHeight: 700 })
-  add('filled', { position: { referencePanel: 'analysis-chart', direction: 'below' }, minimumHeight: 300, initialHeight: 300 })
+  add('analysis-chart', { position: { referencePanel: 'quote-board', direction: 'below' },minimumHeight: 280 })
+  add('filled', { position: { referencePanel: 'analysis-chart', direction: 'below' }, minimumHeight: 200 })
   add('daily', { position: { referencePanel: 'filled', direction: 'within' }, inactive: true })
   add('trend', { position: { referencePanel: 'filled', direction: 'within' }, inactive: true })
 
   add('orderbook-canvas', { position: { referencePanel: 'orderbook-dom', direction: 'within' }, inactive: true })
-  add('stock-detail', { position: { referencePanel: 'orderbook-dom', direction: 'below' }, initialHeight: 300 })
+  add('stock-detail', { position: { referencePanel: 'orderbook-dom', direction: 'below' }, minimumHeight: 200 })
 
-  add('order-history', { position: { referencePanel: 'order-form', direction: 'below' }, initialHeight: 300 })
+  add('order-history', { position: { referencePanel: 'order-form', direction: 'below' }, minimumHeight: 300 })
   add('holdings', { position: { referencePanel: 'order-history', direction: 'within' }, inactive: true })
 }
 
 /**
  * tablet (700–1099px) — 2열 
- * 1열: [현재가/종목상세] 탭 · 분석차트 · [체결/일별/투자동향] 탭
- * 2열: 주문 · [호가 Dom/Canvas] 탭
+ * 1열: [현재가/종목상세] 탭 → 분석차트 → [체결/일별/투자동향] 탭
+ * 2열: 주문 → [호가 Dom/Canvas] 탭 → [주문내역/보유주식] 탭
  */
 function buildTablet(api: DockviewApi) {
   const add = makeAddWidget(api)
@@ -166,14 +167,14 @@ function buildTablet(api: DockviewApi) {
   add('order-form', { position: { referencePanel: 'quote-board', direction: 'right' }, initialWidth: 320 })
 
   add('stock-detail', { position: { referencePanel: 'quote-board', direction: 'within' }, inactive: true })
-  add('analysis-chart', { position: { referencePanel: 'quote-board', direction: 'below' }, minimumHeight: 320, initialHeight: 700 })
-  add('filled', { position: { referencePanel: 'analysis-chart', direction: 'below' }, minimumHeight: 280, initialHeight: 280 })
+  add('analysis-chart', { position: { referencePanel: 'quote-board', direction: 'below' }, minimumHeight: 280 })
+  add('filled', { position: { referencePanel: 'analysis-chart', direction: 'below' }, minimumHeight: 200 })
   add('daily', { position: { referencePanel: 'filled', direction: 'within' }, inactive: true })
   add('trend', { position: { referencePanel: 'filled', direction: 'within' }, inactive: true })
 
-  add('orderbook-dom', { position: { referencePanel: 'order-form', direction: 'below' },minimumHeight: 200, initialHeight: 530 })
+  add('orderbook-dom', { position: { referencePanel: 'order-form', direction: 'below' }, minimumHeight: 120 })
   add('orderbook-canvas', { position: { referencePanel: 'orderbook-dom', direction: 'within' }, inactive: true })
-  add('holdings', { position: { referencePanel: 'orderbook-dom', direction: 'below' }, minimumHeight: 280, initialHeight: 280 })
+  add('holdings', { position: { referencePanel: 'orderbook-dom', direction: 'below' }, minimumHeight: 260 })
   add('order-history', { position: { referencePanel: 'holdings', direction: 'within' }, inactive: true })
 }
 
@@ -292,7 +293,7 @@ export default function WidgetsDockviewPage() {
         <button
           type='button'
           onClick={resetLayout}
-          className='h-[42px]  w-[42px] fixed top-[126px] right-[14px] z-30 flex flex-col items-center gap-1 px-0 py-[1px] text-gray-500 bg-gray-200 border border-gray-200 rounded-full shadow-md hover:text-blue-700 hover:border-blue-200'
+          className='h-[42px]  w-[42px] fixed top-[25%] right-[14px] z-30 flex flex-col items-center gap-1 px-0 py-[1px] text-gray-500 bg-gray-200 border border-gray-200 rounded-full shadow-md hover:text-blue-700 hover:border-blue-200'
           title='위젯 레이아웃 초기화'
         >
           <RestartAlt sx={{ fontSize: 38 }} />

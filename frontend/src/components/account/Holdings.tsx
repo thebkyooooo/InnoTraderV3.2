@@ -84,7 +84,7 @@ export function Holdings({ accountNo, height = 400, showSummary = true, onSymbol
       )}
 
       {/* 보유종목 그리드 */}
-      <div className={`flex-1 min-h-[220px] shrink-0 overflow-hidden ${!showSummary ? '' : 'p-4 border border-gray-200 rounded-lg bg-white'}`}>
+      <div className={`flex-1 min-h-[200px] shrink-0 overflow-hidden ${!showSummary ? '' : 'p-4 border border-gray-200 rounded-lg bg-white'}`}>
         <DataGrid<HoldingItem>
           rows={items}
           columnDefs={columns}
