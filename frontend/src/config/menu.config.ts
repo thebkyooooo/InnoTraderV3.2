@@ -27,17 +27,17 @@ export const MENU_ITEMS: MenuItem[] = [
     children: [
       { key: 'dashboard-widgets',
         label: '01. React-grid-layout',
-        title: 'R 트레이딩보드 ',
+        title: '트레이딩보드 React-grid-layout ',
         path: '/widgets' 
       },
       { key: 'widgets-dockview',
         label: '02. Dockview',
-        title: 'D 트레이딩보드 ',
+        title: '트레이딩보드 Dockview',
         path: '/widgets-dockview' 
       },
       { key: 'widgets-flexlayout',
         label: '03. FlexLayout',
-        title: 'F 트레이딩보드 ',
+        title: '트레이딩보드 FlexLayout',
         path: '/widgets-flexlayout' 
       },
     ],

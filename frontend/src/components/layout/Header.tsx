@@ -119,7 +119,7 @@ export function Header({ onMenuToggle }: HeaderProps) {
               <Typography
                 variant="subtitle1"
                 color="text.secondary"
-                sx={{ fontSize: '18px', fontWeight: 600 }}
+                sx={{ fontSize: '16px', fontWeight: 600, lineHeight: '0.75' }}
               >
                 {pageTitle}
               </Typography>
