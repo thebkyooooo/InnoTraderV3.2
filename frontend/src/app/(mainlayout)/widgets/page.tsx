@@ -14,7 +14,7 @@ import { useStockPriceWS } from '@/features/quote/api/use-quote-ws'
 const ResponsiveGridLayout = WidthProvider(Responsive)
 
 const ROW_HEIGHT = 30
-const STORAGE_KEY = 'dashboard-widgets-layout-v5'
+const STORAGE_KEY = 'dashboard-widgets-layout-v7'
 
 // 해상도별 브레이크포인트(px)·컬럼 수 — lg: 데스크톱, md: 태블릿, sm: 그 이하(모바일 포함).
 // react-grid-layout의 breakpoints는 뷰포트가 아니라 (WidthProvider가 측정하는) 그리드
@@ -55,7 +55,7 @@ const DEFAULT_LAYOUTS: Layouts = {
   // xl (데스크톱, cols 18) — 4단 비율
   xl: [
     { i: 'quote-board',        x: 0, y: 0,  w: 12, h: 5,  minW: 2, minH: 4 },
-    { i: 'analysis-chart',     x: 0, y: 5, w: 12, h: 18, minW: 2, minH: 4 },
+    { i: 'analysis-chart',     x: 0, y: 5,  w: 12, h: 18, minW: 2, minH: 4 },
     { i: 'filled-daily-trend', x: 0, y: 23, w: 12, h: 8,  minW: 2, minH: 4 },
     { i: 'orderbook',          x: 12, y: 5,  w: 3, h: 14, minW: 2, minH: 4 },
     { i: 'stock-detail',       x: 12, y: 19, w: 3, h: 9,  minW: 2, minH: 4 },
@@ -66,7 +66,7 @@ const DEFAULT_LAYOUTS: Layouts = {
   // lg (데스크톱, cols 15) — 4단 비율
   lg: [
     { i: 'quote-board',        x: 0, y: 0,  w: 6, h: 5,  minW: 2, minH: 4 },
-    { i: 'analysis-chart',     x: 0, y: 5, w: 6, h: 18, minW: 2, minH: 4 },
+    { i: 'analysis-chart',     x: 0, y: 5,  w: 6, h: 18, minW: 2, minH: 4 },
     { i: 'filled-daily-trend', x: 0, y: 23, w: 6, h: 8,  minW: 2, minH: 4 },
     { i: 'orderbook',          x: 6, y: 5,  w: 3, h: 14, minW: 2, minH: 4 },
     { i: 'stock-detail',       x: 6, y: 19, w: 3, h: 9,  minW: 2, minH: 4 },
@@ -74,16 +74,16 @@ const DEFAULT_LAYOUTS: Layouts = {
     { i: 'order-history',      x: 9, y: 12, w: 3, h: 8,  minW: 2, minH: 4 },
     { i: 'holdings',           x: 12, y: 20, w: 3, h: 20, minW: 2, minH: 4 },
   ],
-  // md (태블릿, cols 9) — 3단 비율은 lg와 동일하게 유지, 폭만 축소.
+  // md (태블릿, cols 8) — 3단 비율은 lg와 동일하게 유지, 폭만 축소.
   md: [
-    { i: 'quote-board',        x: 0, y: 0,  w: 3, h: 5,  minW: 2, minH: 4 },
-    { i: 'analysis-chart',     x: 0, y: 5, w: 3, h: 12, minW: 2, minH: 4 },
-    { i: 'filled-daily-trend', x: 0, y: 17, w: 3, h: 8,  minW: 2, minH: 4 },
-    { i: 'orderbook',          x: 3, y: 5,  w: 3, h: 14, minW: 2, minH: 4 },
-    { i: 'stock-detail',       x: 3, y: 19, w: 3, h: 9,  minW: 2, minH: 4 },
-    { i: 'order-form',         x: 6, y: 0,  w: 3, h: 12, minW: 2, minH: 4 },
-    { i: 'order-history',      x: 6, y: 12, w: 3, h: 8,  minW: 2, minH: 4 },
-    { i: 'holdings',           x: 6, y: 20, w: 3, h: 8, minW: 2, minH: 4 },
+    { i: 'quote-board',        x: 0, y: 0,  w: 4, h: 5,  minW: 2, minH: 4 },
+    { i: 'analysis-chart',     x: 0, y: 5,  w: 4, h: 12, minW: 2, minH: 4 },
+    { i: 'filled-daily-trend', x: 0, y: 17, w: 4, h: 8,  minW: 2, minH: 4 },
+    { i: 'orderbook',          x: 4, y: 5,  w: 2.5, h: 14, minW: 2, minH: 4 },
+    { i: 'stock-detail',       x: 4, y: 19, w: 2.5, h: 9,  minW: 2, minH: 4 },
+    { i: 'order-form',         x: 7.5, y: 0,  w: 2.5, h: 12, minW: 2, minH: 4 },
+    { i: 'order-history',      x: 7.5, y: 12, w: 2.5, h: 8,  minW: 2, minH: 4 },
+    { i: 'holdings',           x: 7.5, y: 20, w: 2.5, h: 8, minW: 2, minH: 4 },
   ],
   // sm (모바일 포함, cols 5) —  좌/우 2단 비율은 lg와 동일하게 유지, 폭만 축소.
   sm: [

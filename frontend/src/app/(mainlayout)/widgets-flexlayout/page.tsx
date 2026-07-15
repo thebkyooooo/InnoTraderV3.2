@@ -1,6 +1,6 @@
 'use client'
 import React, { useState, useEffect, useMemo, useCallback } from 'react'
-import { Layout, Model, type IJsonModel, type TabNode } from 'flexlayout-react'
+import { Layout, Model, Actions, TabSetNode, type IJsonModel, type TabNode } from 'flexlayout-react'
 import 'flexlayout-react/style/light.css'
 import { RestartAlt, OpenInNew, CloseFullscreen, OpenInFull } from '@mui/icons-material'
 import { useWidgetDashboardState, type WidgetDashboardState } from '@/features/dashboard/useWidgetDashboardState'
@@ -79,7 +79,7 @@ function resolveBreakpoint(width: number): Breakpoint {
   return 'mobile'
 }
 
-const STORAGE_KEY_PREFIX = 'widgets-flexlayout-layout-v3'
+const STORAGE_KEY_PREFIX = 'widgets-flexlayout-layout-v4'
 const storageKey = (bp: Breakpoint) => `${STORAGE_KEY_PREFIX}-${bp}`
 
 // desktop (≥1100px) — 상하 2행(좌·우 컬럼 다열).
@@ -116,7 +116,7 @@ const DESKTOP_JSON: IJsonModel = {
         type: 'row', weight: 30,
         children: [
           { type: 'tabset', weight: 50, children: [tab('order-form')]},
-          { type: 'tabset', weight: 50, children: [tab('holdings'), tab('order-history')] },
+          { type: 'tabset', weight: 50, children: [tab('order-history'), tab('holdings')] },
         ],
       },
     ],
@@ -159,7 +159,7 @@ const MOBILE_JSON: IJsonModel = {
       { type: 'tabset', weight: 9, children: [tab('quote-board'), tab('stock-detail')] },
       { type: 'tabset', weight: 14, children: [tab('order-form')] },
       { type: 'tabset', weight: 16, children: [tab('orderbook-dom'), tab('orderbook-canvas')] },
-      { type: 'tabset', weight: 16, children: [tab('holdings'), tab('order-history')] },
+      { type: 'tabset', weight: 16, children: [tab('order-history'), tab('holdings')] },
       { type: 'tabset', weight: 16, children: [tab('analysis-chart')] },
       { type: 'tabset', weight: 14, children: [tab('filled'), tab('daily'), tab('trend')] },
     ],
@@ -202,6 +202,34 @@ export default function WidgetsFlexLayoutPage() {
     bpRef.current = bp
     setModel(loadModel(bp))
   }, [])
+
+  // 모델 교체(브레이크포인트 전환·리셋) 직후, FlexLayout이 새 탭셋의 콘텐츠 rect를 확정하기 전에
+  // 마운트된 탭 콘텐츠(AG Grid 등)가 빈 화면으로 고착되는 경우가 있다. 탭 콘텐츠는 탭셋의 실측
+  // rect(getContentRect)를 렌더 시점에 읽어 배치되므로, 다른 탭을 선택했다가 원래 탭을 재선택하면
+  // 그 시점의 올바른 rect로 다시 그려져 복구된다(수동 복구 경로). 이를 레이아웃 계산이 끝난 뒤
+  // 프로그램으로 재현한다 — 두 액션이 같은 태스크에서 연속 dispatch되어 화면 깜빡임은 없다.
+  useEffect(() => {
+    if (!model) return
+    let raf2 = 0
+    const raf1 = requestAnimationFrame(() => {
+      raf2 = requestAnimationFrame(() => {
+        model.visitNodes((node) => {
+          if (node instanceof TabSetNode) {
+            const selected = node.getSelectedNode()
+            const other = node.getChildren().find((c) => c !== selected)
+            if (selected && other) {
+              model.doAction(Actions.selectTab(other.getId()))
+              model.doAction(Actions.selectTab(selected.getId()))
+            }
+          }
+        })
+      })
+    })
+    return () => {
+      cancelAnimationFrame(raf1)
+      cancelAnimationFrame(raf2)
+    }
+  }, [model])
 
   // 컨테이너 폭 변화를 감시해 브레이크포인트가 바뀌면 해당 모델로 교체한다.
   // 모델 교체는 FlexLayout 전체 remount를 유발하므로(그리드가 잠깐 사라졌다 나타남),
