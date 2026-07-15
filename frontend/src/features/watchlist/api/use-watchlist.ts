@@ -37,8 +37,11 @@ export function useCreateWatchlistGroup() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (groupName: string) => watchlistApi.createGroup(groupName),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['watchlist', 'groups'] })
+    // 응답이 갱신된 그룹 목록 전체를 담고 있으므로 재조회를 기다리지 않고 캐시를 바로 갱신한다.
+    // invalidateQueries만 쓰면 재조회가 끝나기 전까지 groups가 이전 목록을 유지해
+    // 방금 생성된 그룹코드로 selectedCode를 옮기는 순간 Select가 out-of-range 값을 갖게 된다.
+    onSuccess: (res) => {
+      queryClient.setQueryData(['watchlist', 'groups'], res.data)
     },
   })
 }
@@ -49,8 +52,8 @@ export function useRenameWatchlistGroup() {
   return useMutation({
     mutationFn: ({ groupCode, groupName }: { groupCode: string; groupName: string }) =>
       watchlistApi.renameGroup(groupCode, groupName),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['watchlist', 'groups'] })
+    onSuccess: (res) => {
+      queryClient.setQueryData(['watchlist', 'groups'], res.data)
     },
   })
 }
@@ -60,8 +63,8 @@ export function useDeleteWatchlistGroup() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (groupCode: string) => watchlistApi.deleteGroup(groupCode),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['watchlist', 'groups'] })
+    onSuccess: (res) => {
+      queryClient.setQueryData(['watchlist', 'groups'], res.data)
     },
   })
 }
@@ -72,9 +75,10 @@ export function useAddWatchlistItems() {
   return useMutation({
     mutationFn: ({ groupCode, symbols }: { groupCode: string; symbols: string[] }) =>
       watchlistApi.addItems(groupCode, symbols),
-    onSuccess: (_data, { groupCode }) => {
+    onSuccess: (res, { groupCode }) => {
+      queryClient.setQueryData(['watchlist', 'items', groupCode], res.data)
+      // 그룹 목록의 itemCount도 함께 바뀌므로 재조회한다(응답에 그룹 목록 전체는 없음).
       queryClient.invalidateQueries({ queryKey: ['watchlist', 'groups'] })
-      queryClient.invalidateQueries({ queryKey: ['watchlist', 'items', groupCode] })
     },
   })
 }
@@ -85,9 +89,9 @@ export function useRemoveWatchlistItems() {
   return useMutation({
     mutationFn: ({ groupCode, symbols }: { groupCode: string; symbols: string[] }) =>
       watchlistApi.removeItems(groupCode, symbols),
-    onSuccess: (_data, { groupCode }) => {
+    onSuccess: (res, { groupCode }) => {
+      queryClient.setQueryData(['watchlist', 'items', groupCode], res.data)
       queryClient.invalidateQueries({ queryKey: ['watchlist', 'groups'] })
-      queryClient.invalidateQueries({ queryKey: ['watchlist', 'items', groupCode] })
     },
   })
 }

@@ -3,7 +3,7 @@ import React, { useEffect, useMemo, useState } from 'react'
 import type { ColDef } from 'ag-grid-community'
 import IconButton from '@mui/material/IconButton'
 import Tooltip from '@mui/material/Tooltip'
-import { CreateNewFolderOutlined, DriveFileRenameOutline, AddCircleOutlined, RemoveCircleOutlined, DeleteOutlined, TaskAlt } from '@mui/icons-material'
+import { CreateNewFolderOutlined, DriveFileRenameOutline, AddCircleOutlined, RemoveCircleOutlined, DeleteOutlined } from '@mui/icons-material'
 import Button from '@mui/material/Button'
 import { Modal } from '@/components/ui/Modal'
 import DialogTitle from '@mui/material/DialogTitle'
@@ -25,11 +25,10 @@ import {
 import { type StockQuote } from '@/features/stock-master/api/stock-master-api'
 import { useStockQuotes } from '@/features/stock-master/api/use-stock-master'
 import { useStockPricesWS } from '@/features/quote/api/use-quote-ws'
-import { StockDetailCard, DailyChart } from '@/components/quote'
+import { StockSidePanel } from '@/components/quote'
 import { GroupFormDialog } from '@/features/watchlist/components/GroupFormDialog'
 import { StockAddDialog } from '@/features/watchlist/components/StockAddDialog'
 import { StockRemoveDialog } from '@/features/watchlist/components/StockRemoveDialog'
-import { ArrowForwardIosSharp, FormatIndentIncreaseOutlined } from '@mui/icons-material';
 
 // ── 그리드 ──────────────────────────────────────────────────────────────────────
 
@@ -162,22 +161,8 @@ export default function WatchlistPage() {
 
   // ── UI ──────────────────────────────────────────────────────────────────────
   return (
-    <div aria-pressed={panelOpen} className="flex flex-col sm:flex-row gap-0 w-full h-full relative">
-      <button
-        type="button"
-        onClick={() => setPanelOpen(v => !v)}
-        aria-pressed={panelOpen}
-        title={panelOpen ? '패널 숨기기' : '패널 보기'}
-        className={`absolute hidden sm:block border border-gray-50 bg-slate-300 h-[40px] w-[20px] top-0.5 right-0.5 transition-transform duration-300 ease-in-out 
-                    ${panelOpen ? 'rounded-l-md' : 'rounded-r-md rotate-180'}`}
-      >
-        <ArrowForwardIosSharp sx={{ fontSize: 20, color: 'text.disabled' }} />
-      </button>
-
-      <div 
-          aria-hidden={!panelOpen}
-          className={`@container p-4 sm:p-6 flex-1 flex flex-col gap-4 shrink-0 overflow-hidden transition-[width,opacity] duration-300 ease-in-out ${panelOpen ? 'w-full' : 'w-full'}`}
-        >
+    <div aria-pressed={panelOpen} className="flex flex-col sm:flex-row gap-4 sm:gap-0 w-full h-full relative">
+      <div className="flex-1 flex flex-col gap-4 min-w-0 sm:p-6">
         {/* <h1 className="text-lg font-bold text-foreground">관심종목</h1> */}
 
         <div className="flex flex-wrap items-center gap-2">
@@ -213,53 +198,22 @@ export default function WatchlistPage() {
         </div>
 
         <Section className='flex-1 min-h-[360px] shrink-0'>
-          <DataGrid<StockQuote> rows={quotes} columnDefs={columns} loading={loading} height="100%" onRowClick={setSelectedStock} selectionHeaderName="" selectionColumnWidth={36} getRowId={r => r.symbol} />
+          <DataGrid<StockQuote> 
+            rows={quotes} 
+            columnDefs={columns} 
+            loading={loading} 
+            height="100%" 
+            onRowClick={setSelectedStock} 
+            selectionHeaderName="" 
+            selectionColumnWidth={36} 
+            getRowId={r => r.symbol} 
+            showSelectionColumn={false}
+          />
         </Section>
       </div>
 
       {/* 사이드 패널 */}
-      <div
-        aria-hidden={!panelOpen}
-        className={`flex p-4 pt-0 sm:p-0 shrink-0 overflow-hidden transition-[width,opacity] duration-300 ease-in-out border-gray-200 sm:bg-white ${panelOpen ? 'sm:border-l sm:w-[320px] 2xl:w-[520px] sm:opacity-100' : 'sm:w-0 sm:opacity-0'}`}
-      >
-        <div className="shrink-0 w-full flex flex-col gap-3 rounded-xl bg-white border border-gray-200 sm:rounded-none sm:border-none pt-0 sm:pt-2">
-          {displayStock ? (
-            <>
-              <div className="w-full sm:w-[320px] 2xl:w-[520px] flex flex-col gap-3.5 p-4">
-                <div>
-                  {/* 선택 종목 헤더 */}
-                  <div className="flex items-baseline gap-2">
-                    <span className="text-base font-bold text-foreground truncate">{displayStock.name}</span>
-                    <span className="text-xs text-gray-500">{displayStock.symbol}</span>
-                  </div>
-                  <div className="flex items-baseline gap-2">
-                    <span className="text-xl font-bold tabular-nums" style={{ color: signColor(displayStock.prevDiff) }}>
-                      {fmt(displayStock.price)}
-                    </span>
-                    <span className="text-sm font-medium tabular-nums" style={{ color: signColor(displayStock.prevDiff) }}>
-                      {displayStock.prevDiff > 0 ? '+' : ''}{fmt(displayStock.prevDiff)}
-                      {' '}({displayStock.change > 0 ? '+' : ''}{Number(displayStock.change).toFixed(2)}%)
-                    </span>
-                  </div>
-                </div>
-
-                {/* 일봉 차트 — symbol만 넘기면 DailyChart 내부에서 조회 */}
-                <div className="rounded-lg border border-gray-200 overflow-hidden pl-2 pt-2">
-                  <DailyChart symbol={displayStock.symbol} height={300} type="candlestick" />
-                </div>
-
-                {/* 종목 상세 — symbol만 넘기면 내부에서 조회 */}
-                <StockDetailCard symbol={displayStock.symbol} />
-              </div>
-            </>
-          ) : (
-            <div className="flex flex-col gap-2  flex-1 items-center justify-center text-center text-sm text-gray-400">
-              <TaskAlt className='!text-[52px]'></TaskAlt>
-              <span>종목을 선택하세요</span>
-            </div>
-          )}
-        </div>
-      </div>
+      <StockSidePanel stock={displayStock} open={panelOpen} onToggle={() => setPanelOpen(v => !v)} />
 
       {/* 그룹 추가/변경 모달 */}
       <GroupFormDialog

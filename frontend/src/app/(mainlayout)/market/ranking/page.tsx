@@ -1,5 +1,5 @@
 'use client'
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useEffect } from 'react'
 import { useSearchParams } from 'next/navigation'
 import type { ColDef, ValueFormatterParams } from 'ag-grid-community'
 import { SegmentedControl, Button, DataGrid, Section } from '@/components/ui'
@@ -8,6 +8,7 @@ import { useRanking, type RankingType } from '@/features/market/api/use-market'
 import type { StockRanking } from '@/features/market/api/market-api'
 import type { MarketType } from '@/features/market/api/market-api'
 import { useStockPricesWS } from '@/features/quote/api/use-quote-ws'
+import { StockSidePanel } from '@/components/quote'
 
 // ─── 포매터 ────────────────────────────────────────────────────────────────────
 
@@ -141,6 +142,8 @@ export default function MarketRankingPage() {
   const searchParams = useSearchParams()
   const [marketSeg, setMarketSeg] = useState<'all' | 'kospi' | 'kosdaq'>(() => readMarketSeg(searchParams.get('market')))
   const [rankType, setRankType] = useState<RankingType>(() => readRankType(searchParams.get('type')))
+  const [panelOpen, setPanelOpen] = useState(true)
+  const [selectedStock, setSelectedStock] = useState<StockRanking | null>(null)
 
   const marketType = useMemo<MarketType>(() => {
     if (marketSeg === 'kospi')  return 'KOSPI'
@@ -163,50 +166,73 @@ export default function MarketRankingPage() {
     }
   }), [data, liveQuotes])
 
+  // 랭킹 목록(구분/시장)이 바뀌면 선택 종목을 첫 종목으로 맞춘다(없으면 해제)
+  useEffect(() => {
+    setSelectedStock(prev => {
+      if (prev && rows.some(r => r.symbol === prev.symbol)) return prev
+      return rows[0] ?? null
+    })
+  }, [rows])
+
+  // 사이드 패널 상단 현재가 실시간 반영 — rows(WS 병합본)에서 같은 심볼을 매 렌더 조회
+  const displayStock = useMemo(() => {
+    if (!selectedStock) return null
+    return rows.find(r => r.symbol === selectedStock.symbol) ?? selectedStock
+  }, [rows, selectedStock])
+
   return (
-    <div className="flex flex-col gap-4 w-full h-full">
-      <div className="flex flex-row gap-4">
-        <div>
-          <SegmentedControl
-            value={marketSeg}
-            onChange={(v) => setMarketSeg(v as typeof marketSeg)}
-            options={[
-              { label: '전체',   value: 'all' },
-              { label: '코스피', value: 'kospi' },
-              { label: '코스닥', value: 'kosdaq' },
-            ]}
-            size="small"
-            sx={{ whiteSpace: 'nowrap' }}
-          />
+    <div className="flex flex-col sm:flex-row gap-4 sm:gap-0 w-full h-full relative">
+      <div className="flex-1 flex flex-col gap-4 min-w-0 sm:p-6">
+        <div className="flex flex-row gap-4">
+          <div>
+            <SegmentedControl
+              value={marketSeg}
+              onChange={(v) => setMarketSeg(v as typeof marketSeg)}
+              options={[
+                { label: '전체',   value: 'all' },
+                { label: '코스피', value: 'kospi' },
+                { label: '코스닥', value: 'kosdaq' },
+              ]}
+              size="small"
+              sx={{ whiteSpace: 'nowrap' }}
+            />
+          </div>
+
+          <DragScroll className="flex w-full rounded-lg">
+            <div className="flex gap-1.5 pr-4">
+              {RANK_TYPES.map(({ label, value }) => (
+                <Button
+                  key={value}
+                  variant={rankType === value ? 'contained' : 'outlined'}
+                  onClick={() => setRankType(value)}
+                  sx={{ whiteSpace: 'nowrap', minWidth: 'unset' }}
+                >
+                  {label}
+                </Button>
+              ))}
+            </div>
+          </DragScroll>
         </div>
 
-        <DragScroll className="flex w-full rounded-lg">
-          <div className="flex gap-1.5 pr-4">
-            {RANK_TYPES.map(({ label, value }) => (
-              <Button
-                key={value}
-                variant={rankType === value ? 'contained' : 'outlined'}
-                onClick={() => setRankType(value)}
-                sx={{ whiteSpace: 'nowrap', minWidth: 'unset' }}
-              >
-                {label}
-              </Button>
-            ))}
-          </div>
-        </DragScroll>
+        <Section className="flex-1 min-h-96">
+          <DataGrid<StockRanking>
+            rows={rows}
+            columnDefs={COL_DEFS}
+            height="100%"
+            loading={isFetching}
+            pagination
+            pageSize={20}
+            onRowClick={setSelectedStock}
+            selectionHeaderName=""
+            selectionColumnWidth={36}
+            getRowId={(r) => r.symbol}
+            showSelectionColumn={false}
+          />
+        </Section>
       </div>
 
-      <Section className="flex-1 min-h-96">
-        <DataGrid<StockRanking>
-          rows={rows}
-          columnDefs={COL_DEFS}
-          height="100%"
-          loading={isFetching}
-          pagination
-          pageSize={20}
-          getRowId={(r) => r.symbol}
-        />
-      </Section>
+      {/* 사이드 패널 */}
+      <StockSidePanel stock={displayStock} open={panelOpen} onToggle={() => setPanelOpen(v => !v)} />
     </div>
   )
 }

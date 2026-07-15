@@ -5,7 +5,8 @@ import type { SxProps, Theme } from '@mui/material'
 
 const MAIN_SX_MAP: Record<string, SxProps<Theme>> = {
   '/dashboard': { p: { xs: 0, sm: 0 } },
-  '/watchlist': { p: { xs: 0, sm: 0 } },
+  '/watchlist': { p: { xs: 2, sm: 0 } },
+  '/market/ranking': { p: { xs: 2, sm: 0 } },
 }
 
 export function MainLayoutClient({ children }: { children: React.ReactNode }) {

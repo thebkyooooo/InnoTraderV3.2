@@ -112,7 +112,7 @@ export default function DashboardPage() {
           className={`absolute hidden sm:block border border-gray-50 bg-slate-300 h-[40px] w-[20px] top-0.5 right-0.5 transition-transform duration-300 ease-in-out 
                       ${panelOpen ? 'rounded-l-md' : 'rounded-r-md rotate-180'}`}
         >
-          <ArrowForwardIosSharp sx={{ fontSize: 20, color: 'text.disabled' }} />
+          <ArrowForwardIosSharp sx={{ fontSize: 20, color: 'text.disabled', pb: '2px' }} />
         </button>
 
         <div 
@@ -216,11 +216,12 @@ export default function DashboardPage() {
               </div>
 
               <Card
+                sx={ {bgcolor: '#f2f4f7' } }
                 title="총 평가금액"
                 subtitle={holdings ? `${holdings.summary.totalEvalAmount.toLocaleString()}원` : '-'}
                 titleSx={{fontSize: '14px'}} subtitleSx={{fontSize: '20px', fontVariantNumeric: 'tabular-nums'}}
               >
-                {(pendingOrders?.items?.length ?? 0) > 0 ? (
+                {(holdings?.items?.length ?? 0) > 0 ? (
                   <ul className='flex flex-col text-sm tabular-nums'>
                     <li className={`flex-1 flex justify-between ${holdings ? pnlClass(holdings.summary.totalProfit) : ''}`}>
                       <span>{holdings ? `${signed(holdings.summary.totalProfit)}원` : '-'}</span>
