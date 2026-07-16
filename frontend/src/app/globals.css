@@ -162,6 +162,22 @@
   border-bottom-left-radius: 0 !important;
   border-bottom-right-radius: 0 !important;
 }
+/* 페이지네이션 가운데 정렬 + 좁은 폭에서는 가로 스크롤 대신 줄바꿈으로 전체 표시 */
+.ag-paging-panel {
+  height: auto !important;
+  min-height: var(--ag-pagination-panel-height);
+  overflow: visible !important;
+}
+.ag-paging-panel-content {
+  justify-content: center !important;
+  flex-wrap: wrap;
+  /* 기본값 flex: 0 0 auto + min-width: 100%는 컨테이너가 패널 폭 이상으로 늘어나
+     줄바꿈이 발동하지 않으므로, 패널 폭에 맞게 제한해 wrap이 동작하게 한다 */
+  flex: 1 1 auto !important;
+  min-width: 0 !important;
+  row-gap: 4px;
+  padding: 4px 0;
+}
 
 /* FlexLayout 스타일 설정 */
 .flexlayout__tabset_tabbar_outer {
