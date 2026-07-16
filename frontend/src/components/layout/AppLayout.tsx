@@ -78,6 +78,9 @@ export function AppLayout({ children, mainSx }: AppLayoutProps) {
               flex: 1,
               p: { xs: 2, sm: 3 },
               overflow: 'auto',
+              // 내부 스크롤(그리드 등)이 경계에 닿았을 때 body로 체이닝되어
+              // 모바일 러버밴드 바운스(화면 전체가 위아래로 흔들림)가 생기지 않도록 차단
+              overscrollBehavior: 'contain',
               borderRight: '1px solid',
               borderLeft: '1px solid',
               borderColor: 'divider',

@@ -86,12 +86,14 @@
     color-scheme: light;
   }
 
-  /* iOS 가로 흔들림(러버밴드) 방지 — 페이지가 뷰포트 폭을 넘지 않도록 */
+  /* iOS 흔들림(러버밴드) 방지 — 가로는 페이지가 뷰포트 폭을 넘지 않도록,
+     세로는 내부 스크롤 영역(그리드 등) 터치 시 body가 함께 바운스되지 않도록 */
   html,
   body {
     max-width: 100%;
     overflow-x: hidden;
     overscroll-behavior-x: none;
+    overscroll-behavior-y: none;
   }
 
   body {
@@ -146,6 +148,13 @@
 /* AG Grid 스타일 설정 */
 .ag-root-wrapper {
   border: none !important;
+}
+
+/* 모바일에서 그리드 터치 시 그리드 영역 자체가 위아래로 출렁이는
+   러버밴드 바운스 방지 (v36 통합 스크롤 영역 + 세로 스크롤바 뷰포트) */
+.ag-grid-viewport,
+.ag-body-vertical-scroll-viewport {
+  overscroll-behavior: none;
 }
 
 /* 헤더 정렬 (컬럼별 headerClass로 지정) */

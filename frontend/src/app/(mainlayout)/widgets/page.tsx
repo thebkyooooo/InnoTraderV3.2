@@ -235,6 +235,7 @@ export default function DashboardWidgetsPage() {
         rowHeight={ROW_HEIGHT}
         onLayoutChange={handleLayoutChange}
         draggableHandle='.widget-drag-handle'
+        draggableCancel='.widget-drag-cancel'
         compactType='vertical'
         margin={[16, 16]}
         containerPadding={[0, 0]}
@@ -243,8 +244,9 @@ export default function DashboardWidgetsPage() {
           <div key={id} className='bg-white border border-gray-200 rounded-lg flex flex-col overflow-hidden p-4'>
             <div className='widget-drag-handle flex items-start -mb-1 border-b-0 border-gray-200 text-sm font-semibold text-gray-500 cursor-move select-none'>
               {WIDGET_TABS[id] ? (
-                // 탭 클릭이 드래그 시작으로 오인되지 않도록 이 영역에서 mousedown 전파를 막는다.
-                <div onMouseDown={(e) => e.stopPropagation()} className='cursor-auto mb-1'>
+                // 탭 클릭이 드래그 시작으로 오인되지 않도록 draggableCancel 셀렉터로 제외한다.
+                // (mousedown 전파 차단 방식은 터치 이벤트가 네이티브 리스너로 붙는 모바일에서 통하지 않는다)
+                <div className='widget-drag-cancel cursor-auto mb-1'>
                   <Tabs
                     value={tabState[id].value}
                     onChange={(v) => tabState[id].onChange(String(v))}
