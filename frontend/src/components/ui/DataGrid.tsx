@@ -78,8 +78,10 @@ export function DataGrid<TData = Record<string, unknown>>({
       // rowData가 빈 배열 → 빈 배열로만 바뀌면 "행 개수 변화 없음"으로 보고 오버레이 위치
       // 재계산을 건너뛰므로, "조회된 데이터가 없습니다" 오버레이를 직접 다시 띄운다.
       // 단 loading 중에는 오버레이를 loading prop이 관리하므로 건드리지 않는다
-      // (v32+에서 hideOverlay가 로딩 오버레이를 숨기지 못한다는 경고 발생).
-      if (!loadingRef.current) {
+      // (v32+에서 hideOverlay가 로딩 오버레이를 숨기지 못한다는 경고 #99 발생).
+      // loadingRef(React prop)뿐 아니라 그리드 내부 옵션도 확인해야 한다 — rAF 시점에
+      // prop은 이미 false여도 그리드에 아직 loading=true가 남아 있는 레이스가 있다.
+      if (!loadingRef.current && !api.getGridOption('loading')) {
         api.hideOverlay()
         api.showNoRowsOverlay()
       }

@@ -194,6 +194,9 @@ export default function WidgetsFlexLayoutPage() {
   const wrapperRef = React.useRef<HTMLDivElement>(null)
   const [model, setModel] = useState<Model | null>(null)
   const bpRef = React.useRef<Breakpoint | null>(null)
+  // 탭셋 최대화 여부 — 최대화 중에는 래퍼의 min-height를 해제해 최대화된 탭이
+  // (1800px 전체가 아니라) 실제 보이는 영역만 채우도록 한다.
+  const [maximized, setMaximized] = useState(false)
 
   // 마운트 시 현재 컨테이너 폭으로 초기 브레이크포인트 결정 후 모델 로드.
   useEffect(() => {
@@ -264,6 +267,38 @@ export default function WidgetsFlexLayoutPage() {
     }
   }, [])
 
+  // 최대화/복원 액션도 onModelChange로 들어오므로 여기서 최대화 상태를 함께 갱신한다.
+  const handleModelChange = useCallback((m: Model) => {
+    setMaximized(m.getMaximizedTabset() !== undefined)
+    persist(m)
+  }, [persist])
+
+  // 모델 교체(브레이크포인트 전환·리셋·저장본 복원) 시에도 최대화 상태를 동기화한다.
+  // (저장된 레이아웃에 최대화 상태가 포함되어 있을 수 있다)
+  useEffect(() => {
+    setMaximized(model?.getMaximizedTabset() !== undefined)
+  }, [model])
+
+  // 최대화 토글 시 래퍼를 한 프레임 숨겼다 복원한다.
+  // 이 페이지는 main 높이가 콘텐츠(래퍼) 높이에, 래퍼의 h-full이 다시 main 높이에 의존하는
+  // 순환 구조라, 클래스만 바꿔서는 이전에 잡힌 높이(모바일 1800px)가 그대로 유지된다
+  // (안정 상태가 두 개인 레이아웃 — DevTools에서 요소를 건드리면 그제야 재수렴하는 증상).
+  // 고리를 한 프레임 끊어 새 클래스 기준의 평형값으로 재수렴시킨다. 크기 변화는 라이브러리
+  // ResizeObserver가 감지해 내부를 재배치한다. (DataGrid.tsx의 측정 복구 트릭과 동일 계열)
+  const maximizedFirstRunRef = React.useRef(true)
+  useEffect(() => {
+    if (maximizedFirstRunRef.current) { maximizedFirstRunRef.current = false; return }
+    const el = wrapperRef.current
+    if (!el) return
+    const prev = el.style.display
+    el.style.display = 'none'
+    const raf = requestAnimationFrame(() => { el.style.display = prev })
+    return () => {
+      cancelAnimationFrame(raf)
+      el.style.display = prev
+    }
+  }, [maximized])
+
   const resetLayout = () => {
     const bp = bpRef.current ?? 'desktop'
     try {
@@ -292,12 +327,12 @@ export default function WidgetsFlexLayoutPage() {
         <span className='text-[7px] -mt-[24px]'>리셋</span>
       </button>
 
-      <div ref={wrapperRef} className='flex-1 min-h-[1800px] @[700px]:min-h-[600px] relative'>
+      <div ref={wrapperRef} className={`flex-1 relative ${maximized ? 'h-full' : 'min-h-[1800px] @[700px]:min-h-[600px]'}`}>
         {model && (
           <Layout
             model={model}
             factory={factory}
-            onModelChange={persist}
+            onModelChange={handleModelChange}
             constrainFloatPanels
             icons={ICONS}
           />

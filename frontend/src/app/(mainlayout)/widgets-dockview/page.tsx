@@ -1,5 +1,5 @@
 'use client'
-import React, { createContext, useContext, useEffect, useState } from 'react'
+import React, { createContext, useContext, useEffect, useRef, useState } from 'react'
 import {
   DockviewReact,
   type DockviewReadyEvent,
@@ -47,6 +47,15 @@ function GroupHeaderActions(props: IDockviewHeaderActionsProps) {
   const { api, containerApi, activePanel } = props
   const [maximized, setMaximized] = useState(() => api.isMaximized())
   const [locationType, setLocationType] = useState(() => api.location.type)
+  // maximumWidth/Height가 걸린 패널(현재가 120px, 주문 400px 등)이 있으면 최대화가 깨진다:
+  //  - 그 패널 그룹을 최대화하면 자기 상한에 막혀 못 커지고,
+  //  - 다른 그룹을 최대화해도 숨겨진 형제 그룹의 상한이 부모 branch 집계(splitview
+  //    maximumSize 합/branch min)에 그대로 남아 같은 열 전체가 400px 등으로 캡된다.
+  // 그래서 최대화 동안엔 "모든" 그룹의 상한을 풀고, 복원 시 각 그룹의 명시 제약
+  // 스냅샷(_explicitConstraints)을 그대로 되돌린다. setConstraints는 한 번 설정하면
+  // 해제할 공식 API가 없어서(설정값이 activePanel 제약보다 우선) 내부 필드를 직접 복원한다.
+  type ExplicitConstraints = Partial<Record<'minimumWidth' | 'minimumHeight' | 'maximumWidth' | 'maximumHeight', number>>
+  const savedConstraintsRef = useRef<Map<string, ExplicitConstraints> | null>(null)
 
   useEffect(() => {
     setMaximized(api.isMaximized())
@@ -58,6 +67,29 @@ function GroupHeaderActions(props: IDockviewHeaderActionsProps) {
       locDisposable.dispose()
     }
   }, [api, containerApi])
+
+  const toggleMaximized = () => {
+    type GroupWithConstraints = { _explicitConstraints?: ExplicitConstraints }
+    if (maximized) {
+      api.exitMaximized()
+      const saved = savedConstraintsRef.current
+      if (saved) {
+        for (const g of containerApi.groups) {
+          const snapshot = saved.get(g.id)
+          if (snapshot) (g as unknown as GroupWithConstraints)._explicitConstraints = snapshot
+        }
+        savedConstraintsRef.current = null
+      }
+    } else {
+      const saved = new Map<string, ExplicitConstraints>()
+      for (const g of containerApi.groups) {
+        saved.set(g.id, { ...(g as unknown as GroupWithConstraints)._explicitConstraints })
+        g.api.setConstraints({ maximumWidth: Number.MAX_SAFE_INTEGER, maximumHeight: Number.MAX_SAFE_INTEGER })
+      }
+      savedConstraintsRef.current = saved
+      api.maximize()
+    }
+  }
 
   const btnClass = 'flex items-center justify-center w-6 h-full text-gray-400 hover:text-blue-600'
 
@@ -89,7 +121,7 @@ function GroupHeaderActions(props: IDockviewHeaderActionsProps) {
           type='button'
           className={btnClass}
           title={maximized ? '원래 크기로' : '최대화'}
-          onClick={() => (maximized ? api.exitMaximized() : api.maximize())}
+          onClick={toggleMaximized}
         >
           {maximized ? <CloseFullscreen sx={{ fontSize: 18 }} /> : <OpenInFull sx={{ fontSize: 18 }} />}
         </button>
@@ -117,7 +149,7 @@ function resolveBreakpoint(width: number): Breakpoint {
   return 'mobile'
 }
 
-const STORAGE_KEY_PREFIX = 'widgets-dockview-layout-v18'
+const STORAGE_KEY_PREFIX = 'widgets-dockview-layout-v19'
 const storageKey = (bp: Breakpoint) => `${STORAGE_KEY_PREFIX}-${bp}`
 
 type AddWidget = (
@@ -224,6 +256,29 @@ export default function WidgetsDockviewPage() {
   const bpRef = React.useRef<Breakpoint | null>(null)
   // 브레이크포인트 전환으로 배치를 교체하는 동안엔 저장 리스너가 (교체 중간 상태를) 덮어쓰지 않게 막는다.
   const switchingRef = React.useRef(false)
+  // 그룹 최대화 여부 — 최대화 중에는 래퍼의 min-height를 해제해 최대화된 그룹이
+  // (1800px 전체가 아니라) 실제 보이는 영역만 채우도록 한다.
+  const [maximized, setMaximized] = useState(false)
+
+  // 최대화 토글 시 래퍼를 한 프레임 숨겼다 복원한다.
+  // 이 페이지는 main 높이가 콘텐츠(래퍼) 높이에, 래퍼의 h-full이 다시 main 높이에 의존하는
+  // 순환 구조라, 클래스만 바꿔서는 이전에 잡힌 높이(모바일 1800px)가 그대로 유지된다
+  // (안정 상태가 두 개인 레이아웃 — DevTools에서 요소를 건드리면 그제야 재수렴하는 증상).
+  // 고리를 한 프레임 끊어 새 클래스 기준의 평형값으로 재수렴시킨다. 크기 변화는 dockview
+  // ResizeObserver가 감지해 내부를 재배치한다. (DataGrid.tsx의 측정 복구 트릭과 동일 계열)
+  const maximizedFirstRunRef = React.useRef(true)
+  useEffect(() => {
+    if (maximizedFirstRunRef.current) { maximizedFirstRunRef.current = false; return }
+    const el = wrapperRef.current
+    if (!el) return
+    const prev = el.style.display
+    el.style.display = 'none'
+    const raf = requestAnimationFrame(() => { el.style.display = prev })
+    return () => {
+      cancelAnimationFrame(raf)
+      el.style.display = prev
+    }
+  }, [maximized])
 
   const onReady = (event: DockviewReadyEvent) => {
     const api = event.api
@@ -233,9 +288,17 @@ export default function WidgetsDockviewPage() {
     bpRef.current = initialBp
     applyLayout(api, initialBp)
 
+    // 최대화/복원 시 래퍼 min-height 해제·복구용 상태 동기화
+    setMaximized(api.hasMaximizedGroup())
+    api.onDidMaximizedGroupChange(() => setMaximized(api.hasMaximizedGroup()))
+
     // 레이아웃 변화(드래그 이동/리사이즈/탭 이동)를 현재 브레이크포인트 키에 저장한다.
+    // 단, 최대화 중에는 저장하지 않는다 — toJSON()이 maximizedNode까지 직렬화해서
+    // 새로고침/재진입 시 fromJSON이 최대화 상태로 복원되는데, 이때 constraint 해제가
+    // 재적용되지 않아 최대화가 깨지고, 최대화 중 래퍼(h-full)에 맞춰 왜곡된 그리드
+    // 비율이 저장돼 복구 후 배치도 망가진다. 최대화 직전의 정상 레이아웃만 유지한다.
     api.onDidLayoutChange(() => {
-      if (!bpRef.current || switchingRef.current) return
+      if (!bpRef.current || switchingRef.current || api.hasMaximizedGroup()) return
       try {
         localStorage.setItem(storageKey(bpRef.current), JSON.stringify(api.toJSON()))
       } catch {
@@ -263,6 +326,8 @@ export default function WidgetsDockviewPage() {
           bpRef.current = nextBp
           applyLayout(api, nextBp)
           switchingRef.current = false
+          // clear+재생성 시 최대화가 풀려도 이벤트가 보장되지 않으므로 직접 동기화
+          setMaximized(api.hasMaximizedGroup())
         }
       }, 200)
     })
@@ -285,6 +350,7 @@ export default function WidgetsDockviewPage() {
     }
     api.clear()
     buildLayout(api, bp)
+    setMaximized(api.hasMaximizedGroup())
   }
 
   return (
@@ -300,7 +366,7 @@ export default function WidgetsDockviewPage() {
           <span className='text-[7px] -mt-[24px]'>리셋</span>
         </button>
 
-        <div ref={wrapperRef} className='flex-1 min-h-[1800px] @[700px]:min-h-[600px]'>
+        <div ref={wrapperRef} className={`flex-1 ${maximized ? 'h-full' : 'min-h-[1800px] @[700px]:min-h-[600px]'}`}>
           <DockviewReact
             className='dockview-theme-light'
             components={COMPONENTS}
