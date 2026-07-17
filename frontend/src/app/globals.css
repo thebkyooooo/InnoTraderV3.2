@@ -93,7 +93,6 @@
     max-width: 100%;
     overflow-x: hidden;
     overscroll-behavior-x: none;
-    overscroll-behavior-y: none;
   }
 
   body {

@@ -1,5 +1,9 @@
 {
   "css.validate": false,
   "scss.validate": false,
-  "css.lint.unknownAtRules": "ignore"
+  "css.lint.unknownAtRules": "ignore",
+  // QueryDSL Q클래스는 Gradle 빌드가 build/generated/querydsl에 생성해 소스 폴더로 등록한다.
+  // redhat.java가 자체 APT로 bin/generated-sources에 같은 클래스를 또 생성하면
+  // "already defined" 중복 진단이 나므로 IDE 측 어노테이션 프로세싱을 끈다.
+  "java.import.gradle.annotationProcessing.enabled": false
 }
