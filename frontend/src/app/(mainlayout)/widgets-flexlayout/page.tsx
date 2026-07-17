@@ -283,21 +283,31 @@ export default function WidgetsFlexLayoutPage() {
   // 이 페이지는 main 높이가 콘텐츠(래퍼) 높이에, 래퍼의 h-full이 다시 main 높이에 의존하는
   // 순환 구조라, 클래스만 바꿔서는 이전에 잡힌 높이(모바일 1800px)가 그대로 유지된다
   // (안정 상태가 두 개인 레이아웃 — DevTools에서 요소를 건드리면 그제야 재수렴하는 증상).
-  // 고리를 한 프레임 끊어 새 클래스 기준의 평형값으로 재수렴시킨다. 크기 변화는 라이브러리
-  // ResizeObserver가 감지해 내부를 재배치한다. (DataGrid.tsx의 측정 복구 트릭과 동일 계열)
+  // 고리를 한 프레임 끊어 새 클래스 기준의 평형값으로 재수렴시킨다.
   const maximizedFirstRunRef = React.useRef(true)
   useEffect(() => {
     if (maximizedFirstRunRef.current) { maximizedFirstRunRef.current = false; return }
     const el = wrapperRef.current
-    if (!el) return
+    if (!el || !model) return
     const prev = el.style.display
+    let raf2 = 0
     el.style.display = 'none'
-    const raf = requestAnimationFrame(() => { el.style.display = prev })
+    const raf = requestAnimationFrame(() => {
+      el.style.display = prev
+      // 숨김 프레임 동안 FlexLayout이 탭 콘텐츠 rect를 0으로 측정해 고착하는 경우가 있다
+      // (프로덕션 빌드에서 재현 — updateRect는 루트 rect가 그대로면 재배치를 건너뛰므로
+      // 창을 실제로 리사이즈하기 전까지 콘텐츠가 0x0으로 안 보이는 증상).
+      // 표시 복원 다음 프레임에 no-op 모델 액션으로 강제 redraw해 재측정시킨다.
+      raf2 = requestAnimationFrame(() => {
+        model.doAction(Actions.updateModelAttributes({}))
+      })
+    })
     return () => {
       cancelAnimationFrame(raf)
+      cancelAnimationFrame(raf2)
       el.style.display = prev
     }
-  }, [maximized])
+  }, [maximized, model])
 
   const resetLayout = () => {
     const bp = bpRef.current ?? 'desktop'
