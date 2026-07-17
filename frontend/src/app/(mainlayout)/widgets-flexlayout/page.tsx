@@ -172,6 +172,14 @@ const DEFAULT_JSONS: Record<Breakpoint, IJsonModel> = {
   mobile: MOBILE_JSON,
 }
 
+// 레이아웃 트리에서 최대화 플래그를 제거한다. 최대화는 일시적 보기 상태라 저장하지
+// 않는다(dockview 페이지와 동일 정책) — 저장/복원 양쪽에서 제거해 새로고침·재진입 시
+// 항상 일반 배치로 시작하고, 이전 버전이 저장해둔 maximized도 무시한다.
+function stripMaximized(node: { maximized?: boolean; children?: unknown[] }) {
+  delete node.maximized
+  node.children?.forEach((c) => stripMaximized(c as { maximized?: boolean; children?: unknown[] }))
+}
+
 function loadModel(bp: Breakpoint): Model {
   try {
     const saved = localStorage.getItem(storageKey(bp))
@@ -181,6 +189,7 @@ function loadModel(bp: Breakpoint): Model {
       // 추가한 플래그(예: tabEnablePopoutFloatIcon)가 반영되지 않는다. 코드 쪽 GLOBAL을
       // 병합해 강제한다. (rootOrientationVertical 등 저장본 고유 값은 유지)
       json.global = { ...json.global, ...GLOBAL }
+      stripMaximized(json.layout)
       return Model.fromJson(json)
     }
   } catch {
@@ -261,7 +270,9 @@ export default function WidgetsFlexLayoutPage() {
   const persist = useCallback((m: Model) => {
     if (!bpRef.current) return
     try {
-      localStorage.setItem(storageKey(bpRef.current), JSON.stringify(m.toJson()))
+      const json = m.toJson()
+      stripMaximized(json.layout)
+      localStorage.setItem(storageKey(bpRef.current), JSON.stringify(json))
     } catch {
       // storage 사용 불가 환경이면 조용히 무시
     }
@@ -274,7 +285,7 @@ export default function WidgetsFlexLayoutPage() {
   }, [persist])
 
   // 모델 교체(브레이크포인트 전환·리셋·저장본 복원) 시에도 최대화 상태를 동기화한다.
-  // (저장된 레이아웃에 최대화 상태가 포함되어 있을 수 있다)
+  // (저장/복원 시 maximized는 stripMaximized로 제거되므로 사실상 false로 리셋)
   useEffect(() => {
     setMaximized(model?.getMaximizedTabset() !== undefined)
   }, [model])
