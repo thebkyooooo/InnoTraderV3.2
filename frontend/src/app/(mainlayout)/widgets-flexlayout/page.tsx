@@ -1,10 +1,10 @@
 'use client'
 import React, { useState, useEffect, useMemo, useCallback } from 'react'
-import { Layout, Model, Actions, TabSetNode, type IJsonModel, type TabNode } from 'flexlayout-react'
+import { Layout, Model, Actions, TabSetNode, DockLocation, type IJsonModel, type TabNode } from 'flexlayout-react'
 import 'flexlayout-react/style/light.css'
-import { RestartAlt, OpenInNew, CloseFullscreen, OpenInFull } from '@mui/icons-material'
+import { RestartAlt, OpenInNew, CloseFullscreen, OpenInFull, CropFree } from '@mui/icons-material'
 import { useWidgetDashboardState, type WidgetDashboardState } from '@/features/dashboard/useWidgetDashboardState'
-import { renderWidgetContent, WIDGET_TITLES, type WidgetId } from '@/features/dashboard/widgetContent'
+import { renderWidgetContent, WIDGET_TITLES, WIDGET_IDS, type WidgetId } from '@/features/dashboard/widgetContent'
 import { WidgetVisibilityContext } from '@/shared/lib/widget-visibility'
 
 /** 초기 배치: 좌측(현재가·차트·체결/일별/투자동향 탭) + 우측(주문·주문내역·보유주식·호가 탭·종목상세). */
@@ -198,6 +198,18 @@ function loadModel(bp: Breakpoint): Model {
   return Model.fromJson(DEFAULT_JSONS[bp])
 }
 
+// 위젯 추가 시 대상 탭셋 결정: 마지막으로 활성화된 탭셋을 우선하고, 아직 아무 탭셋도
+// 클릭되지 않아 활성 탭셋이 없으면 트리에서 처음 만나는 탭셋으로 폴백한다.
+function targetTabSetId(model: Model): string | undefined {
+  const active = model.getActiveTabset()
+  if (active) return active.getId()
+  let id: string | undefined
+  model.visitNodes((node) => {
+    if (!id && node instanceof TabSetNode) id = node.getId()
+  })
+  return id
+}
+
 export default function WidgetsFlexLayoutPage() {
   const dashboardState = useWidgetDashboardState()
   const wrapperRef = React.useRef<HTMLDivElement>(null)
@@ -206,6 +218,9 @@ export default function WidgetsFlexLayoutPage() {
   // 탭셋 최대화 여부 — 최대화 중에는 래퍼의 min-height를 해제해 최대화된 탭이
   // (1800px 전체가 아니라) 실제 보이는 영역만 채우도록 한다.
   const [maximized, setMaximized] = useState(false)
+  // 위젯 추가 드롭다운 열림 상태 + 바깥 클릭 감지용 ref.
+  const [addMenuOpen, setAddMenuOpen] = useState(false)
+  const addMenuRef = React.useRef<HTMLDivElement>(null)
 
   // 마운트 시 현재 컨테이너 폭으로 초기 브레이크포인트 결정 후 모델 로드.
   useEffect(() => {
@@ -320,6 +335,28 @@ export default function WidgetsFlexLayoutPage() {
     }
   }, [maximized, model])
 
+  // 위젯을 활성(없으면 첫) 탭셋에 새 탭으로 추가한다. 중복 허용 정책이라 id는 지정하지
+  // 않고 FlexLayout이 자동 부여하게 둔다(같은 위젯 여러 개 가능). select=true로 추가 즉시
+  // 선택 → 탭 가시성이 켜져 WidgetTab이 곧바로 마운트·구독된다. 추가는 onModelChange를
+  // 발생시키므로 persist로 자동 저장된다.
+  const addWidget = (id: WidgetId) => {
+    if (!model) return
+    const targetId = targetTabSetId(model)
+    if (!targetId) return
+    model.doAction(Actions.addTab(tab(id), targetId, DockLocation.CENTER, -1, true))
+    setAddMenuOpen(false)
+  }
+
+  // 드롭다운 바깥을 클릭하면 닫는다.
+  useEffect(() => {
+    if (!addMenuOpen) return
+    const onPointerDown = (e: PointerEvent) => {
+      if (addMenuRef.current && !addMenuRef.current.contains(e.target as Node)) setAddMenuOpen(false)
+    }
+    document.addEventListener('pointerdown', onPointerDown)
+    return () => document.removeEventListener('pointerdown', onPointerDown)
+  }, [addMenuOpen])
+
   const resetLayout = () => {
     const bp = bpRef.current ?? 'desktop'
     try {
@@ -338,14 +375,40 @@ export default function WidgetsFlexLayoutPage() {
 
   return (
     <div className='relative flex flex-col gap-3 w-full h-full'>
+      <div ref={addMenuRef} className='fixed top-[20%] right-[14px] z-30'>
+        <button
+          type='button'
+          onClick={() => setAddMenuOpen((o) => !o)}
+          className='h-[42px] w-[42px] flex flex-col items-center gap-1 px-0 pt-1 text-gray-500 bg-gray-200 border border-gray-200 rounded-full shadow-md hover:border-gray-200 hover:bg-gray-300'
+          title='위젯 추가'
+        >
+          <CropFree sx={{ fontSize: 32 }} />
+          <span className='text-[8px] -mt-[25px]'>추가</span>
+        </button>
+        {addMenuOpen && (
+          <div className='absolute top-0 right-[48px] w-36 max-h-[60vh] overflow-auto bg-white border border-gray-200 rounded-md shadow-lg py-1'>
+            {WIDGET_IDS.map((id) => (
+              <button
+                key={id}
+                type='button'
+                onClick={() => addWidget(id)}
+                className='block w-full text-left px-3 py-1.5 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700'
+              >
+                {WIDGET_TITLES[id]}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
       <button
         type='button'
         onClick={resetLayout}
-        className='h-[42px]  w-[42px] fixed top-[25%] right-[14px] z-30 flex flex-col items-center gap-1 px-0 py-[1px] text-gray-500 bg-gray-200 border border-gray-200 rounded-full shadow-md hover:text-blue-700 hover:border-blue-200'
+        className='h-[42px]  w-[42px] fixed top-[25%] right-[14px] z-30 flex flex-col items-center gap-1 px-0 py-[1px] text-gray-500 bg-gray-200 border border-gray-200 rounded-full shadow-md hover:border-gray-200 hover:bg-gray-300'
         title='위젯 레이아웃 초기화'
       >
         <RestartAlt sx={{ fontSize: 38 }} />
-        <span className='text-[7px] -mt-[24px]'>리셋</span>
+        <span className='text-[8px] -mt-[26px]'>리셋</span>
       </button>
 
       <div ref={wrapperRef} className={`flex-1 relative ${maximized ? 'h-full' : 'min-h-[1800px] @[700px]:min-h-[600px]'}`}>
