@@ -363,7 +363,7 @@ export default function WidgetsDockviewPage() {
           title='위젯 레이아웃 초기화'
         >
           <RestartAlt sx={{ fontSize: 38 }} />
-          <span className='text-[7px] -mt-[24px]'>리셋</span>
+          {/* <span className='text-[7px] -mt-[24px]'>리셋</span> */}
         </button>
 
         <div ref={wrapperRef} className={`flex-1 ${maximized ? 'h-full' : 'min-h-[1800px] @[700px]:min-h-[600px]'}`}>

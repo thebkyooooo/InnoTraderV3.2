@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react'
 import { Layout, Model, Actions, TabSetNode, DockLocation, type IJsonModel, type TabNode } from 'flexlayout-react'
 import 'flexlayout-react/style/light.css'
-import { RestartAlt, OpenInNew, CloseFullscreen, OpenInFull, CropFree } from '@mui/icons-material'
+import { RestartAlt, OpenInNew, CloseFullscreen, OpenInFull, Add } from '@mui/icons-material'
 import { useWidgetDashboardState, type WidgetDashboardState } from '@/features/dashboard/useWidgetDashboardState'
 import { renderWidgetContent, WIDGET_TITLES, WIDGET_IDS, type WidgetId } from '@/features/dashboard/widgetContent'
 import { WidgetVisibilityContext } from '@/shared/lib/widget-visibility'
@@ -382,8 +382,8 @@ export default function WidgetsFlexLayoutPage() {
           className='h-[42px] w-[42px] flex flex-col items-center gap-1 px-0 pt-1 text-gray-500 bg-gray-200 border border-gray-200 rounded-full shadow-md hover:border-gray-200 hover:bg-gray-300'
           title='위젯 추가'
         >
-          <CropFree sx={{ fontSize: 32 }} />
-          <span className='text-[8px] -mt-[25px]'>추가</span>
+          <Add sx={{ fontSize: 32 }} />
+          {/* <span className='text-[8px] -mt-[25px]'>추가</span> */}
         </button>
         {addMenuOpen && (
           <div className='absolute top-0 right-[48px] w-36 max-h-[60vh] overflow-auto bg-white border border-gray-200 rounded-md shadow-lg py-1'>
@@ -408,7 +408,7 @@ export default function WidgetsFlexLayoutPage() {
         title='위젯 레이아웃 초기화'
       >
         <RestartAlt sx={{ fontSize: 38 }} />
-        <span className='text-[8px] -mt-[26px]'>리셋</span>
+        {/* <span className='text-[8px] -mt-[26px]'>리셋</span> */}
       </button>
 
       <div ref={wrapperRef} className={`flex-1 relative ${maximized ? 'h-full' : 'min-h-[1800px] @[700px]:min-h-[600px]'}`}>

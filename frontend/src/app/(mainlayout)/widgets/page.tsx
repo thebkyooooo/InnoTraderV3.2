@@ -224,7 +224,7 @@ export default function DashboardWidgetsPage() {
         title='위젯 레이아웃 초기화'
       >
         <RestartAlt sx={{ fontSize: 38 }} />
-        <span className='text-[7px] -mt-[24px]'>리셋</span>
+        {/* <span className='text-[7px] -mt-[24px]'>리셋</span> */}
       </button>
 
       <ResponsiveGridLayout
