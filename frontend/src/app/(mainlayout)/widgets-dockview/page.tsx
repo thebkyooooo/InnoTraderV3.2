@@ -359,7 +359,7 @@ export default function WidgetsDockviewPage() {
         <button
           type='button'
           onClick={resetLayout}
-          className='h-[42px]  w-[42px] fixed top-[25%] right-[14px] z-30 flex flex-col items-center gap-1 px-0 py-[1px] text-gray-500 bg-gray-200 border border-gray-200 rounded-full shadow-md hover:text-blue-700 hover:border-blue-200'
+          className='h-[42px]  w-[42px] fixed top-[50%] right-[14px] z-30 flex flex-col items-center gap-1 px-0 py-[1px] text-gray-500 bg-gray-200 border border-gray-200 rounded-full shadow-md hover:text-blue-700 hover:border-blue-200'
           title='위젯 레이아웃 초기화'
         >
           <RestartAlt sx={{ fontSize: 38 }} />

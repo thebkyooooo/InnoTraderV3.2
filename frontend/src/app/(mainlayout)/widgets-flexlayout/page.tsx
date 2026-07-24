@@ -375,24 +375,35 @@ export default function WidgetsFlexLayoutPage() {
 
   return (
     <div className='relative flex flex-col gap-3 w-full h-full'>
-      <div ref={addMenuRef} className='fixed top-[20%] right-[14px] z-30'>
+      <div ref={addMenuRef} className='fixed top-[calc(50%-50px)] right-[14px] z-30'>
+        <button
+          type='button'
+          onClick={resetLayout}
+          className='h-[42px] w-[42px] z-30 flex flex-col items-center gap-1 px-0 py-[1px] text-gray-500 bg-gray-200 border border-gray-200 rounded-full shadow-md hover:border-gray-200 hover:bg-gray-300'
+          title='위젯 레이아웃 초기화'
+        >
+          <RestartAlt sx={{ fontSize: 38 }} />
+          {/* <span className='text-[8px] -mt-[26px]'>리셋</span> */}
+        </button>
+
         <button
           type='button'
           onClick={() => setAddMenuOpen((o) => !o)}
-          className='h-[42px] w-[42px] flex flex-col items-center gap-1 px-0 pt-1 text-gray-500 bg-gray-200 border border-gray-200 rounded-full shadow-md hover:border-gray-200 hover:bg-gray-300'
+          className='h-[42px] w-[42px] mt-2 flex flex-col items-center gap-1 px-0 pt-1 text-gray-500 bg-gray-200 border border-gray-200 rounded-full shadow-md hover:border-gray-200 hover:bg-gray-300'
           title='위젯 추가'
         >
           <Add sx={{ fontSize: 32 }} />
           {/* <span className='text-[8px] -mt-[25px]'>추가</span> */}
         </button>
         {addMenuOpen && (
-          <div className='absolute top-0 right-[48px] w-36 max-h-[60vh] overflow-auto bg-white border border-gray-200 rounded-md shadow-lg py-1'>
+          <div className='absolute top-[-120px] right-[50px] w-36 max-h-[60vh] overflow-auto bg-white border border-gray-200 rounded-md shadow-lg py-2'>
+            <p className='px-3.5 py-1.5 text-xs font-semibold text-gray-700'>윗젯 추가</p>
             {WIDGET_IDS.map((id) => (
               <button
                 key={id}
                 type='button'
                 onClick={() => addWidget(id)}
-                className='block w-full text-left px-3 py-1.5 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700'
+                className='block w-full text-left px-3.5 py-1.5 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700'
               >
                 {WIDGET_TITLES[id]}
               </button>
@@ -400,16 +411,6 @@ export default function WidgetsFlexLayoutPage() {
           </div>
         )}
       </div>
-
-      <button
-        type='button'
-        onClick={resetLayout}
-        className='h-[42px]  w-[42px] fixed top-[25%] right-[14px] z-30 flex flex-col items-center gap-1 px-0 py-[1px] text-gray-500 bg-gray-200 border border-gray-200 rounded-full shadow-md hover:border-gray-200 hover:bg-gray-300'
-        title='위젯 레이아웃 초기화'
-      >
-        <RestartAlt sx={{ fontSize: 38 }} />
-        {/* <span className='text-[8px] -mt-[26px]'>리셋</span> */}
-      </button>
 
       <div ref={wrapperRef} className={`flex-1 relative ${maximized ? 'h-full' : 'min-h-[1800px] @[700px]:min-h-[600px]'}`}>
         {model && (
