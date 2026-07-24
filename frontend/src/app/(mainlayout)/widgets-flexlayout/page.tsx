@@ -396,14 +396,14 @@ export default function WidgetsFlexLayoutPage() {
           {/* <span className='text-[8px] -mt-[25px]'>추가</span> */}
         </button>
         {addMenuOpen && (
-          <div className='absolute top-[-120px] right-[50px] w-36 max-h-[60vh] overflow-auto bg-white border border-gray-200 rounded-md shadow-lg py-2'>
-            <p className='px-3.5 py-1.5 text-xs font-semibold text-gray-700'>윗젯 추가</p>
+          <div className='absolute top-[-100px] right-[50px] w-36 max-h-[60vh] overflow-auto bg-white border border-gray-200 rounded-md shadow-lg py-2'>
+            <p className='mx-3 mb-2 py-1.5 text-xs font-semibold text-gray-700 border-b border-gray-200'>윗젯 추가</p>
             {WIDGET_IDS.map((id) => (
               <button
                 key={id}
                 type='button'
                 onClick={() => addWidget(id)}
-                className='block w-full text-left px-3.5 py-1.5 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700'
+                className='block w-full text-left px-3.5 py-1 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700'
               >
                 {WIDGET_TITLES[id]}
               </button>
